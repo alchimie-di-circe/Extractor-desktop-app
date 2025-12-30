@@ -1,0 +1,125 @@
+{
+	"meta": {
+		"generatedAt": "2025-12-30T12:59:48.996Z",
+		"tasksAnalyzed": 14,
+		"totalTasks": 14,
+		"analysisCount": 14,
+		"thresholdScore": 5,
+		"projectName": "Task Master",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Configurazione shadcn-svelte e Sistema UI Base",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Inizializzazione shadcn-svelte con Svelte 5 e TailwindCSS 4 (inclusa risoluzione compatibilità), 2) Installazione componenti base (button, card, dialog, input, form, toast, dropdown-menu, tabs), 3) Configurazione tema dark/light con CSS variables e toggle, 4) Creazione layout sidebar con navigazione, 5) Implementazione route hash per dashboard, brands, extract, edit, publish, settings",
+			"reasoning": "Il progetto ha già TailwindCSS 4 configurato e Svelte 5, ma shadcn-svelte richiede configurazione specifica. La struttura routes è vuota (solo +page.svelte placeholder). Complessità moderata: shadcn-svelte con Svelte 5 + TailwindCSS 4 potrebbe avere problemi di compatibilità. Layout e routing sono task standard ma richiedono design accurato."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Sistema IPC Bridge e Gestione Sicura delle Credenziali",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Espandi in subtask per: 1) Installazione dipendenze (keytar, electron-store) e verifica compatibilità nativa, 2) Implementazione keychain.ts con wrapper keytar per macOS/Windows/Linux, 3) Implementazione config-manager.ts con electron-store, 4) Creazione ipc-handlers.ts con tutti gli handler centralizzati, 5) Estensione preload.ts con contextBridge API sicure, 6) Aggiornamento main.ts con registrazione handlers e security settings (context isolation, sandbox)",
+			"reasoning": "Il preload.ts è attualmente vuoto e main.ts ha solo la configurazione base senza IPC. Keytar richiede rebuild native per Electron, potenzialmente problematico. Context isolation e security sono critici per sicurezza credenziali. La complessità è alta per le native dependencies e il testing cross-platform."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "UI Configurazione Provider LLM Multi-Provider",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Creazione route settings/llm-providers con layout tab, 2) Implementazione LLMProviderCard.svelte con form validazione API key, 3) Creazione llm-providers.svelte.ts store con Svelte 5 runes per stato providers, 4) Implementazione IPC handlers per test connessione a provider (Anthropic, OpenAI, Google, Perplexity), 5) Integrazione con keychain per salvataggio sicuro credenziali e configurazione modelli per ruolo",
+			"reasoning": "Dipende da Task 1 (UI) e Task 2 (IPC). La struttura routes/settings non esiste. Richiede form validation, connection testing async, e store management. Complessità media-alta per la gestione di 4+ provider con diversi schemi di autenticazione."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Python Sidecar con FastAPI e Lifecycle Management",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Espandi in subtask per: 1) Creazione struttura directory python/ con requirements.txt, 2) Implementazione FastAPI server con endpoints health e execute, 3) Implementazione SSE streaming per eventi agenti, 4) Creazione sidecar-manager.ts in Electron per spawn/kill processo, 5) Implementazione health check polling e auto-restart, 6) Gestione graceful shutdown su app quit, 7) Bundling strategy (pyinstaller o embedded Python per distribuzione)",
+			"reasoning": "Non esiste alcuna struttura python/. Complessità alta: cross-language communication, process lifecycle management, SSE streaming, e soprattutto bundling Python in app Electron. Il sidecar manager deve gestire crash, restart, e shutdown graceful. La strategia di bundling (pyinstaller vs embedded) ha implicazioni significative per distribuzione."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Generazione Dinamica cagent.yaml e Configurazione Agenti",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Definizione TypeScript interfaces per CagentConfig e AgentRole, 2) Creazione cagent-config.ts con funzione generateCagentYaml, 3) Implementazione UI settings/agents per configurazione ruoli e system prompts, 4) IPC handler per scrittura file yaml e validazione schema, 5) Implementazione hot-reload notifica al sidecar Python",
+			"reasoning": "Dipende da Task 3 (provider config) e Task 4 (sidecar). Generazione YAML è straightforward ma richiede validazione rigorosa. La UI per configurazione agenti richiede form complessi. Hot-reload sidecar aggiunge complessità di comunicazione."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Agente Estrazione con osxphotos Integration",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Espandi in subtask per: 1) Setup osxphotos in ambiente Python e test accesso Photos library, 2) Implementazione ExtractionAgent class con metodi list_albums e extract_photos, 3) Creazione endpoint FastAPI /agent/extract con progress streaming, 4) UI extract page con album browser tree view, 5) Implementazione griglia preview con selezione multipla e filtri, 6) Integrazione preservazione EXIF e metadata faces/labels",
+			"reasoning": "osxphotos è macOS-only e richiede permessi Photos library. EXIF preservation e metadata extraction sono complessi. La UI richiede tree view, grid con lazy loading, e progress tracking. Alto rischio di problemi di permessi su macOS."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Integrazione Cloudinary MCP per Editing Agent",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Configurazione Cloudinary MCP server in .mcp.json con autenticazione, 2) Implementazione EditingAgent Python con wrapper MCP tools, 3) UI edit page con preview before/after e pannello trasformazioni, 4) Implementazione batch processing con progress, 5) Cache locale preview e gestione quota Cloudinary",
+			"reasoning": "Integrazione MCP richiede comprensione del protocollo. Cloudinary ha limiti quota da gestire. UI preview before/after richiede gestione immagini async. Batch processing aggiunge complessità di orchestrazione."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Native RAG con SQLite e Captioning Agent",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Espandi in subtask per: 1) Setup SQLite vector store e schema per embeddings, 2) Implementazione BrandKnowledgeBase con sentence-transformers per indexing, 3) Creazione funzione search con cosine similarity, 4) Implementazione CaptioningAgent con integrazione RAG, 5) UI caption editor con preview per piattaforma e suggestions, 6) Supporto generazione per multiple piattaforme (IG, LinkedIn, Twitter) con tone of voice",
+			"reasoning": "RAG nativo con SQLite richiede implementazione custom di vector similarity search. sentence-transformers ha dipendenze pesanti (PyTorch). Captioning multi-piattaforma richiede templating complesso. Integrazione contesto brand nella generazione è non triviale."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Integrazione Postiz API e Scheduling Agent",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Creazione PostizClient TypeScript con metodi schedulePost e getAnalytics, 2) Implementazione SchedulingAgent Python con ottimizzazione orari, 3) UI publish page con form scheduling e preview multi-piattaforma, 4) Implementazione webhook listener in main process per analytics, 5) Storage analytics in SQLite e visualizzazione storica",
+			"reasoning": "API REST integration è standard. Webhook listener in Electron main process richiede HTTP server. UI scheduling con date picker e preview è moderatamente complessa. Analytics storage è straightforward."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Integrazione Timeline Twick con A2UI Widgets",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Installazione e configurazione Twick con Svelte 5, 2) Creazione timeline page con integrazione scheduledPosts store, 3) Implementazione sistema A2UI con WidgetRegistry e AgentWidget renderer, 4) Protocollo A2UI in FastAPI per generazione widget specs, 5) SSE streaming per aggiornamenti real-time e drag-drop reordering",
+			"reasoning": "Twick potrebbe non essere compatibile con Svelte 5. A2UI è un protocollo custom che richiede design accurato. Dynamic component rendering in Svelte ha patterns specifici. SSE + drag-drop insieme aggiungono complessità stato."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Orchestrator Agent e Comunicazione A2A",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Espandi in subtask per: 1) Definizione protocollo A2A con schema contesto condiviso, 2) Implementazione OrchestratorAgent base con registro sub-agents, 3) Implementazione workflow planner con LLM, 4) Sistema handoff con preservazione stato e rollback, 5) Error handling e retry policies, 6) Dashboard orchestrazione in UI con workflow visualization, 7) Logging e tracing conversazioni agenti",
+			"reasoning": "Dipende da tutti gli agenti (6, 7, 8, 9). Orchestrazione multi-agent è architetturalmente complessa. Workflow planning con LLM richiede prompt engineering sofisticato. Error recovery e rollback sono critici. La visualizzazione workflow real-time aggiunge ulteriore complessità."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Brand Management UI e Asset Organization",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Espandi in subtask per: 1) Creazione route brands con lista brand cards e modal creazione, 2) Implementazione brands/[brandId] con tabs (assets, guidelines, social, analytics), 3) Sistema upload documenti con RAG indexing automatico, 4) Store brand con SQLite backend via IPC, 5) Componenti AssetGrid, BrandColorPalette, SocialAccountConnector",
+			"reasoning": "Dipende da Task 1 (UI) e Task 8 (RAG). CRUD operations sono standard. Upload con indexing RAG aggiunge complessità. Dynamic routing con [brandId] è supportato da SvelteKit. La varietà di componenti richiede design system coerente."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Testing Suite Completa e CI/CD Setup",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Espandi in subtask per: 1) Configurazione test pyramid (Vitest, pytest, Playwright) con struttura directory, 2) Unit tests per componenti Svelte e servizi, 3) Unit tests Python per agenti e RAG, 4) Integration tests per IPC e agent communication, 5) E2E tests per workflow critici, 6) CI/CD pipeline GitHub Actions con build multi-piattaforma",
+			"reasoning": "Vitest e Playwright già configurati base. Richiede test cross-language (TS + Python). CI/CD per Electron è complessa (build macOS richiede macOS runner, code signing). Coverage target 80% è ambizioso per progetto greenfield."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Electron Packaging e Distribuzione",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Espandi in subtask per: 1) Configurazione makers DMG con notarization macOS, 2) Configurazione makers Squirrel per Windows con code signing, 3) Bundling Python sidecar con PyInstaller o embedded, 4) Implementazione auto-update con electron-updater, 5) Setup GitHub Releases per distribuzione, 6) Documentazione installazione e troubleshooting",
+			"reasoning": "Electron Forge già configurato base. Code signing richiede certificati e setup complesso. Notarization macOS ha requisiti specifici. Python bundling è il punto più critico: dimensione bundle e compatibilità cross-platform. Auto-update testing richiede infrastruttura."
+		}
+	]
+}

@@ -54,7 +54,8 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-squirrel-startup": "^1.0.1",
+    "task-master-ai": "^0.40.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -1,0 +1,1710 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Configurazione shadcn-svelte e Sistema UI Base",
+        "description": "Installare e configurare shadcn-svelte come libreria UI principale, insieme ai componenti fondamentali per l'interfaccia dell'applicazione.",
+        "details": "1. Eseguire `npx shadcn-svelte@latest init` per inizializzare shadcn-svelte\n2. Configurare il file `components.json` con le preferenze di stile (default, new-york)\n3. Installare i componenti base: button, card, dialog, input, form, toast, dropdown-menu, tabs\n4. Creare la struttura delle cartelle: `src/lib/components/ui/` per componenti shadcn\n5. Configurare il tema dark/light mode con CSS variables\n6. Creare un layout base con sidebar navigation in `src/routes/+layout.svelte`\n7. Implementare le route base: dashboard (#/), brands (#/brands), extract (#/extract), edit (#/edit), publish (#/publish), settings (#/settings)\n\nPseudo-codice per layout:\n```svelte\n<script>\n  import { page } from '$app/stores';\n  const routes = [\n    { path: '#/', label: 'Dashboard', icon: 'home' },\n    { path: '#/extract', label: 'Estrai', icon: 'image' },\n    // ...\n  ];\n</script>\n<div class=\"flex h-screen\">\n  <aside class=\"w-64 border-r\">\n    {#each routes as route}\n      <a href={route.path} class:active={$page.url.hash === route.path}>{route.label}</a>\n    {/each}\n  </aside>\n  <main class=\"flex-1\"><slot /></main>\n</div>\n```",
+        "testStrategy": "Test unitari per verificare il rendering dei componenti shadcn. Test di navigazione per assicurarsi che tutte le route funzionino correttamente con hash routing. Verificare che il tema dark/light switch funzioni.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Inizializzazione shadcn-svelte con Svelte 5 e TailwindCSS 4",
+            "description": "Installare e configurare shadcn-svelte assicurando la compatibilità con Svelte 5 e TailwindCSS 4, risolvendo eventuali conflitti di versione.",
+            "dependencies": [],
+            "details": "1. Eseguire `npx shadcn-svelte@latest init` e seguire il wizard interattivo\n2. Durante l'init, selezionare:\n   - Style: 'default' o 'new-york' secondo preferenza\n   - Base color: neutral o slate\n   - CSS variables: YES\n3. Verificare che `components.json` venga creato correttamente nella root\n4. Se TailwindCSS 4 causa conflitti con @tailwindcss/postcss (deprecato in v4), aggiornare la configurazione:\n   - TailwindCSS 4 usa `@tailwindcss/vite` direttamente (già presente nel progetto)\n   - Assicurarsi che `src/app.css` importi `@tailwind base; @tailwind components; @tailwind utilities;`\n5. Verificare che `src/lib/utils.ts` venga creato con la funzione `cn()` per class merging\n6. Creare la struttura cartelle `src/lib/components/ui/` se non esiste\n7. Eseguire `npm run check` per verificare che non ci siano errori TypeScript",
+            "status": "pending",
+            "testStrategy": "Verificare che `npx shadcn-svelte@latest add button` funzioni senza errori. Controllare che la build `npm run check` passi correttamente. Testare che TailwindCSS applichi gli stili nei componenti.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-0-foundation",
+              "svelte"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Installazione componenti base shadcn-svelte",
+            "description": "Installare tutti i componenti UI fondamentali richiesti: button, card, dialog, input, form, toast, dropdown-menu e tabs.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Eseguire i seguenti comandi per installare i componenti:\n   ```bash\n   npx shadcn-svelte@latest add button\n   npx shadcn-svelte@latest add card\n   npx shadcn-svelte@latest add dialog\n   npx shadcn-svelte@latest add input\n   npx shadcn-svelte@latest add form\n   npx shadcn-svelte@latest add toast\n   npx shadcn-svelte@latest add dropdown-menu\n   npx shadcn-svelte@latest add tabs\n   ```\n2. Per il form, installare anche le dipendenze peer: `npm install sveltekit-superforms zod`\n3. Verificare che ogni componente sia stato creato in `src/lib/components/ui/`\n4. Controllare che le dipendenze come `bits-ui`, `lucide-svelte`, `clsx`, `tailwind-merge` siano state aggiunte automaticamente al package.json\n5. Per toast, inizializzare il Toaster nel layout principale importando da `$lib/components/ui/sonner`\n6. Creare un file barrel export `src/lib/components/ui/index.ts` per facilitare gli import",
+            "status": "pending",
+            "testStrategy": "Creare una pagina di test `src/routes/ui-test/+page.svelte` che renderizzi ogni componente installato. Verificare che tutti i componenti vengano visualizzati correttamente e siano interattivi.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-0-foundation",
+              "svelte"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Configurazione tema dark/light con CSS variables e toggle",
+            "description": "Implementare il sistema di temi dark/light mode utilizzando CSS variables e un componente toggle per lo switch tra i temi.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "1. Configurare le CSS variables per i temi in `src/app.css`:\n   ```css\n   :root {\n     --background: 0 0% 100%;\n     --foreground: 222.2 84% 4.9%;\n     /* ...altre variabili per light mode */\n   }\n   .dark {\n     --background: 222.2 84% 4.9%;\n     --foreground: 210 40% 98%;\n     /* ...altre variabili per dark mode */\n   }\n   ```\n2. Creare uno store per gestire il tema in `src/lib/stores/theme.svelte.ts`:\n   ```typescript\n   let theme = $state<'light' | 'dark' | 'system'>('system');\n   export const themeStore = { get theme() { return theme; }, setTheme(t) { theme = t; } };\n   ```\n3. Creare componente `src/lib/components/custom/ThemeToggle.svelte` usando Button e DropdownMenu di shadcn\n4. Implementare la logica per persistere la preferenza in localStorage\n5. Aggiungere script in `app.html` per evitare flash di tema sbagliato al caricamento:\n   ```html\n   <script>(function(){const t=localStorage.getItem('theme');if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');})();</script>\n   ```\n6. Supportare `prefers-color-scheme` per la modalità 'system'",
+            "status": "pending",
+            "testStrategy": "Verificare che il toggle cambi effettivamente il tema. Testare che la preferenza venga salvata in localStorage e ripristinata al reload. Verificare che la modalità 'system' risponda correttamente alle preferenze OS.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-0-foundation",
+              "svelte"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Creazione layout sidebar con navigazione",
+            "description": "Implementare il layout principale dell'applicazione con una sidebar di navigazione fissa e area contenuto dinamica.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "1. Modificare `src/routes/+layout.svelte` per implementare il layout con sidebar:\n   ```svelte\n   <script lang=\"ts\">\n     import { page } from '$app/stores';\n     import { Button } from '$lib/components/ui/button';\n     import ThemeToggle from '$lib/components/custom/ThemeToggle.svelte';\n     import '../app.css';\n     \n     const routes = [\n       { path: '#/', label: 'Dashboard', icon: 'Home' },\n       { path: '#/brands', label: 'Brand', icon: 'Building2' },\n       { path: '#/extract', label: 'Estrai', icon: 'ImageDown' },\n       { path: '#/edit', label: 'Modifica', icon: 'Pencil' },\n       { path: '#/publish', label: 'Pubblica', icon: 'Send' },\n       { path: '#/settings', label: 'Impostazioni', icon: 'Settings' },\n     ];\n   </script>\n   ```\n2. Struttura HTML con flexbox: sidebar fissa a sinistra (w-64), main content area (flex-1)\n3. Installare `lucide-svelte` per le icone: `npm install lucide-svelte`\n4. Implementare evidenziazione link attivo usando `$page.url.hash`\n5. Aggiungere il ThemeToggle nella sidebar (in basso o header)\n6. Rendere la sidebar responsive: collassabile su mobile con hamburger menu\n7. Aggiungere il Toaster component per le notifiche globali",
+            "status": "pending",
+            "testStrategy": "Verificare che la sidebar sia visibile e fissa. Testare che il link attivo sia evidenziato correttamente. Verificare la responsività su diverse dimensioni schermo. Testare che il contenuto delle pagine venga renderizzato nell'area main.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-0-foundation",
+              "svelte"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Implementazione route hash per tutte le sezioni",
+            "description": "Creare le pagine placeholder per ogni route dell'applicazione: dashboard, brands, extract, edit, publish e settings utilizzando hash routing.",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Poiché SvelteKit usa file-based routing e l'app Electron richiede hash routing, implementare un router hash-based:\n   - Opzione A: Usare adapter-static con `trailingSlash: 'always'` e navigare via hash\n   - Opzione B: Creare un sistema di routing client-side basato su `window.location.hash`\n2. Creare uno store `src/lib/stores/router.svelte.ts` per gestire l'hash routing:\n   ```typescript\n   let currentRoute = $state(window.location.hash || '#/');\n   window.addEventListener('hashchange', () => currentRoute = window.location.hash);\n   export const router = { get route() { return currentRoute; } };\n   ```\n3. Creare le pagine componenti in `src/lib/pages/`:\n   - `Dashboard.svelte` - Overview dell'applicazione\n   - `Brands.svelte` - Gestione brand\n   - `Extract.svelte` - Estrazione contenuti\n   - `Edit.svelte` - Editor contenuti\n   - `Publish.svelte` - Pubblicazione contenuti\n   - `Settings.svelte` - Configurazioni (includerà sotto-route per LLM providers)\n4. Modificare `+page.svelte` per renderizzare la pagina corretta basandosi sull'hash\n5. Ogni pagina deve avere:\n   - Titolo H1\n   - Descrizione placeholder\n   - Layout base con Card per contenuti futuri\n6. Configurare `src/routes/+layout.ts` con `export const prerender = true;` per compatibilità Electron",
+            "status": "pending",
+            "testStrategy": "Navigare tra tutte le route usando i link nella sidebar. Verificare che l'URL hash cambi correttamente. Testare che il contenuto della pagina si aggiorni senza refresh. Verificare che il refresh della pagina mantenga la route corretta.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-0-foundation",
+              "svelte"
+            ]
+          }
+        ],
+        "tags": [
+          "frontend",
+          "ui-framework",
+          "phase-0-foundation",
+          "svelte"
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Sistema IPC Bridge e Gestione Sicura delle Credenziali",
+        "description": "Implementare il sistema IPC tra main process e renderer, includendo un servizio keychain per la memorizzazione sicura delle API keys tramite OS keychain nativo.",
+        "details": "1. Estendere `electron/preload.ts` con contextBridge per esporre API sicure:\n```typescript\nimport { contextBridge, ipcRenderer } from 'electron';\ncontextBridge.exposeInMainWorld('electronAPI', {\n  // Keychain\n  saveCredential: (service: string, account: string, password: string) => \n    ipcRenderer.invoke('keychain:save', service, account, password),\n  getCredential: (service: string, account: string) => \n    ipcRenderer.invoke('keychain:get', service, account),\n  deleteCredential: (service: string, account: string) => \n    ipcRenderer.invoke('keychain:delete', service, account),\n  // Config\n  getConfig: (key: string) => ipcRenderer.invoke('config:get', key),\n  setConfig: (key: string, value: any) => ipcRenderer.invoke('config:set', key, value),\n});\n```\n2. Creare `electron/keychain.ts` usando `keytar` per macOS keychain nativo\n3. Creare `electron/ipc-handlers.ts` per gestire tutti gli handler IPC\n4. Creare `electron/config-manager.ts` per gestire configurazioni persistenti con electron-store\n5. Aggiornare `electron/main.ts` per registrare tutti gli handler IPC\n6. Installare dipendenze: `keytar`, `electron-store`\n7. Creare tipi TypeScript in `src/app.d.ts` per l'API esposta\n8. Abilitare context isolation e sandbox nel BrowserWindow",
+        "testStrategy": "Test di integrazione per verificare che le credenziali vengano salvate e recuperate correttamente dal keychain. Test per assicurarsi che il context isolation sia attivo e che il renderer non possa accedere direttamente a Node.js APIs.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Installazione dipendenze native (keytar, electron-store) e configurazione build",
+            "description": "Installare keytar ed electron-store come dipendenze del progetto e configurare il sistema di build per supportare i moduli nativi di Electron",
+            "dependencies": [],
+            "details": "1. Eseguire `npm install keytar electron-store` per aggiungere le dipendenze\n2. Verificare che `@electron-forge/plugin-auto-unpack-natives` sia già configurato nel package.json (presente)\n3. Configurare rebuild di keytar per l'architettura Electron corrente\n4. Aggiornare forge.config.ts se necessario per includere keytar nei moduli nativi da impacchettare\n5. Testare che keytar compili correttamente con `npm run start`\n6. Verificare compatibilità con macOS Keychain, Windows Credential Vault e Linux Secret Service",
+            "status": "pending",
+            "testStrategy": "Verificare che il progetto si avvii senza errori dopo l'installazione. Controllare che keytar sia presente in node_modules e che i binari nativi siano stati compilati correttamente per la piattaforma.",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione modulo keychain.ts con wrapper keytar cross-platform",
+            "description": "Creare il modulo electron/keychain.ts che wrappa keytar per fornire un'interfaccia unificata per la gestione sicura delle credenziali su tutti i sistemi operativi",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `electron/keychain.ts` con classe KeychainService\n2. Implementare metodi: saveCredential(service, account, password), getCredential(service, account), deleteCredential(service, account), findCredentials(service)\n3. Definire costante SERVICE_NAME per identificare l'app nel keychain (es. 'com.trae-extractor')\n4. Aggiungere gestione errori robusta con messaggi descrittivi\n5. Implementare logging per debug in development\n6. Gestire casi edge: credenziale non trovata, permessi negati, keychain locked\n7. Esportare singleton instance per uso nell'app",
+            "status": "pending",
+            "testStrategy": "Test unitari con mock di keytar. Test manuali per verificare salvataggio/recupero credenziali dal keychain nativo del sistema operativo. Verificare che le credenziali persistano dopo riavvio dell'app.",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Implementazione config-manager.ts con electron-store per configurazioni persistenti",
+            "description": "Creare il modulo electron/config-manager.ts per la gestione delle configurazioni persistenti dell'applicazione utilizzando electron-store",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `electron/config-manager.ts` con classe ConfigManager\n2. Definire schema TypeScript per le configurazioni supportate (theme, language, windowBounds, lastUsedProvider, etc.)\n3. Inizializzare electron-store con schema e defaults\n4. Implementare metodi: get(key), set(key, value), delete(key), reset(), getAll()\n5. Aggiungere validazione input per prevenire configurazioni invalide\n6. Implementare migration strategy per future modifiche allo schema\n7. Configurare path di storage appropriato per ogni piattaforma\n8. Esportare singleton instance",
+            "status": "pending",
+            "testStrategy": "Test unitari per verifica get/set/delete. Test che le configurazioni persistano tra riavvii. Test schema validation per input invalidi.",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Creazione ipc-handlers.ts con gestori centralizzati per keychain e config",
+            "description": "Implementare il modulo electron/ipc-handlers.ts che centralizza tutti gli handler IPC per keychain e configurazioni",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "1. Creare `electron/ipc-handlers.ts` con funzione registerIpcHandlers()\n2. Registrare handler per keychain: 'keychain:save', 'keychain:get', 'keychain:delete', 'keychain:findAll'\n3. Registrare handler per config: 'config:get', 'config:set', 'config:delete', 'config:getAll', 'config:reset'\n4. Implementare validazione input per tutti gli handler\n5. Aggiungere error handling con messaggi strutturati per il renderer\n6. Wrappare risposte in formato consistente: { success: boolean, data?: any, error?: string }\n7. Aggiungere logging per debug\n8. Esportare funzione di registrazione da chiamare nel main process",
+            "status": "pending",
+            "testStrategy": "Test unitari con mock ipcMain. Test integrazione verificando che gli handler rispondano correttamente agli invoke dal renderer.",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Estensione preload.ts con contextBridge API sicure",
+            "description": "Estendere electron/preload.ts utilizzando contextBridge per esporre API sicure al renderer process senza esporre direttamente Node.js",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Aggiornare `electron/preload.ts` con import di contextBridge e ipcRenderer\n2. Esporre API keychain: saveCredential, getCredential, deleteCredential, findCredentials\n3. Esporre API config: getConfig, setConfig, deleteConfig, getAllConfig, resetConfig\n4. Ogni metodo deve usare ipcRenderer.invoke() per comunicazione asincrona\n5. Non esporre ipcRenderer direttamente - solo wrapper specifici\n6. Tipizzare le API esposte con interfaccia ElectronAPI\n7. Usare try/catch per gestire errori di comunicazione\n8. Aggiungere validazione parametri lato preload come primo livello di difesa",
+            "status": "pending",
+            "testStrategy": "Test che window.electronAPI sia definito con tutte le funzioni attese. Test che chiamate dirette a Node.js APIs falliscano dal renderer (context isolation attivo).",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Aggiornamento main.ts con security settings e registrazione handlers",
+            "description": "Aggiornare electron/main.ts per abilitare context isolation, sandbox, e registrare tutti gli handler IPC all'avvio",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "1. Aggiungere import di registerIpcHandlers da ipc-handlers.ts\n2. Configurare webPreferences con: contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true\n3. Chiamare registerIpcHandlers() prima della creazione della finestra\n4. Aggiungere Content-Security-Policy appropriata\n5. Disabilitare remote module se presente\n6. Aggiornare `src/app.d.ts` con dichiarazione interface Window { electronAPI: ElectronAPI }\n7. Creare tipo ElectronAPI in app.d.ts con tutte le funzioni esposte\n8. Testare che l'app funzioni correttamente con tutte le security features attive",
+            "status": "pending",
+            "testStrategy": "Test E2E che verifichi context isolation attivo. Test che nodeIntegration sia disabilitato nel renderer. Test che le API IPC funzionino correttamente attraverso il preload.",
+            "tags": [
+              "electron-main",
+              "security",
+              "phase-0-foundation",
+              "electron"
+            ]
+          }
+        ],
+        "tags": [
+          "electron-main",
+          "security",
+          "phase-0-foundation",
+          "electron"
+        ]
+      },
+      {
+        "id": 3,
+        "title": "UI Configurazione Provider LLM Multi-Provider",
+        "description": "Creare l'interfaccia utente per configurare multipli provider LLM (Anthropic, OpenAI, Google, Perplexity) con validazione delle connessioni e memorizzazione sicura delle API keys.",
+        "details": "1. Creare `src/routes/settings/llm-providers/+page.svelte` con form per ogni provider\n2. Implementare componente `src/lib/components/custom/LLMProviderCard.svelte`:\n```svelte\n<script lang=\"ts\">\n  import { Card, CardContent, CardHeader } from '$lib/components/ui/card';\n  import { Input } from '$lib/components/ui/input';\n  import { Button } from '$lib/components/ui/button';\n  \n  export let provider: { id: string; name: string; logo: string; models: string[] };\n  let apiKey = '';\n  let selectedModel = '';\n  let connectionStatus: 'idle' | 'testing' | 'success' | 'error' = 'idle';\n  \n  async function testConnection() {\n    connectionStatus = 'testing';\n    try {\n      await window.electronAPI.testLLMConnection(provider.id, apiKey, selectedModel);\n      connectionStatus = 'success';\n    } catch { connectionStatus = 'error'; }\n  }\n  \n  async function saveCredentials() {\n    await window.electronAPI.saveCredential('llm-provider', provider.id, apiKey);\n  }\n</script>\n```\n3. Creare servizio `src/lib/services/llm-config.ts` per interagire con IPC\n4. Implementare store Svelte 5 runes per stato provider: `src/lib/stores/llm-providers.svelte.ts`\n5. Creare IPC handler in main process per test connessione ai provider\n6. Provider supportati: Anthropic (Claude), OpenAI (GPT-4), Google (Gemini), Perplexity (Research)\n7. Memorizzare preferenze modello per ruolo: main, fallback, research",
+        "testStrategy": "Test unitari per form validation. Test di mock per verificare che le API keys vengano salvate correttamente. Test E2E per il flusso completo: inserimento key -> test connessione -> salvataggio.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Creazione route settings/llm-providers con layout tab e navigazione",
+            "description": "Creare la struttura delle route per le impostazioni LLM provider con layout a tab per navigare tra i diversi provider e le configurazioni dei ruoli.",
+            "dependencies": [],
+            "details": "1. Creare la cartella `src/routes/settings/` e `src/routes/settings/llm-providers/`\n2. Implementare `+page.svelte` con layout a tab usando componenti shadcn (Tabs, TabsList, TabsTrigger, TabsContent)\n3. Creare tab per: Providers (lista card), Ruoli (main, fallback, research), Impostazioni avanzate\n4. Implementare navigazione breadcrumb: Home > Settings > LLM Providers\n5. Aggiungere stato loading skeleton durante il caricamento iniziale dei dati provider\n6. Integrare con il layout base dell'applicazione esistente",
+            "status": "pending",
+            "testStrategy": "Test unitario per rendering corretto dei tab. Test navigazione tra tab. Verifica responsive design su diverse dimensioni schermo.",
+            "tags": [
+              "frontend",
+              "ai-config",
+              "phase-1-config",
+              "svelte"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione componente LLMProviderCard.svelte con validazione form",
+            "description": "Creare il componente riutilizzabile LLMProviderCard per visualizzare e configurare ogni provider LLM con form di input API key, selezione modello e validazione.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `src/lib/components/custom/LLMProviderCard.svelte`\n2. Props: provider (id, name, logo, models[], description, docsUrl)\n3. Implementare input API key con toggle visibilità password (eye icon)\n4. Dropdown select per scelta modello dal lista models[] del provider\n5. Validazione form: API key non vuota, formato corretto per ogni provider (sk-*, claude-*, etc.)\n6. Stato connessione con indicatore visivo: idle (grigio), testing (spinner), success (verde check), error (rosso X)\n7. Pulsanti: Test Connection, Save, Clear\n8. Mostrare messaggio errore dettagliato in caso di fallimento connessione\n9. Supporto per provider: Anthropic, OpenAI, Google Gemini, Perplexity",
+            "status": "pending",
+            "testStrategy": "Test unitari per validazione input API key. Test rendering stati connessione. Mock test per simulare risposte test connection success/error.",
+            "tags": [
+              "frontend",
+              "ai-config",
+              "phase-1-config",
+              "svelte"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Creazione store llm-providers.svelte.ts con Svelte 5 runes",
+            "description": "Implementare lo store reattivo usando Svelte 5 runes ($state, $derived) per gestire lo stato globale dei provider LLM configurati.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `src/lib/stores/llm-providers.svelte.ts`\n2. Definire interfacce TypeScript: LLMProvider, ProviderConfig, ModelRole\n3. Usare $state per: providers[], selectedModels (per ruolo), connectionStatuses{}\n4. Implementare $derived per: configuredProviders (solo quelli con API key), availableModelsForRole\n5. Funzioni: addProvider, updateProviderConfig, setModelForRole, updateConnectionStatus\n6. Persistenza: sincronizzare con IPC per caricamento/salvataggio config\n7. Gestione ruoli modello: main (task principali), fallback (backup), research (Perplexity)\n8. Esporre getters per accesso facile allo stato corrente",
+            "status": "pending",
+            "testStrategy": "Test unitari per reattività store. Verifica $derived computati correttamente. Test persistenza stato con mock IPC.",
+            "tags": [
+              "frontend",
+              "ai-config",
+              "phase-1-config",
+              "svelte"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Implementazione IPC handlers test connessione multi-provider",
+            "description": "Creare gli handler IPC nel main process Electron per testare la connessione ai vari provider LLM (Anthropic, OpenAI, Google, Perplexity) e validare le API keys.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "1. Estendere `electron/main.ts` con ipcMain.handle per 'llm:test-connection'\n2. Creare `electron/services/llm-tester.ts` con funzioni per ogni provider\n3. Implementare test Anthropic: chiamata API messages con prompt minimale\n4. Implementare test OpenAI: chiamata chat completions con modello selezionato\n5. Implementare test Google Gemini: chiamata generateContent\n6. Implementare test Perplexity: chiamata chat completions (API compatibile OpenAI)\n7. Timeout configurabile (default 10s) per ogni test\n8. Restituire risultato strutturato: success, latency, modelInfo, errorMessage\n9. Estendere preload.ts con contextBridge per esporre testLLMConnection al renderer\n10. Gestire errori: API key invalida, quota exceeded, network error, model not found",
+            "status": "pending",
+            "testStrategy": "Test integrazione con mock server per simulare risposte API. Test timeout handling. Test gestione errori specifici per ogni provider.",
+            "tags": [
+              "frontend",
+              "ai-config",
+              "phase-1-config",
+              "svelte"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Integrazione keychain e configurazione modelli per ruolo",
+            "description": "Integrare il sistema keychain OS nativo per salvare le API keys in modo sicuro e implementare la UI per assegnare modelli specifici ai ruoli (main, fallback, research).",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "1. Integrare con IPC keychain esistente (Task 2): saveCredential, getCredential, deleteCredential\n2. Chiamare keychain:save quando utente salva API key in LLMProviderCard\n3. Caricare API keys da keychain all'avvio pagina settings (mascherare con •••)\n4. Creare componente `ModelRoleSelector.svelte` per assegnazione ruoli\n5. UI per ogni ruolo: dropdown con modelli disponibili (solo provider configurati)\n6. Validazione: almeno un modello main configurato prima di salvare\n7. Warning se fallback non configurato\n8. Suggerimento automatico: Perplexity per research se disponibile\n9. Salvare configurazione ruoli in config file tramite IPC\n10. Implementare pulsante 'Reset to Defaults' per configurazione",
+            "status": "pending",
+            "testStrategy": "Test E2E completo: inserimento API key -> test -> salvataggio keychain -> ricarica pagina -> verifica key mascherata. Test assegnazione ruoli. Test reset configurazione.",
+            "tags": [
+              "frontend",
+              "ai-config",
+              "phase-1-config",
+              "svelte"
+            ]
+          }
+        ],
+        "tags": [
+          "frontend",
+          "ai-config",
+          "phase-1-config",
+          "svelte"
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Python Sidecar con FastAPI e Lifecycle Management",
+        "description": "Implementare il sistema di sidecar Python con FastAPI che ospiterà il Cagent engine, includendo gestione del ciclo di vita del processo dal main Electron.",
+        "details": "1. Creare struttura `python/`:\n   - `python/main.py` - FastAPI server con SSE support\n   - `python/requirements.txt` - dipendenze (fastapi, uvicorn, sse-starlette, cagent)\n   - `python/agents/` - implementazioni agenti\n   - `python/tools/` - wrapper MCP tools\n2. Implementare FastAPI server:\n```python\nfrom fastapi import FastAPI, Request\nfrom sse_starlette.sse import EventSourceResponse\nimport asyncio\n\napp = FastAPI()\n\n@app.get(\"/health\")\nasync def health():\n    return {\"status\": \"ok\"}\n\n@app.post(\"/agent/execute\")\nasync def execute_agent(request: Request):\n    data = await request.json()\n    # Esegui agente con Cagent\n    return {\"result\": \"...\"}\n\n@app.get(\"/agent/stream\")\nasync def stream_events(request: Request):\n    async def event_generator():\n        while True:\n            yield {\"data\": \"...\"}\n            await asyncio.sleep(0.1)\n    return EventSourceResponse(event_generator())\n```\n3. Creare `electron/sidecar-manager.ts`:\n   - spawn processo Python con uvicorn\n   - health check polling\n   - graceful shutdown su app quit\n   - restart automatico su crash\n4. Bundling: includere Python embedded o usare pyinstaller per distribuzione\n5. Creare `src/lib/services/cagent-client.ts` per HTTP client verso sidecar",
+        "testStrategy": "Test unitari per FastAPI endpoints. Test di integrazione per verificare spawn/shutdown del sidecar. Test health check polling. Test SSE streaming.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Creazione struttura directory python/ con requirements.txt",
+            "description": "Creare la struttura completa della directory python/ con tutti i file e cartelle necessari per il sidecar FastAPI, incluso il file requirements.txt con tutte le dipendenze Python richieste.",
+            "dependencies": [],
+            "details": "Creare la seguente struttura:\n- `python/main.py` - Entry point vuoto iniziale per FastAPI server\n- `python/requirements.txt` - Dipendenze: fastapi>=0.104.0, uvicorn[standard]>=0.24.0, sse-starlette>=1.8.0, pydantic>=2.5.0, python-dotenv>=1.0.0\n- `python/agents/` - Directory per implementazioni agenti (con __init__.py)\n- `python/agents/__init__.py` - Init package agenti\n- `python/tools/` - Directory per wrapper MCP tools (con __init__.py)\n- `python/tools/__init__.py` - Init package tools\n- `python/config.py` - Configurazione settings con Pydantic BaseSettings\n\nAssicurarsi che le versioni delle dipendenze siano compatibili tra loro e che il requirements.txt includa anche dipendenze di sviluppo come pytest.",
+            "status": "pending",
+            "testStrategy": "Verificare che tutte le directory e file esistano. Testare `pip install -r requirements.txt` in un virtual environment pulito per confermare che tutte le dipendenze si installino correttamente senza conflitti.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione FastAPI server con endpoints health e execute",
+            "description": "Implementare il server FastAPI base in python/main.py con l'endpoint /health per health check e l'endpoint /agent/execute per esecuzione sincrona degli agenti.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementare in `python/main.py`:\n1. Inizializzazione FastAPI app con metadata (title, version, description)\n2. Configurazione CORS per permettere richieste da Electron (origins: http://localhost:*)\n3. Endpoint GET `/health` che ritorna {\"status\": \"ok\", \"timestamp\": datetime, \"version\": \"1.0.0\"}\n4. Endpoint POST `/agent/execute` che:\n   - Accetta JSON body con {\"agent_type\": str, \"input\": dict, \"config\": dict}\n   - Valida input con Pydantic models\n   - Placeholder per esecuzione agente (da integrare con Cagent)\n   - Ritorna {\"result\": any, \"execution_time\": float, \"agent_type\": str}\n5. Error handling globale con HTTPException e custom exception handlers\n6. Logging configurato con uvicorn logger\n7. Script di avvio: `if __name__ == \"__main__\": uvicorn.run(app, host=\"127.0.0.1\", port=8765)`",
+            "status": "pending",
+            "testStrategy": "Test unitari con TestClient di FastAPI per verificare: risposta corretta /health, validazione input /agent/execute, gestione errori. Test manuale avviando server e chiamando endpoints con curl/httpie.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Implementazione SSE streaming per eventi agenti",
+            "description": "Implementare l'endpoint SSE (Server-Sent Events) /agent/stream per lo streaming real-time degli eventi durante l'esecuzione degli agenti verso il frontend Electron.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implementare streaming SSE:\n1. Creare `python/streaming.py` con:\n   - Classe `EventStream` per gestire la coda eventi\n   - Metodi `emit(event_type, data)` e `close()`\n   - Supporto per event types: 'thinking', 'tool_call', 'tool_result', 'message', 'error', 'done'\n2. Endpoint GET `/agent/stream` in main.py:\n   - Usa sse-starlette EventSourceResponse\n   - Accetta query params: session_id, agent_type\n   - Generator asincrono che yielda eventi SSE formattati\n   - Heartbeat ogni 15 secondi per mantenere connessione viva\n   - Cleanup risorse su disconnessione client\n3. Endpoint POST `/agent/stream/start` per iniziare esecuzione con streaming:\n   - Crea session_id unico\n   - Avvia task asincrono per esecuzione agente\n   - Ritorna session_id per connettersi a /agent/stream\n4. Formato eventi: {\"event\": str, \"data\": json, \"id\": str, \"retry\": int}",
+            "status": "pending",
+            "testStrategy": "Test con client SSE (httpx-sse o aiohttp) per verificare ricezione eventi. Test disconnessione e riconnessione. Test heartbeat. Test multipli client contemporanei sulla stessa sessione.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Creazione sidecar-manager.ts in Electron per spawn/kill processo",
+            "description": "Creare il modulo TypeScript electron/sidecar-manager.ts per gestire lo spawn e la terminazione del processo Python sidecar dal main process di Electron.",
+            "dependencies": [
+              2
+            ],
+            "details": "Creare `electron/sidecar-manager.ts`:\n1. Classe `SidecarManager` con pattern Singleton:\n   - Proprietà private: process (ChildProcess | null), port (number), isRunning (boolean)\n   - Metodo `async start()`: spawna processo Python con uvicorn\n   - Metodo `async stop()`: termina processo gracefully\n   - Metodo `getPort()`: ritorna porta del server\n2. Configurazione spawn:\n   - Determinare path Python (bundled o sistema)\n   - Args: ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', PORT]\n   - cwd: path alla directory python/\n   - env: merge process.env con variabili custom\n   - stdio: ['pipe', 'pipe', 'pipe'] per catturare output\n3. Gestione stdout/stderr:\n   - Logging output Python in console Electron\n   - Parsing per rilevare 'Uvicorn running' come segnale ready\n4. Event emitter per stati: 'starting', 'ready', 'error', 'stopped'\n5. Esportare istanza singleton e funzioni helper",
+            "status": "pending",
+            "testStrategy": "Test spawn processo e verifica che si avvii. Test kill processo e verifica terminazione. Test parsing output per rilevamento stato ready. Mock child_process per unit test isolati.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Implementazione health check polling e auto-restart",
+            "description": "Implementare il sistema di health check polling periodico nel sidecar-manager con logica di auto-restart automatico in caso di crash o mancata risposta del processo Python.",
+            "dependencies": [
+              4
+            ],
+            "details": "Estendere `SidecarManager` con health monitoring:\n1. Metodo privato `async healthCheck()`: chiama GET /health con timeout 5s\n2. Metodo `startHealthPolling(intervalMs = 10000)`:\n   - setInterval per polling periodico\n   - Contatore failedChecks per tracking fallimenti consecutivi\n   - Dopo 3 fallimenti consecutivi, triggera restart\n3. Metodo `async restart()`: stop() seguito da start() con backoff esponenziale:\n   - Prima retry: immediato\n   - Seconda retry: 1 secondo\n   - Terza retry: 5 secondi\n   - Quarta+ retry: 30 secondi\n   - Max 5 tentativi, poi emit 'fatal-error'\n4. Gestione evento 'exit' del processo:\n   - Se exit code !== 0, triggera restart automatico\n   - Log dettagliato del motivo crash\n5. Metodo `stopHealthPolling()` per cleanup\n6. Statistiche: uptime, restartCount, lastHealthCheck\n7. Integrazione con IPC per notificare renderer di stati sidecar",
+            "status": "pending",
+            "testStrategy": "Test health check con server mock che risponde OK. Test fallimento health check simulando timeout. Test auto-restart contando numero di restart. Test backoff esponenziale timing. Test max retry limit.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Gestione graceful shutdown su app quit",
+            "description": "Implementare la gestione del graceful shutdown del sidecar Python quando l'applicazione Electron viene chiusa, assicurando la corretta terminazione di tutte le risorse.",
+            "dependencies": [
+              5
+            ],
+            "details": "Implementare shutdown graceful:\n1. In `electron/main.ts`, registrare handler per eventi app lifecycle:\n   - app.on('before-quit'): inizia shutdown sidecar\n   - app.on('will-quit'): attende completamento shutdown\n   - app.on('window-all-closed'): gestione per macOS\n2. Metodo `SidecarManager.gracefulShutdown(timeoutMs = 5000)`:\n   - Invia POST /shutdown al server Python (implementare endpoint)\n   - Attende risposta o timeout\n   - Se timeout, invia SIGTERM al processo\n   - Attende terminazione con timeout secondario\n   - Se ancora attivo, SIGKILL forzato\n3. Endpoint Python POST `/shutdown`:\n   - Completa richieste in-flight\n   - Chiude connessioni SSE aperte\n   - Cleanup risorse (file handles, connections)\n   - Ritorna 200 OK\n   - Chiama sys.exit(0) dopo risposta\n4. Flag isShuttingDown per prevenire restart durante shutdown\n5. Promise per attendere completamento shutdown in app quit",
+            "status": "pending",
+            "testStrategy": "Test shutdown graceful verificando che processo termini con exit code 0. Test timeout fallback a SIGTERM. Test che richieste in-flight completino prima di shutdown. Test che app Electron attenda correttamente terminazione sidecar.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Bundling strategy con PyInstaller per distribuzione",
+            "description": "Implementare la strategia di bundling del sidecar Python usando PyInstaller per creare un eseguibile standalone da distribuire insieme all'applicazione Electron.",
+            "dependencies": [
+              3,
+              6
+            ],
+            "details": "Configurare PyInstaller bundling:\n1. Creare `python/pyinstaller.spec`:\n   - name: 'trae-sidecar'\n   - onefile: False (onedir per startup più veloce)\n   - Includere tutti i moduli in agents/ e tools/\n   - Hidden imports per dipendenze dinamiche FastAPI/Pydantic\n   - Excludes: test files, __pycache__\n2. Script `scripts/build-sidecar.js`:\n   - Esegue PyInstaller con spec file\n   - Copia output in `resources/sidecar/` per electron-builder\n   - Cross-platform: genera per OS corrente\n3. Configurare electron-builder in package.json:\n   - extraResources: includere sidecar bundle\n   - asarUnpack: escludere sidecar da asar\n4. Modificare SidecarManager:\n   - Detect ambiente (dev vs production)\n   - Dev: usa python interpreter + uvicorn\n   - Prod: usa eseguibile PyInstaller da app.getPath('resources')\n5. Testing distribuzione:\n   - Verificare che bundle funzioni su macOS/Windows/Linux\n   - Verificare permessi esecuzione\n   - Verificare path resolution in produzione",
+            "status": "pending",
+            "testStrategy": "Test build PyInstaller su CI per ogni piattaforma. Test che eseguibile bundle si avvii correttamente. Test che health check funzioni con bundle. Test distribuzione completa app Electron con sidecar incluso su macOS, Windows e Linux.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-2-core",
+              "python",
+              "fastapi"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "phase-2-core",
+          "python",
+          "fastapi"
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Generazione Dinamica cagent.yaml e Configurazione Agenti",
+        "description": "Implementare il sistema che genera dinamicamente il file cagent.yaml basandosi sulle configurazioni utente dei provider LLM e ruoli agenti.",
+        "details": "1. Creare `src/lib/services/cagent-config.ts`:\n```typescript\ninterface AgentRole {\n  name: string;\n  model: string;\n  provider: string;\n  systemPrompt: string;\n  tools: string[];\n}\n\ninterface CagentConfig {\n  version: string;\n  agents: AgentRole[];\n  rag: { vectorStore: string; embeddingModel: string; };\n  mcp: { servers: string[]; };\n}\n\nexport async function generateCagentYaml(config: CagentConfig): Promise<string> {\n  // Genera YAML dalla configurazione\n}\n```\n2. Creare IPC handler per scrivere cagent.yaml nel path corretto\n3. Implementare UI in `src/routes/settings/agents/+page.svelte` per:\n   - Assegnare modelli a ruoli (Orchestrator, Extraction, Editing, Captioning, Scheduling)\n   - Configurare system prompts per agente\n   - Abilitare/disabilitare tools per agente\n4. Creare template YAML di default in `resources/cagent-template.yaml`\n5. Validazione configurazione prima di salvataggio\n6. Hot-reload: notificare sidecar Python di ricaricare config",
+        "testStrategy": "Test unitari per generazione YAML corretta. Test di validazione configurazione. Test che il sidecar riceva correttamente le notifiche di reload.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definizione TypeScript Interfaces per CagentConfig e AgentRole",
+            "description": "Creare le interfacce TypeScript complete per la configurazione del sistema cagent, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig con tutti i tipi necessari per la validazione statica.",
+            "dependencies": [],
+            "details": "Creare il file `src/lib/types/cagent.ts` con le seguenti interfacce:\n\n```typescript\nexport interface AgentRole {\n  name: 'orchestrator' | 'extraction' | 'editing' | 'captioning' | 'scheduling';\n  model: string;\n  provider: 'anthropic' | 'openai' | 'google' | 'ollama' | 'openrouter';\n  systemPrompt: string;\n  tools: string[];\n  enabled: boolean;\n  temperature?: number;\n  maxTokens?: number;\n}\n\nexport interface RAGConfig {\n  vectorStore: 'chroma' | 'qdrant' | 'pinecone';\n  embeddingModel: string;\n  chunkSize?: number;\n  chunkOverlap?: number;\n}\n\nexport interface MCPServerConfig {\n  name: string;\n  command: string;\n  args: string[];\n  env: Record<string, string>;\n}\n\nexport interface CagentConfig {\n  version: string;\n  agents: AgentRole[];\n  rag: RAGConfig;\n  mcp: { servers: MCPServerConfig[] };\n}\n```\n\nIncludere anche type guards e funzioni di validazione per runtime checks.",
+            "status": "pending",
+            "testStrategy": "Test unitari per type guards e funzioni di validazione. Verificare che i tipi siano esportati correttamente e utilizzabili in altri moduli. Test di compilazione TypeScript per verificare correttezza tipi.",
+            "tags": [
+              "python-backend",
+              "ai-config",
+              "phase-1-config",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Creazione cagent-config.ts con Funzione generateCagentYaml",
+            "description": "Implementare il servizio principale per la generazione del file YAML cagent, includendo serializzazione, template di default e gestione errori.",
+            "dependencies": [
+              1
+            ],
+            "details": "Creare `src/lib/services/cagent-config.ts`:\n\n1. Installare dipendenza: `npm install yaml` per serializzazione YAML\n\n2. Implementare funzioni:\n```typescript\nimport { stringify } from 'yaml';\nimport type { CagentConfig, AgentRole } from '$lib/types/cagent';\n\nexport const DEFAULT_AGENT_ROLES: AgentRole[] = [\n  { name: 'orchestrator', model: 'claude-3-5-sonnet', provider: 'anthropic', ... },\n  { name: 'extraction', model: 'gpt-4o', provider: 'openai', ... },\n  // altri ruoli default\n];\n\nexport function generateCagentYaml(config: CagentConfig): string {\n  // Validazione config\n  validateConfig(config);\n  // Generazione YAML con commenti\n  return stringify(config, { indent: 2, lineWidth: 120 });\n}\n\nexport function parseYamlToConfig(yamlContent: string): CagentConfig { ... }\nexport function mergeWithDefaults(partial: Partial<CagentConfig>): CagentConfig { ... }\n```\n\n3. Creare `resources/cagent-template.yaml` con configurazione di esempio commentata.",
+            "status": "pending",
+            "testStrategy": "Test unitari per generateCagentYaml con varie configurazioni. Test round-trip YAML->Config->YAML. Test merge con defaults. Test gestione casi limite (config vuota, valori mancanti).",
+            "tags": [
+              "python-backend",
+              "ai-config",
+              "phase-1-config",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Implementazione UI Settings/Agents per Configurazione Ruoli e System Prompts",
+            "description": "Creare l'interfaccia utente Svelte per la configurazione degli agenti, permettendo di assegnare modelli, modificare system prompts e gestire tools per ogni ruolo.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Creare `src/routes/settings/agents/+page.svelte`:\n\n1. Struttura componenti:\n- `AgentRoleCard.svelte` - Card per ogni ruolo agente con form di configurazione\n- `SystemPromptEditor.svelte` - Editor monaco/codemirror per system prompts\n- `ToolsSelector.svelte` - Checkbox list per abilitare/disabilitare tools\n- `ModelSelector.svelte` - Dropdown con modelli disponibili per provider selezionato\n\n2. Implementare store Svelte 5 con runes:\n```svelte\n<script>\n  import { agentConfigStore } from '$lib/stores/agent-config.svelte';\n  let { agents } = $derived(agentConfigStore);\n</script>\n```\n\n3. Features UI:\n- Tabs per ogni ruolo (Orchestrator, Extraction, Editing, Captioning, Scheduling)\n- Preview YAML generato in tempo reale\n- Bottone \"Ripristina Defaults\" per ogni ruolo\n- Validazione inline con messaggi di errore\n- Salvataggio con conferma e indicatore di stato",
+            "status": "pending",
+            "testStrategy": "Test componenti con Svelte Testing Library. Test interazioni utente (selezione modelli, modifica prompts). Test validazione form. Test integrazione con store. Screenshot testing per UI consistency.",
+            "tags": [
+              "python-backend",
+              "ai-config",
+              "phase-1-config",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "IPC Handler per Scrittura File YAML e Validazione Schema",
+            "description": "Implementare gli handler IPC Electron per scrivere il file cagent.yaml nel filesystem, con validazione schema JSON/YAML e gestione errori filesystem.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Creare `src/lib/ipc/cagent-handlers.ts`:\n```typescript\nimport { ipcMain } from 'electron';\nimport { writeFile, readFile } from 'fs/promises';\nimport { join } from 'path';\nimport Ajv from 'ajv';\n\nconst CAGENT_SCHEMA = { /* JSON Schema per validazione */ };\n\nipcMain.handle('cagent:save', async (event, config: CagentConfig) => {\n  // Validazione con AJV\n  const ajv = new Ajv();\n  const validate = ajv.compile(CAGENT_SCHEMA);\n  if (!validate(config)) throw new Error(validate.errors);\n  \n  // Genera YAML e scrivi\n  const yaml = generateCagentYaml(config);\n  const configPath = join(app.getPath('userData'), 'cagent.yaml');\n  await writeFile(configPath, yaml, 'utf-8');\n  return { success: true, path: configPath };\n});\n\nipcMain.handle('cagent:load', async () => { ... });\nipcMain.handle('cagent:validate', async (event, yaml: string) => { ... });\n```\n\n2. Creare JSON Schema per validazione rigorosa in `resources/cagent-schema.json`\n\n3. Gestire backup automatico prima di sovrascrivere config esistente",
+            "status": "pending",
+            "testStrategy": "Test unitari per validazione schema con casi validi e invalidi. Test scrittura/lettura filesystem con mock. Test gestione errori (permessi, disco pieno). Test backup automatico.",
+            "tags": [
+              "python-backend",
+              "ai-config",
+              "phase-1-config",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Implementazione Hot-Reload Notifica al Sidecar Python",
+            "description": "Implementare il meccanismo di notifica al sidecar Python quando la configurazione cagent viene modificata, permettendo il reload dinamico senza riavvio.",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Estendere comunicazione sidecar in `src/lib/services/sidecar-manager.ts`:\n```typescript\nexport class SidecarManager {\n  private ws: WebSocket | null = null;\n  \n  async notifyConfigReload(): Promise<boolean> {\n    if (!this.ws) throw new Error('Sidecar non connesso');\n    \n    return new Promise((resolve) => {\n      this.ws.send(JSON.stringify({\n        type: 'config:reload',\n        path: this.getConfigPath()\n      }));\n      \n      // Attendi ACK dal sidecar\n      const handler = (msg) => {\n        if (msg.type === 'config:reload:ack') resolve(true);\n      };\n      this.ws.once('message', handler);\n      setTimeout(() => resolve(false), 5000); // timeout\n    });\n  }\n}\n```\n\n2. Implementare lato Python in `python/sidecar/config_watcher.py`:\n```python\nasync def handle_config_reload(self, path: str):\n    new_config = load_cagent_yaml(path)\n    await self.agent_manager.reconfigure(new_config)\n    return {'type': 'config:reload:ack', 'success': True}\n```\n\n3. Aggiungere file watcher come fallback per modifiche manuali al file",
+            "status": "pending",
+            "testStrategy": "Test comunicazione WebSocket con mock sidecar. Test timeout e retry logic. Test file watcher con modifiche filesystem. Test E2E: modifica UI -> salvataggio -> notifica -> reload Python.",
+            "tags": [
+              "python-backend",
+              "ai-config",
+              "phase-1-config",
+              "python",
+              "cagent"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "ai-config",
+          "phase-1-config",
+          "python",
+          "cagent"
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Agente Estrazione con osxphotos Integration",
+        "description": "Implementare l'agente di estrazione foto che utilizza osxphotos per accedere alla libreria Apple Photos locale, con preservazione EXIF e suggerimenti AI per tag.",
+        "details": "1. Installare osxphotos in ambiente Python: `pip install osxphotos`\n2. Creare `python/agents/extraction_agent.py`:\n```python\nimport osxphotos\nfrom typing import List, Dict\n\nclass ExtractionAgent:\n    def __init__(self, photos_db_path: str = None):\n        self.photosdb = osxphotos.PhotosDB(dbfile=photos_db_path)\n    \n    async def list_albums(self) -> List[str]:\n        return [a.title for a in self.photosdb.album_info]\n    \n    async def extract_photos(\n        self, \n        album_name: str = None,\n        date_range: tuple = None,\n        dest_path: str = None\n    ) -> List[Dict]:\n        photos = self.photosdb.photos(albums=[album_name] if album_name else None)\n        results = []\n        for photo in photos:\n            photo.export(dest_path, exif=True)\n            results.append({\n                'uuid': photo.uuid,\n                'filename': photo.original_filename,\n                'exif': photo.exif_info,\n                'labels': photo.labels,\n                'faces': [f.name for f in photo.face_info]\n            })\n        return results\n```\n3. Creare UI in `src/routes/extract/+page.svelte`:\n   - Album browser con tree view\n   - Filtri per data, tipo media, persone\n   - Griglia preview foto con selezione multipla\n   - Progress bar durante estrazione\n4. Endpoint FastAPI `/agent/extract` per eseguire estrazione\n5. Integrazione con RAG per suggerimenti tag automatici",
+        "testStrategy": "Test con mock PhotosDB per evitare dipendenza da libreria reale. Test UI per selezione album e filtri. Test E2E per flusso estrazione completo.",
+        "priority": "high",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Setup osxphotos in ambiente Python e test accesso Photos library",
+            "description": "Configurare l'ambiente Python con osxphotos, gestire i permessi macOS per accesso alla libreria Photos, e verificare il corretto funzionamento con test di connessione.",
+            "dependencies": [],
+            "details": "1. Aggiungere osxphotos a requirements.txt o pyproject.toml del progetto Python\n2. Installare con `pip install osxphotos` nell'ambiente virtuale del sidecar\n3. Creare script di test `python/tests/test_osxphotos_access.py` per verificare:\n   - Accesso al database Photos (~/Pictures/Photos Library.photoslibrary)\n   - Gestione errore se permessi Full Disk Access non concessi\n   - Fallback graceful se libreria Photos non esiste\n4. Documentare in README i requisiti macOS:\n   - System Preferences > Privacy & Security > Full Disk Access\n   - Aggiungere Terminal/IDE alla lista\n5. Creare utility `python/utils/photos_permissions.py` per verificare permessi runtime\n6. Gestire caso edge: multiple Photos libraries (System Photo Library vs altre)",
+            "status": "pending",
+            "testStrategy": "Test con mock PhotosDB per CI/CD. Test manuale su macOS reale per verificare permessi. Test che verifica messaggi errore chiari quando permessi mancanti.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione ExtractionAgent class con metodi list_albums e extract_photos",
+            "description": "Creare la classe ExtractionAgent completa con tutti i metodi per listare album, filtrare foto, e gestire l'estrazione con opzioni avanzate.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `python/agents/extraction_agent.py` con struttura:\n```python\nimport osxphotos\nfrom typing import List, Dict, Optional, AsyncIterator\nfrom datetime import datetime\nfrom pathlib import Path\n\nclass ExtractionAgent:\n    def __init__(self, photos_db_path: Optional[str] = None):\n        self.photosdb = osxphotos.PhotosDB(dbfile=photos_db_path)\n    \n    async def list_albums(self) -> List[Dict]:\n        # Ritorna struttura gerarchica con folder/album\n        \n    async def get_album_photos_count(self, album_name: str) -> int:\n        # Per preview senza caricare tutte le foto\n        \n    async def extract_photos(\n        self,\n        album_name: Optional[str] = None,\n        date_range: Optional[tuple[datetime, datetime]] = None,\n        media_types: List[str] = ['photo'],\n        people: Optional[List[str]] = None,\n        dest_path: str = './exports',\n        preserve_exif: bool = True\n    ) -> AsyncIterator[Dict]:\n        # Yield progressivo per streaming\n```\n2. Implementare filtri per: keywords, favorite, hidden, edited\n3. Supportare export incrementale (skip se già esportato)\n4. Gestire video oltre a foto",
+            "status": "pending",
+            "testStrategy": "Test unitari con mock osxphotos.PhotosDB. Test filtri con fixture dati. Test async iterator per streaming corretto.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Creazione endpoint FastAPI /agent/extract con progress streaming",
+            "description": "Implementare l'endpoint REST per l'estrazione con supporto Server-Sent Events (SSE) per progress tracking real-time.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Creare `python/api/routes/extraction.py`:\n```python\nfrom fastapi import APIRouter, BackgroundTasks\nfrom fastapi.responses import StreamingResponse\nfrom sse_starlette.sse import EventSourceResponse\nimport asyncio\n\nrouter = APIRouter(prefix='/agent/extract', tags=['extraction'])\n\n@router.get('/albums')\nasync def list_albums():\n    # Ritorna lista album con conteggi\n\n@router.post('/start')\nasync def start_extraction(config: ExtractionConfig):\n    # Avvia estrazione, ritorna job_id\n\n@router.get('/progress/{job_id}')\nasync def extraction_progress(job_id: str):\n    # SSE stream con progress updates\n    async def event_generator():\n        while not job_complete:\n            yield {'event': 'progress', 'data': json.dumps(progress)}\n    return EventSourceResponse(event_generator())\n\n@router.get('/preview/{album_name}')\nasync def preview_photos(album_name: str, limit: int = 50):\n    # Ritorna thumbnail URLs per preview\n```\n2. Implementare job queue con asyncio per estrazione background\n3. Gestire cancellazione job in corso",
+            "status": "pending",
+            "testStrategy": "Test endpoint con TestClient FastAPI. Test SSE streaming con mock extraction. Test cancellation e cleanup.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "UI extract page con album browser tree view",
+            "description": "Creare la pagina Svelte per l'estrazione con navigazione gerarchica degli album usando tree view component.",
+            "dependencies": [
+              3
+            ],
+            "details": "1. Creare `src/routes/extract/+page.svelte` con layout:\n   - Sidebar sinistra: tree view album\n   - Area centrale: preview foto\n   - Sidebar destra: filtri e opzioni\n2. Implementare `src/lib/components/custom/AlbumTreeView.svelte`:\n```svelte\n<script lang=\"ts\">\n  import { TreeView } from '$lib/components/ui/tree-view';\n  import type { Album } from '$lib/types/photos';\n  \n  export let albums: Album[] = [];\n  export let selectedAlbum: Album | null = null;\n  \n  // Struttura gerarchica: Folders > Albums\n</script>\n```\n3. Aggiungere icone per tipo album (Smart Album, Folder, Regular)\n4. Mostrare conteggio foto per ogni album\n5. Supportare selezione multipla album\n6. Implementare ricerca/filtro album per nome\n7. Store Svelte 5 `$lib/stores/extraction.svelte.ts` per stato estrazione",
+            "status": "pending",
+            "testStrategy": "Test componente TreeView con mock data. Test navigazione e selezione. Test integrazione con store.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Implementazione griglia preview con selezione multipla e filtri",
+            "description": "Creare la griglia foto con lazy loading, selezione multipla, e pannello filtri avanzati per data, tipo media, e persone.",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Creare `src/lib/components/custom/PhotoGrid.svelte`:\n   - Virtual scrolling per performance con molte foto\n   - Thumbnail lazy loading con placeholder blur\n   - Selezione multipla con Shift+Click per range\n   - Select all / deselect all\n2. Implementare `src/lib/components/custom/ExtractionFilters.svelte`:\n   - Date range picker (da/a)\n   - Media type checkboxes (foto, video, screenshot, live photo)\n   - People/faces dropdown multi-select\n   - Keywords/tags filter\n   - Favorite only toggle\n3. Creare `src/lib/components/custom/ExtractionProgress.svelte`:\n   - Progress bar con percentuale\n   - Contatore foto estratte / totale\n   - Foto corrente in elaborazione\n   - Tempo stimato rimanente\n   - Pulsante annulla\n4. Connettere SSE endpoint per updates real-time\n5. Toast notifiche per completamento/errori",
+            "status": "pending",
+            "testStrategy": "Test virtual scrolling con large dataset mock. Test selezione multipla keyboard shortcuts. Test SSE integration con mock EventSource.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Integrazione preservazione EXIF e metadata faces/labels",
+            "description": "Implementare la preservazione completa dei metadati EXIF durante l'export e l'estrazione dei metadata Apple Photos (faces, labels, keywords) per suggerimenti AI.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Estendere ExtractionAgent per metadata completo:\n```python\nasync def extract_with_metadata(self, photo) -> Dict:\n    return {\n        'uuid': photo.uuid,\n        'filename': photo.original_filename,\n        'path': str(photo.path),\n        'exif': {\n            'camera': photo.exif_info.get('camera_model'),\n            'lens': photo.exif_info.get('lens_model'),\n            'focal_length': photo.exif_info.get('focal_length'),\n            'aperture': photo.exif_info.get('aperture'),\n            'iso': photo.exif_info.get('iso'),\n            'date_taken': photo.date.isoformat(),\n            'gps': photo.location if photo.location else None,\n        },\n        'apple_metadata': {\n            'faces': [{'name': f.name, 'rect': f.face_rect} for f in photo.face_info],\n            'labels': photo.labels,  # ML-generated da Apple\n            'keywords': photo.keywords,\n            'persons': photo.persons,\n            'score': photo.score,  # Aesthetic score\n        }\n    }\n```\n2. Opzione export: preserva EXIF originale vs. strip\n3. Creare `python/services/metadata_indexer.py` per indicizzare in RAG\n4. Generare suggerimenti tag basati su labels Apple + faces\n5. Salvare metadata in sidecar JSON per ogni foto esportata",
+            "status": "pending",
+            "testStrategy": "Test EXIF preservation con exiftool verification. Test estrazione corretta faces/labels con mock data. Test indexing RAG per suggerimenti.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-2-core",
+              "python",
+              "osxphotos"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "media-processing",
+          "phase-2-core",
+          "python",
+          "osxphotos"
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Integrazione Cloudinary MCP per Editing Agent",
+        "description": "Implementare l'agente di editing che utilizza i server MCP ufficiali di Cloudinary per trasformazioni media avanzate come background removal, upscale e auto-crop.",
+        "details": "1. Configurare Cloudinary MCP in `.mcp.json`:\n```json\n{\n  \"mcpServers\": {\n    \"cloudinary\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@cloudinary/mcp-server\"],\n      \"env\": {\n        \"CLOUDINARY_URL\": \"cloudinary://...\"\n      }\n    }\n  }\n}\n```\n2. Creare `python/agents/editing_agent.py`:\n```python\nfrom cagent import Agent, Tool\n\nclass EditingAgent(Agent):\n    tools = [\n        Tool('cloudinary_upload', 'Carica media su Cloudinary'),\n        Tool('cloudinary_transform', 'Applica trasformazioni'),\n        Tool('cloudinary_remove_bg', 'Rimuovi sfondo'),\n        Tool('cloudinary_upscale', 'Upscale immagine'),\n    ]\n    \n    async def process_media(self, media_path: str, transformations: List[str]):\n        # Esegui trasformazioni via MCP\n        pass\n```\n3. Creare UI in `src/routes/edit/+page.svelte`:\n   - Preview prima/dopo trasformazione\n   - Pannello trasformazioni con preset\n   - Slider per parametri (qualità, dimensioni)\n   - Batch processing per multiple immagini\n4. Implementare cache locale per preview\n5. Gestione quota Cloudinary e fallback",
+        "testStrategy": "Test con mock MCP server per Cloudinary. Test UI per selezione trasformazioni. Test batch processing con multiple immagini.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurazione Cloudinary MCP Server in .mcp.json",
+            "description": "Aggiungere la configurazione del server MCP Cloudinary al file .mcp.json esistente, includendo il comando npx per il package @cloudinary/mcp-server e le variabili d'ambiente necessarie per l'autenticazione.",
+            "dependencies": [],
+            "details": "Modificare il file .mcp.json per aggiungere l'entry 'cloudinary' nell'oggetto mcpServers. Configurare: 1) command: 'npx' con args ['-y', '@cloudinary/mcp-server'], 2) env con CLOUDINARY_URL nel formato cloudinary://API_KEY:API_SECRET@CLOUD_NAME, 3) Aggiornare .env.example con placeholder CLOUDINARY_URL. Verificare che il server MCP si avvii correttamente con la configurazione.",
+            "status": "pending",
+            "testStrategy": "Test manuale di connessione al server MCP Cloudinary. Verificare che il server risponda ai comandi base via protocollo MCP. Test con credenziali mock per validare il parsing della CLOUDINARY_URL.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "cloudinary"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione EditingAgent Python con Wrapper MCP Tools",
+            "description": "Creare l'agente di editing in Python che comunica con il server MCP Cloudinary per eseguire trasformazioni media come upload, remove background, upscale e auto-crop.",
+            "dependencies": [
+              1
+            ],
+            "details": "Creare la directory python/agents/ se non esiste. Implementare editing_agent.py con: 1) Classe EditingAgent che estende da cagent base, 2) Metodi wrapper per ogni tool MCP: cloudinary_upload, cloudinary_transform, cloudinary_remove_bg, cloudinary_upscale, cloudinary_auto_crop, 3) Metodo async process_media() che orchestra le trasformazioni, 4) Gestione errori MCP con retry logic, 5) Logging delle operazioni per debugging. Creare anche __init__.py per il package agents.",
+            "status": "pending",
+            "testStrategy": "Unit test con mock del server MCP Cloudinary per simulare risposte. Test delle singole funzioni wrapper. Test di integrazione con mock server per verificare il flusso completo di trasformazione.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "cloudinary"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "UI Edit Page con Preview Before/After e Pannello Trasformazioni",
+            "description": "Creare la pagina Svelte per l'editing media con anteprima side-by-side prima/dopo trasformazione, pannello di selezione trasformazioni con preset predefiniti e slider per parametri configurabili.",
+            "dependencies": [
+              2
+            ],
+            "details": "Creare src/routes/edit/+page.svelte con: 1) Layout split-view per preview before/after con possibilità di slider comparison, 2) Pannello laterale con lista trasformazioni disponibili (Remove BG, Upscale 2x/4x, Auto-Crop, Enhance), 3) Preset button per combinazioni comuni, 4) Slider/input per parametri: qualità output (1-100), dimensioni (width/height), formato output (jpg/png/webp), 5) Bottoni Apply e Reset, 6) Loading state durante elaborazione. Creare store Svelte in src/lib/stores/editing.svelte.ts per stato UI.",
+            "status": "pending",
+            "testStrategy": "Test componente con @testing-library/svelte per verificare rendering UI. Test interazioni slider e selezione trasformazioni. Test stati loading/error/success. Test responsive layout.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "cloudinary"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Implementazione Batch Processing con Progress Tracking",
+            "description": "Estendere la pagina di editing per supportare l'elaborazione batch di multiple immagini simultaneamente, con barra di progresso globale e stato individuale per ogni file.",
+            "dependencies": [
+              3
+            ],
+            "details": "Aggiungere a src/routes/edit/+page.svelte: 1) Componente FileQueue per visualizzare lista file selezionati con stato individuale (pending/processing/done/error), 2) Progress bar globale con conteggio (3/10 completati), 3) Controlli batch: Start All, Pause, Cancel, 4) Elaborazione parallela configurabile (max 3 concurrent), 5) Persistenza coda in localStorage per recovery, 6) Export risultati in ZIP. Creare src/lib/services/batch-processor.ts per logica di orchestrazione con EventEmitter per progress updates.",
+            "status": "pending",
+            "testStrategy": "Test batch processor con mock async operations. Test UI progress updates via store subscriptions. Test gestione errori parziali (alcuni file falliscono). Test pause/resume funzionalità.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "cloudinary"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Cache Locale Preview e Gestione Quota Cloudinary",
+            "description": "Implementare sistema di cache locale per le preview trasformate e monitoraggio della quota Cloudinary con fallback locale quando i limiti sono raggiunti.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Creare src/lib/services/preview-cache.ts con: 1) Cache in-memory con LRU eviction (max 50MB), 2) Persistenza cache su disco via Electron fs API in userData/cache/, 3) Hash-based keys per identificare trasformazioni uniche. Creare src/lib/services/cloudinary-quota.ts con: 1) Tracking chiamate API con localStorage, 2) Stima quota rimanente basata su limiti piano, 3) Warning UI quando quota <20%, 4) Fallback a trasformazioni locali (Sharp/Jimp) per operazioni base quando quota esaurita. Aggiungere indicatore quota in UI edit page.",
+            "status": "pending",
+            "testStrategy": "Test cache hit/miss con operazioni ripetute. Test eviction policy LRU. Test quota tracking con mock API calls. Test fallback locale con Cloudinary mock che restituisce quota exceeded.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "cloudinary"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "media-processing",
+          "phase-3-agents",
+          "python",
+          "cloudinary"
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Native RAG con SQLite e Captioning Agent",
+        "description": "Implementare il sistema RAG nativo di Cagent con storage SQLite locale per knowledge base del brand, e l'agente di captioning che genera descrizioni contestuali.",
+        "details": "1. Creare struttura `resources/brand-assets/` per documenti brand\n2. Creare `resources/vector-store/` per SQLite embeddings\n3. Implementare `python/rag/indexer.py`:\n```python\nimport sqlite3\nfrom sentence_transformers import SentenceTransformer\n\nclass BrandKnowledgeBase:\n    def __init__(self, db_path: str):\n        self.db = sqlite3.connect(db_path)\n        self.model = SentenceTransformer('all-MiniLM-L6-v2')\n        self._init_schema()\n    \n    def index_document(self, doc_path: str, doc_type: str):\n        # Estrai testo, genera embeddings, salva in SQLite\n        pass\n    \n    def search(self, query: str, top_k: int = 5) -> List[Dict]:\n        query_embedding = self.model.encode(query)\n        # Ricerca similarità coseno\n        pass\n```\n4. Creare `python/agents/captioning_agent.py`:\n   - Integrazione con RAG per contesto brand\n   - Generazione caption per piattaforma (IG, LinkedIn, Twitter)\n   - Tone of voice personalizzabile\n   - Hashtag suggestions\n5. UI in `src/routes/edit/+page.svelte` sezione captions:\n   - Editor caption con preview per piattaforma\n   - Suggerimenti AI in tempo reale\n   - Storico captions generate",
+        "testStrategy": "Test unitari per indexing e search RAG. Test qualità caption generate con metriche. Test integrazione con brand guidelines.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Setup SQLite Vector Store e Schema per Embeddings",
+            "description": "Creare la struttura delle directory per gli asset del brand e implementare lo schema SQLite per lo storage degli embeddings vettoriali con supporto per ricerca efficiente.",
+            "dependencies": [],
+            "details": "1. Creare directory `resources/brand-assets/` per documenti brand (PDF, TXT, MD)\n2. Creare directory `resources/vector-store/` per database SQLite\n3. Implementare schema SQLite in `python/rag/schema.sql`:\n   - Tabella `documents` (id, path, doc_type, content, created_at, updated_at)\n   - Tabella `embeddings` (id, document_id, chunk_text, embedding BLOB, chunk_index)\n   - Tabella `metadata` (document_id, key, value) per info aggiuntive\n4. Creare `python/rag/__init__.py` e struttura modulo\n5. Implementare `python/rag/database.py` con classe `VectorDatabase` per gestione connessione e init schema\n6. Aggiungere indici per ottimizzare query su document_id e chunk_index",
+            "status": "pending",
+            "testStrategy": "Test unitari per creazione schema SQLite. Verificare che tutte le tabelle vengano create correttamente. Test inserimento e recupero dati di esempio. Test integrità referenziale tra documents ed embeddings.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione BrandKnowledgeBase con Sentence-Transformers",
+            "description": "Sviluppare la classe BrandKnowledgeBase che utilizza sentence-transformers per generare embeddings e indicizzare documenti del brand nel vector store SQLite.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Installare dipendenze in `requirements.txt`: sentence-transformers, numpy\n2. Implementare `python/rag/indexer.py` con classe `BrandKnowledgeBase`:\n   - `__init__(db_path)`: inizializza connessione SQLite e modello SentenceTransformer('all-MiniLM-L6-v2')\n   - `_init_schema()`: crea tabelle se non esistono\n   - `_chunk_document(text, chunk_size=512, overlap=50)`: divide testo in chunk con overlap\n   - `index_document(doc_path, doc_type)`: estrae testo (supporto PDF, TXT, MD), genera embeddings per ogni chunk, salva in SQLite\n   - `index_directory(dir_path)`: indicizza tutti i documenti in una directory\n   - `delete_document(doc_id)`: rimuove documento e relativi embeddings\n3. Serializzare embeddings numpy come BLOB SQLite\n4. Gestire errori per file non supportati o corrotti",
+            "status": "pending",
+            "testStrategy": "Test unitari per chunking del testo con varie dimensioni. Test indexing di documenti TXT e MD. Verificare che gli embeddings abbiano dimensione corretta (384 per MiniLM). Test recupero documento indicizzato.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Creazione Funzione Search con Cosine Similarity",
+            "description": "Implementare la funzionalità di ricerca semantica nella knowledge base utilizzando la similarità del coseno tra embeddings della query e documenti indicizzati.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Aggiungere a `BrandKnowledgeBase` in `python/rag/indexer.py`:\n   - `search(query: str, top_k: int = 5) -> List[Dict]`: genera embedding query, calcola cosine similarity con tutti gli embeddings, ritorna top_k risultati\n   - `_cosine_similarity(vec1, vec2)`: implementazione efficiente con numpy\n   - `_deserialize_embedding(blob)`: converte BLOB SQLite in numpy array\n2. Ottimizzare query SQLite per caricare embeddings in batch\n3. Struttura risultato: `{document_id, chunk_text, score, doc_path, doc_type}`\n4. Implementare caching opzionale per query frequenti\n5. Aggiungere filtro per doc_type nella ricerca\n6. Implementare `get_context(query, max_tokens=2000)`: combina chunk rilevanti per contesto LLM",
+            "status": "pending",
+            "testStrategy": "Test ricerca con query note e verificare ranking risultati. Test che documenti simili abbiano score alto. Test performance con 100+ documenti indicizzati. Verificare che top_k funzioni correttamente.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Implementazione CaptioningAgent con Integrazione RAG",
+            "description": "Sviluppare l'agente di captioning che genera descrizioni contestuali per contenuti social, integrando il sistema RAG per mantenere coerenza con le linee guida del brand.",
+            "dependencies": [
+              3
+            ],
+            "details": "1. Creare `python/agents/captioning_agent.py` con classe `CaptioningAgent`:\n   - `__init__(knowledge_base: BrandKnowledgeBase, llm_provider)`: inizializza con RAG e provider LLM\n   - `_get_brand_context(content_description: str)`: recupera contesto brand rilevante via RAG\n   - `generate_caption(content_desc, platform, tone, max_length)`: genera caption con contesto brand\n   - `suggest_hashtags(caption, platform, count=5)`: suggerisce hashtag rilevanti\n   - `rewrite_caption(original, feedback)`: riscrive caption basandosi su feedback\n2. Definire prompt templates per ogni piattaforma\n3. Implementare tone of voice options: professional, casual, inspirational, humorous\n4. Gestire limiti caratteri per piattaforma (Twitter 280, IG 2200, LinkedIn 3000)\n5. Aggiungere support per emoji contestuali",
+            "status": "pending",
+            "testStrategy": "Test generazione caption con mock LLM. Verificare che il contesto RAG venga incluso nel prompt. Test rispetto limiti caratteri per piattaforma. Test variazione tone of voice nei risultati.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "UI Caption Editor con Preview per Piattaforma e Suggestions",
+            "description": "Creare l'interfaccia utente per l'editor di caption in Svelte con preview in tempo reale per diverse piattaforme social e suggerimenti AI integrati.",
+            "dependencies": [
+              4
+            ],
+            "details": "1. Creare sezione captions in `src/routes/edit/+page.svelte`:\n   - Textarea editor con contatore caratteri dinamico\n   - Tabs per switch tra piattaforme (IG, LinkedIn, Twitter)\n   - Preview realistica per ogni piattaforma (mock post appearance)\n2. Creare `src/lib/components/custom/CaptionEditor.svelte`:\n   - Props: initialCaption, platform, onGenerate, onSave\n   - Debounced AI suggestions mentre si digita\n   - Highlight warning quando si supera limite caratteri\n3. Creare `src/lib/components/custom/PlatformPreview.svelte`:\n   - Rendering visivo stile Instagram/LinkedIn/Twitter\n   - Supporto per media preview (immagine/video)\n4. Implementare panel laterale per hashtag suggestions cliccabili\n5. Aggiungere storico captions con localStorage persistence",
+            "status": "pending",
+            "testStrategy": "Test componenti Svelte con Vitest. Verificare contatore caratteri accurato. Test switch tra piattaforme mantiene stato. Test che hashtag suggestions siano cliccabili e inseribili. Test persistenza storico in localStorage.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Supporto Multi-Piattaforma con Tone of Voice Configurabile",
+            "description": "Completare l'integrazione end-to-end per generazione caption su Instagram, LinkedIn e Twitter con selezione del tone of voice e ottimizzazioni specifiche per piattaforma.",
+            "dependencies": [
+              5
+            ],
+            "details": "1. Creare `src/lib/config/platforms.ts` con configurazioni per piattaforma:\n   - Limiti caratteri, formati hashtag, best practices\n   - Template prompt specifici per ogni piattaforma\n2. Creare `src/lib/components/custom/ToneSelector.svelte`:\n   - Radio/select per: Professional, Casual, Inspirational, Humorous, Educational\n   - Preview esempio per ogni tone\n3. Implementare IPC handlers in `electron/main.ts`:\n   - `caption:generate`: chiama CaptioningAgent via sidecar Python\n   - `caption:suggest-hashtags`: genera suggerimenti hashtag\n   - `caption:history`: gestisce storico captions\n4. Creare `src/lib/stores/captionStore.ts` per stato globale captions\n5. Aggiungere batch generation: genera caption per tutte le piattaforme in una volta\n6. Implementare copy-to-clipboard con feedback visivo per ogni piattaforma",
+            "status": "pending",
+            "testStrategy": "Test E2E flusso completo: selezione tone -> generazione -> preview -> copia. Verificare che ogni piattaforma rispetti propri limiti. Test batch generation produce 3 caption diverse. Test IPC handlers con mock sidecar.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "media-processing",
+              "phase-3-agents",
+              "python",
+              "rag"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "media-processing",
+          "phase-3-agents",
+          "python",
+          "rag"
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Integrazione Postiz API e Scheduling Agent",
+        "description": "Implementare l'agente di scheduling che utilizza l'API Postiz per pubblicare contenuti su multiple piattaforme social con analytics webhook.",
+        "details": "1. Creare `src/lib/services/postiz.ts`:\n```typescript\nconst POSTIZ_BASE_URL = 'https://api.postiz.com/v1';\n\nexport class PostizClient {\n  constructor(private apiKey: string) {}\n  \n  async schedulePost(post: {\n    content: string;\n    media: string[];\n    platforms: string[];\n    scheduledAt: Date;\n  }) {\n    return fetch(`${POSTIZ_BASE_URL}/posts`, {\n      method: 'POST',\n      headers: { 'Authorization': `Bearer ${this.apiKey}` },\n      body: JSON.stringify(post)\n    });\n  }\n  \n  async getAnalytics(postId: string) { /* ... */ }\n}\n```\n2. Creare `python/agents/scheduling_agent.py`:\n   - Ottimizzazione orari pubblicazione per piattaforma\n   - Suggerimenti basati su analytics storici\n   - Gestione code pubblicazione\n3. Creare UI in `src/routes/publish/+page.svelte`:\n   - Form scheduling con date picker\n   - Preview post per ogni piattaforma\n   - Lista post schedulati\n4. Implementare webhook listener in main process per analytics\n5. Salvare analytics in SQLite locale\n6. Piattaforme: Instagram, Facebook, LinkedIn, Twitter, TikTok",
+        "testStrategy": "Test con mock Postiz API. Test UI per scheduling flow. Test webhook processing. Test E2E per flusso completo di pubblicazione.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Creazione PostizClient TypeScript con metodi API completi",
+            "description": "Implementare la classe PostizClient in TypeScript con tutti i metodi necessari per interagire con l'API Postiz, inclusi schedulePost, getAnalytics, gestione errori e retry logic.",
+            "dependencies": [],
+            "details": "Creare il file `src/lib/services/postiz.ts` con la classe PostizClient che include:\n1. Costruttore con apiKey e configurazione base URL\n2. Metodo `schedulePost()` per schedulare post su multiple piattaforme (Instagram, Facebook, LinkedIn, Twitter, TikTok)\n3. Metodo `getAnalytics()` per recuperare metriche di un post specifico\n4. Metodo `getScheduledPosts()` per listare post in coda\n5. Metodo `cancelPost()` per annullare post schedulati\n6. Gestione errori HTTP con retry exponential backoff\n7. Type definitions per request/response (PostizPost, PostizAnalytics, Platform)\n8. Validazione input prima dell'invio API\n9. Logging delle chiamate API per debug",
+            "status": "pending",
+            "testStrategy": "Unit test con mock fetch per testare ogni metodo API. Test gestione errori (401, 429, 500). Test retry logic. Test validazione input con dati invalidi. Mock server per integration test.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "publishing",
+              "phase-3-agents",
+              "python",
+              "postiz"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione SchedulingAgent Python con ottimizzazione orari",
+            "description": "Sviluppare l'agente Python per l'ottimizzazione intelligente degli orari di pubblicazione basata su analytics storici e best practices per piattaforma.",
+            "dependencies": [
+              1
+            ],
+            "details": "Creare `python/agents/scheduling_agent.py` che implementa:\n1. Classe SchedulingAgent che eredita da cagent.Agent\n2. Tool `optimize_time` che analizza dati storici per suggerire orari ottimali per piattaforma\n3. Tool `suggest_platforms` che raccomanda piattaforme basate sul tipo di contenuto\n4. Dizionario con fasce orarie ottimali predefinite per ogni piattaforma (es. Instagram 11-13, LinkedIn 8-10)\n5. Algoritmo di scoring basato su engagement storico (likes, comments, shares)\n6. Gestione code di pubblicazione con prioritizzazione\n7. Sistema di prevenzione conflitti per evitare post simultanei\n8. Integrazione con store Svelte tramite IPC per comunicare suggerimenti\n9. Logging dettagliato delle decisioni di scheduling",
+            "status": "pending",
+            "testStrategy": "Unit test per algoritmi di ottimizzazione orari. Test con dataset mock di analytics. Test edge cases (nessun dato storico, una sola piattaforma). Test integrazione con cagent framework.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "publishing",
+              "phase-3-agents",
+              "python",
+              "postiz"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "UI Publish Page con form scheduling e preview multi-piattaforma",
+            "description": "Creare l'interfaccia utente completa per la schedulazione post con date picker, preview real-time per ogni piattaforma e gestione lista post schedulati.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Creare `src/routes/publish/+page.svelte` con i seguenti componenti:\n1. Form di scheduling con campi: contenuto testo, media upload, selezione piattaforme (checkbox), data/ora picker\n2. Componente DateTimePicker con timezone support\n3. Preview cards per ogni piattaforma selezionata che mostra come apparirà il post (dimensioni/formati diversi)\n4. Componente PlatformSelector con icone e stato connessione\n5. Lista post schedulati con filtri (per piattaforma, per data, per stato)\n6. Azioni rapide: modifica, cancella, pubblica ora\n7. Indicatore suggerimenti AI per orario ottimale (integrazione con SchedulingAgent)\n8. Validazione form con feedback visivo (caratteri max per piattaforma, formati media supportati)\n9. Store Svelte `$lib/stores/scheduling.svelte.ts` per stato pubblicazioni\n10. Responsive design per uso su diversi schermi",
+            "status": "pending",
+            "testStrategy": "Test componenti Svelte con Vitest e Testing Library. Test form validation. Test preview rendering per ogni piattaforma. Test interazione date picker. E2E test con Playwright per flow completo.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "publishing",
+              "phase-3-agents",
+              "python",
+              "postiz"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Implementazione webhook listener in Electron main process",
+            "description": "Creare un server HTTP nel main process di Electron per ricevere webhook analytics da Postiz e processare i dati in tempo reale.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implementare webhook listener nel main process Electron:\n1. Creare `electron/main/webhookServer.ts` con server HTTP Express/Fastify integrato\n2. Endpoint POST `/webhook/postiz/analytics` per ricevere dati analytics\n3. Validazione signature webhook per sicurezza (HMAC)\n4. Parsing payload analytics (impressions, engagement, clicks, reach)\n5. Emit eventi IPC verso renderer process per aggiornamenti real-time\n6. Queue system per gestire burst di webhook\n7. Configurazione porta dinamica con fallback\n8. Graceful shutdown del server alla chiusura app\n9. Endpoint GET `/webhook/health` per verificare stato server\n10. Logging webhook ricevuti con timestamp\n11. Gestione errori con retry notification a Postiz",
+            "status": "pending",
+            "testStrategy": "Unit test per parsing payload. Test validazione signature. Integration test con mock webhook requests. Test IPC communication con renderer. Test graceful shutdown. Load test per burst handling.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "publishing",
+              "phase-3-agents",
+              "python",
+              "postiz"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Storage analytics SQLite e visualizzazione storica",
+            "description": "Implementare il salvataggio persistente degli analytics in database SQLite locale con query per report e visualizzazione grafici storici.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implementare sistema storage e visualizzazione analytics:\n1. Schema SQLite in `electron/main/database/analytics.ts`:\n   - Tabella `posts`: id, platform, content, scheduled_at, published_at, status\n   - Tabella `analytics`: id, post_id, timestamp, impressions, engagement, clicks, reach, likes, comments, shares\n   - Indici per query performanti su date range\n2. Repository class con metodi: saveAnalytics, getAnalyticsByPost, getAnalyticsByDateRange, getAggregatedStats\n3. Migration system per schema updates\n4. Creare `src/routes/analytics/+page.svelte` con:\n   - Grafici trend (Chart.js/D3) per engagement nel tempo\n   - Confronto performance tra piattaforme\n   - Best performing posts ranking\n   - Filtri per periodo (7d, 30d, 90d, custom)\n   - Export dati CSV\n5. Store `$lib/stores/analytics.svelte.ts` per stato e cache\n6. IPC handlers per query database dal renderer",
+            "status": "pending",
+            "testStrategy": "Unit test repository con SQLite in-memory. Test migrations. Test query performance con dataset grandi. Test componenti grafici con mock data. E2E test per flusso completo da webhook a visualizzazione.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "publishing",
+              "phase-3-agents",
+              "python",
+              "postiz"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "publishing",
+          "phase-3-agents",
+          "python",
+          "postiz"
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Integrazione Timeline Twick con A2UI Widgets",
+        "description": "Integrare il componente timeline Twick per visualizzazione scheduling e implementare il protocollo A2UI per generazione dinamica di widget UI dagli agenti.",
+        "details": "1. Installare Twick: `npm install @twick/svelte`\n2. Creare `src/routes/timeline/+page.svelte`:\n```svelte\n<script>\n  import { Timeline, Event } from '@twick/svelte';\n  import { scheduledPosts } from '$lib/stores/scheduling.svelte';\n</script>\n<Timeline>\n  {#each $scheduledPosts as post}\n    <Event date={post.scheduledAt} title={post.platform}>\n      <AgentWidget type={post.widgetType} data={post.data} />\n    </Event>\n  {/each}\n</Timeline>\n```\n3. Implementare `src/lib/components/agent-widgets/` sistema A2UI:\n   - `WidgetRegistry.ts` - registro componenti dinamici\n   - `AgentWidget.svelte` - renderer componente dinamico\n   - Widget types: MediaPreview, CaptionEditor, ScheduleCard, AnalyticsChart\n4. Protocollo A2UI in FastAPI:\n```python\n@app.post(\"/a2ui/generate\")\nasync def generate_widget(request: Request):\n    data = await request.json()\n    widget_spec = agent.generate_ui(data['context'])\n    return {\"widget\": widget_spec}\n```\n5. SSE streaming per aggiornamenti real-time dei widget\n6. Drag-drop per riordinare eventi timeline\n7. Integrazione con scheduling agent per date/orari",
+        "testStrategy": "Test rendering timeline con mock data. Test drag-drop functionality. Test SSE updates per widget. Test integrazione A2UI con agenti.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          4,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Installazione e Configurazione Twick con Svelte 5",
+            "description": "Installare il pacchetto @twick/svelte e verificare la compatibilità con Svelte 5 runes syntax. Se Twick non è compatibile, identificare alternative o creare wrapper di compatibilità.",
+            "dependencies": [],
+            "details": "1. Eseguire `npm install @twick/svelte` nel progetto\n2. Verificare se Twick supporta Svelte 5 runes ($state, $derived, $effect) controllando la documentazione e il package.json per peer dependencies\n3. Se non compatibile:\n   - Opzione A: Creare wrapper components che traducono props Svelte 5 in formato Svelte 4\n   - Opzione B: Valutare alternative come timeline-svelte o custom implementation\n4. Creare file di test `src/lib/components/timeline/TimelineWrapper.svelte` per validare l'integrazione\n5. Configurare eventuali alias in svelte.config.js se necessario per risolvere conflitti di versione\n6. Documentare eventuali workaround necessari in un commento nel componente principale",
+            "status": "pending",
+            "testStrategy": "Test di import dei componenti Timeline e Event. Test di rendering base con dati statici. Verificare assenza di warning relativi a deprecation Svelte 4 nel console.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte",
+              "twick"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Creazione Timeline Page con Store scheduledPosts",
+            "description": "Implementare la pagina timeline in src/routes/timeline/+page.svelte che integra lo store Svelte 5 scheduledPosts e renderizza gli eventi scheduling.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare la route `src/routes/timeline/+page.svelte`\n2. Importare o creare lo store `$lib/stores/scheduling.svelte` usando Svelte 5 runes:\n```typescript\n// scheduling.svelte.ts\nimport { writable } from 'svelte/store';\nexport interface ScheduledPost {\n  id: string;\n  platform: string;\n  scheduledAt: Date;\n  widgetType: 'MediaPreview' | 'CaptionEditor' | 'ScheduleCard' | 'AnalyticsChart';\n  data: Record<string, unknown>;\n}\nlet posts = $state<ScheduledPost[]>([]);\nexport const scheduledPosts = { get posts() { return posts; }, add(p: ScheduledPost) {...} };\n```\n3. Implementare layout responsivo per la timeline\n4. Aggiungere loading states e empty states\n5. Creare +page.server.ts per caricare dati iniziali dal backend FastAPI",
+            "status": "pending",
+            "testStrategy": "Test con mock data per scheduledPosts store. Verificare rendering corretto di multipli eventi. Test responsive layout su diverse viewport. Test loading e empty states.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte",
+              "twick"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Implementazione Sistema A2UI con WidgetRegistry e AgentWidget",
+            "description": "Creare il sistema A2UI (Agent-to-UI) per la gestione dinamica dei widget generati dagli agenti, includendo registry centralizzato e renderer dinamico.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Creare directory `src/lib/components/agent-widgets/`\n2. Implementare `WidgetRegistry.ts`:\n```typescript\nimport type { Component } from 'svelte';\nconst registry = new Map<string, Component>();\nexport function registerWidget(type: string, component: Component) { registry.set(type, component); }\nexport function getWidget(type: string): Component | undefined { return registry.get(type); }\n```\n3. Creare `AgentWidget.svelte` con dynamic component rendering:\n```svelte\n<script lang=\"ts\">\nimport { getWidget } from './WidgetRegistry';\nlet { type, data }: { type: string; data: Record<string, unknown> } = $props();\nlet WidgetComponent = $derived(getWidget(type));\n</script>\n{#if WidgetComponent}<svelte:component this={WidgetComponent} {...data} />{/if}\n```\n4. Implementare widget base: MediaPreview.svelte, CaptionEditor.svelte, ScheduleCard.svelte, AnalyticsChart.svelte\n5. Inizializzare registry in +layout.svelte con tutti i widget disponibili",
+            "status": "pending",
+            "testStrategy": "Test unitari per WidgetRegistry (registrazione e recupero). Test rendering dinamico per ogni tipo di widget. Test gestione errori per widget type sconosciuto. Test props passaggio corretto ai widget figli.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte",
+              "twick"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Protocollo A2UI in FastAPI per Generazione Widget Specs",
+            "description": "Implementare l'endpoint FastAPI /a2ui/generate che permette agli agenti di generare specifiche widget dinamiche basate sul contesto corrente.",
+            "dependencies": [
+              3
+            ],
+            "details": "1. Creare `python/api/a2ui.py`:\n```python\nfrom fastapi import APIRouter, Request\nfrom pydantic import BaseModel\nfrom typing import Any, Dict, List\n\nrouter = APIRouter(prefix='/a2ui', tags=['A2UI'])\n\nclass WidgetSpec(BaseModel):\n    type: str  # MediaPreview, CaptionEditor, etc.\n    props: Dict[str, Any]\n    actions: List[Dict[str, str]]  # Azioni disponibili sul widget\n\nclass GenerateRequest(BaseModel):\n    context: Dict[str, Any]\n    agent_id: str\n\n@router.post('/generate', response_model=WidgetSpec)\nasync def generate_widget(request: GenerateRequest):\n    # Logica di generazione basata su contesto e agente\n    widget_spec = await agent_manager.generate_ui(request.agent_id, request.context)\n    return widget_spec\n```\n2. Definire schema JSON per widget specs\n3. Integrare con sistema agenti esistente (Task 5)\n4. Aggiungere validazione e sanitizzazione delle specs generate",
+            "status": "pending",
+            "testStrategy": "Test unitari per endpoint con mock agent. Test validazione WidgetSpec schema. Test integrazione con diversi tipi di agenti. Test error handling per context invalido.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte",
+              "twick"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "SSE Streaming Real-time e Drag-Drop Reordering",
+            "description": "Implementare SSE (Server-Sent Events) per aggiornamenti real-time dei widget e funzionalità drag-drop per riordinare eventi nella timeline.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "1. Creare endpoint SSE in FastAPI `python/api/sse.py`:\n```python\nfrom fastapi import APIRouter\nfrom sse_starlette.sse import EventSourceResponse\nimport asyncio\n\n@router.get('/timeline/updates')\nasync def timeline_updates(request: Request):\n    async def event_generator():\n        while True:\n            if await request.is_disconnected(): break\n            updates = await get_pending_updates()\n            for update in updates:\n                yield {'event': 'widget_update', 'data': json.dumps(update)}\n            await asyncio.sleep(1)\n    return EventSourceResponse(event_generator())\n```\n2. Creare `src/lib/services/sse-client.ts` per gestire connessione SSE\n3. Implementare drag-drop con Svelte 5 usando @use directive:\n   - Creare `src/lib/actions/draggable.ts` e `droppable.ts`\n   - Gestire reorder locale con optimistic update\n   - Sincronizzare ordine con backend via POST /timeline/reorder\n4. Gestire riconnessione automatica SSE e retry logic\n5. Aggiornare store scheduledPosts in tempo reale da eventi SSE",
+            "status": "pending",
+            "testStrategy": "Test SSE con mock server per simulare stream eventi. Test drag-drop con eventi utente simulati. Test riconnessione SSE dopo disconnessione. Test sincronizzazione stato tra multipli client. Test race conditions tra update locali e SSE.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte",
+              "twick"
+            ]
+          }
+        ],
+        "tags": [
+          "frontend",
+          "ui-framework",
+          "phase-4-integration",
+          "svelte",
+          "twick"
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Orchestrator Agent e Comunicazione A2A",
+        "description": "Implementare l'agente orchestratore che coordina tutti gli altri agenti specializzati, gestendo il protocollo A2A (Agent-to-Agent) per passaggio contesto e handoff.",
+        "details": "1. Creare `python/agents/orchestrator_agent.py`:\n```python\nfrom cagent import Agent, Handoff\n\nclass OrchestratorAgent(Agent):\n    name = 'orchestrator'\n    description = 'Coordina il workflow completo di gestione media'\n    \n    sub_agents = [\n        'extraction_agent',\n        'editing_agent', \n        'captioning_agent',\n        'scheduling_agent'\n    ]\n    \n    async def process_request(self, user_request: str, context: Dict):\n        # Analizza richiesta e determina workflow\n        workflow = self.plan_workflow(user_request)\n        \n        results = {}\n        for step in workflow:\n            agent = self.get_agent(step.agent_name)\n            result = await agent.execute(step.task, context={**context, **results})\n            results[step.agent_name] = result\n            \n            # Notifica UI via SSE\n            await self.emit_event('step_complete', {\n                'agent': step.agent_name,\n                'result': result\n            })\n        \n        return results\n    \n    def plan_workflow(self, request: str) -> List[WorkflowStep]:\n        # LLM determina sequenza agenti\n        pass\n```\n2. Implementare protocollo A2A:\n   - Schema contesto condiviso\n   - Handoff con preservazione stato\n   - Error handling e retry\n3. Dashboard orchestrazione in `src/routes/+page.svelte`:\n   - Visualizzazione workflow attivo\n   - Status ogni agente\n   - Interruzione/pausa workflow\n4. Logging conversazioni agenti per debug",
+        "testStrategy": "Test unitari per planning workflow. Test A2A handoff tra agenti. Test error recovery. Test E2E per workflow completo extraction->edit->caption->schedule.",
+        "priority": "high",
+        "dependencies": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Definizione Protocollo A2A con Schema Contesto Condiviso",
+            "description": "Definire e implementare il protocollo Agent-to-Agent (A2A) che standardizza la comunicazione tra agenti, includendo lo schema JSON per il contesto condiviso, i tipi di messaggi supportati e le convenzioni di serializzazione.",
+            "dependencies": [],
+            "details": "Creare `python/agents/protocols/a2a_protocol.py` con:\n1. Definire `SharedContext` dataclass con campi: session_id, user_request, workflow_id, current_step, accumulated_results, metadata, timestamps\n2. Definire `A2AMessage` con tipi: HANDOFF_REQUEST, HANDOFF_ACCEPT, TASK_COMPLETE, TASK_FAILED, CONTEXT_UPDATE\n3. Implementare serializzazione/deserializzazione JSON con validazione Pydantic\n4. Definire `AgentCapability` enum per dichiarare cosa può fare ogni agente\n5. Creare `ContextValidator` per garantire integrità del contesto tra passaggi\n6. Documentare il protocollo in `docs/a2a-protocol.md`",
+            "status": "pending",
+            "testStrategy": "Test unitari per serializzazione/deserializzazione contesto. Test validazione schema con dati validi e invalidi. Test compatibilità backward per versioning protocollo.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione OrchestratorAgent Base con Registro Sub-Agents",
+            "description": "Creare la classe base OrchestratorAgent con sistema di registrazione dinamica degli agenti specializzati, discovery automatico e gestione del ciclo di vita degli agenti.",
+            "dependencies": [
+              1
+            ],
+            "details": "Creare `python/agents/orchestrator_agent.py` con:\n1. Classe `OrchestratorAgent` che eredita da `Agent` base\n2. Implementare `AgentRegistry` singleton per registrazione/lookup agenti\n3. Metodo `register_agent(agent_name, agent_class, capabilities)` per registrazione dinamica\n4. Metodo `get_agent(name)` con lazy initialization\n5. Metodo `discover_agents()` per auto-discovery da directory `agents/`\n6. Gestione ciclo vita: `initialize_agents()`, `shutdown_agents()`\n7. Health check periodico degli agenti registrati\n8. Implementare pattern Observer per notifiche stato agenti",
+            "status": "pending",
+            "testStrategy": "Test registrazione/deregistrazione agenti. Test discovery automatico. Test health check con agenti mock che falliscono. Test concorrenza accesso registry.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Implementazione Workflow Planner con LLM",
+            "description": "Sviluppare il componente che utilizza un LLM per analizzare le richieste utente e generare dinamicamente il piano di workflow ottimale, determinando sequenza e parallelismo degli agenti.",
+            "dependencies": [
+              2
+            ],
+            "details": "Creare `python/agents/workflow_planner.py` con:\n1. Classe `WorkflowPlanner` con metodo `plan_workflow(user_request, available_agents, context)`\n2. Definire `WorkflowStep` dataclass: agent_name, task_description, inputs, expected_outputs, can_parallelize\n3. Definire `WorkflowPlan` con steps, estimated_duration, fallback_paths\n4. Prompt engineering per LLM: system prompt che descrive agenti disponibili e loro capabilities\n5. Implementare `validate_plan()` per verificare dipendenze e fattibilità\n6. Supporto per workflow condizionali (if/else basato su output precedenti)\n7. Caching piani per richieste simili\n8. Integrazione con provider LLM configurato (Anthropic/OpenAI/etc)",
+            "status": "pending",
+            "testStrategy": "Test con richieste campione per verificare piani generati. Test validazione piani invalidi. Mock LLM per test deterministici. Test caching e invalidazione.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Sistema Handoff con Preservazione Stato e Rollback",
+            "description": "Implementare il meccanismo di handoff tra agenti con preservazione completa dello stato, checkpoint per recovery e capacità di rollback a stati precedenti in caso di errore.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Creare `python/agents/handoff_manager.py` con:\n1. Classe `HandoffManager` per gestire transizioni tra agenti\n2. Metodo `initiate_handoff(from_agent, to_agent, context, task)` con validazione\n3. Implementare `StateCheckpoint` per salvare stato prima di ogni handoff\n4. Storage checkpoints: file-based per persistenza, in-memory per performance\n5. Metodo `rollback_to_checkpoint(checkpoint_id)` per recovery\n6. Implementare `HandoffTransaction` con semantica ACID-like\n7. Timeout configurabile per handoff con auto-rollback\n8. Logging dettagliato di ogni transizione stato\n9. Metodo `get_handoff_history(session_id)` per audit trail",
+            "status": "pending",
+            "testStrategy": "Test handoff success tra agenti mock. Test rollback dopo failure. Test timeout handling. Test persistenza checkpoints. Test recovery dopo crash simulato.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Error Handling e Retry Policies",
+            "description": "Implementare sistema robusto di gestione errori con retry policies configurabili, circuit breaker pattern, e graceful degradation per garantire resilienza del workflow.",
+            "dependencies": [
+              4
+            ],
+            "details": "Creare `python/agents/error_handling.py` con:\n1. Definire gerarchia eccezioni: `AgentError`, `HandoffError`, `TimeoutError`, `RetryExhaustedError`\n2. Implementare `RetryPolicy` configurabile: max_retries, backoff_strategy (exponential, linear), retry_on_exceptions\n3. Implementare `CircuitBreaker` pattern per agenti che falliscono ripetutamente\n4. Classe `ErrorRecoveryStrategy` con opzioni: RETRY, SKIP, ROLLBACK, ABORT, FALLBACK_AGENT\n5. Metodo `handle_agent_failure(agent, error, context)` con decision logic\n6. Implementare dead letter queue per task falliti\n7. Notifiche errori critici via EventEmitter\n8. Metriche errori per monitoring (error_count, retry_count, recovery_success_rate)",
+            "status": "pending",
+            "testStrategy": "Test retry con backoff verificando timing. Test circuit breaker open/close. Test ogni recovery strategy. Test dead letter queue processing. Load test per verificare resilienza.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Dashboard Orchestrazione in UI con Workflow Visualization",
+            "description": "Creare l'interfaccia utente per visualizzare in tempo reale lo stato del workflow, con rappresentazione grafica degli agenti, stato corrente, e controlli per interruzione/pausa.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Creare componenti Svelte in `src/routes/+page.svelte` e `src/lib/components/`:\n1. `WorkflowVisualizer.svelte`: grafo interattivo con nodi agenti e archi dipendenze\n2. `AgentStatusCard.svelte`: stato (idle/running/error/complete), progress, ultimo output\n3. `WorkflowTimeline.svelte`: timeline verticale con step completati e corrente\n4. `WorkflowControls.svelte`: pulsanti Pause/Resume/Cancel con conferma\n5. Integrazione SSE per updates real-time da backend\n6. Store Svelte `workflowStore.ts` per stato UI\n7. Animazioni transizione stato (fade, pulse per agente attivo)\n8. Visualizzazione errori inline con opzione retry manuale\n9. Responsive design per sidebar e fullscreen mode",
+            "status": "pending",
+            "testStrategy": "Test componenti con Vitest e Testing Library. Test SSE updates con mock server. Test interazioni utente (pause/resume/cancel). Test E2E flusso completo visualizzazione. Test responsive su viewport diversi.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Logging e Tracing Conversazioni Agenti",
+            "description": "Implementare sistema di logging strutturato e distributed tracing per tracciare tutte le conversazioni e interazioni tra agenti, abilitando debug efficace e analisi post-mortem.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Creare `python/agents/logging/` con:\n1. `conversation_logger.py`: log strutturato JSON con timestamp, agent_id, message_type, content, context_snapshot\n2. Implementare `TraceContext` con trace_id e span_id per distributed tracing\n3. `trace_exporter.py`: export in formato OpenTelemetry-compatible\n4. Storage: file rotating per sviluppo, SQLite per persistenza query\n5. Metodo `get_conversation_history(session_id, agent_filter, time_range)`\n6. UI component `ConversationDebugger.svelte` per visualizzare log filtrati\n7. Livelli log configurabili: DEBUG (tutto), INFO (handoff/complete), ERROR (solo errori)\n8. Sanitizzazione automatica dati sensibili (API keys, PII)\n9. Export logs in formato scaricabile per support/debug",
+            "status": "pending",
+            "testStrategy": "Test logging corretto per ogni tipo messaggio. Test trace context propagation. Test query su storage SQLite. Test sanitizzazione dati sensibili. Test UI filtering e search. Test export formato corretto.",
+            "tags": [
+              "python-backend",
+              "agents",
+              "phase-3-agents",
+              "python",
+              "cagent"
+            ]
+          }
+        ],
+        "tags": [
+          "python-backend",
+          "agents",
+          "phase-3-agents",
+          "python",
+          "cagent"
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Brand Management UI e Asset Organization",
+        "description": "Creare l'interfaccia per gestione brand con organizzazione assets, upload documenti brand guidelines per RAG, e configurazione profili social.",
+        "details": "1. Creare `src/routes/brands/+page.svelte`:\n   - Lista brand cards con logo e stats\n   - Modal creazione nuovo brand\n2. Creare `src/routes/brands/[brandId]/+page.svelte`:\n```svelte\n<script>\n  import { page } from '$app/stores';\n  import { Tabs, TabsContent } from '$lib/components/ui/tabs';\n</script>\n<Tabs>\n  <TabsContent value=\"assets\">\n    <!-- Griglia assets del brand -->\n  </TabsContent>\n  <TabsContent value=\"guidelines\">\n    <!-- Upload PDF/docs per RAG indexing -->\n  </TabsContent>\n  <TabsContent value=\"social\">\n    <!-- Configurazione account social -->\n  </TabsContent>\n  <TabsContent value=\"analytics\">\n    <!-- Dashboard analytics aggregati -->\n  </TabsContent>\n</Tabs>\n```\n3. Implementare upload documenti con indexing automatico RAG\n4. Creare store brand con SQLite backend\n5. Componenti:\n   - AssetGrid con filtri e ricerca\n   - BrandColorPalette estratta da guidelines\n   - SocialAccountConnector per OAuth",
+        "testStrategy": "Test CRUD operazioni brand. Test upload e indexing documenti. Test UI per navigazione brand e assets.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          8
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Creazione Route Brands con Lista Brand Cards e Modal Creazione",
+            "description": "Implementare la pagina principale brands con griglia di card per ogni brand registrato e modal per la creazione di nuovi brand.",
+            "dependencies": [],
+            "details": "1. Creare `src/routes/brands/+page.svelte` con layout griglia responsive\n2. Implementare componente `BrandCard.svelte` in `src/lib/components/custom/` con:\n   - Logo del brand (con fallback placeholder)\n   - Nome brand e descrizione breve\n   - Stats rapide (numero assets, post programmati, etc.)\n   - Azioni rapide (edit, view, delete)\n3. Creare modal creazione brand con form contenente:\n   - Input nome brand (required)\n   - Upload logo (con preview)\n   - Descrizione brand\n   - Colori primari del brand\n   - Settore/categoria\n4. Implementare validazione form con shadcn-svelte form components\n5. Creare `+page.server.ts` per load dei brand esistenti via IPC\n6. Aggiungere ricerca e filtri per la lista brands\n7. Implementare empty state per quando non ci sono brand",
+            "status": "pending",
+            "testStrategy": "Test unitari per rendering BrandCard con vari stati. Test form validation per modal creazione. Test E2E per flusso creazione nuovo brand completo. Verificare responsive layout su diverse viewport.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Implementazione Route brands/[brandId] con Sistema Tabs",
+            "description": "Creare la pagina dettaglio brand con navigazione a tabs per assets, guidelines, social accounts e analytics.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Creare `src/routes/brands/[brandId]/+page.svelte` con dynamic routing\n2. Implementare layout con header brand (logo, nome, azioni edit/delete)\n3. Configurare sistema Tabs shadcn-svelte con 4 sezioni:\n   - Tab 'Assets': placeholder per AssetGrid (subtask 5)\n   - Tab 'Guidelines': placeholder per upload documenti (subtask 3)\n   - Tab 'Social': placeholder per SocialAccountConnector (subtask 5)\n   - Tab 'Analytics': dashboard con metriche aggregate placeholder\n4. Creare `+page.server.ts` per load dati brand specifico\n5. Implementare `+layout.svelte` per breadcrumb navigation (Home > Brands > [Nome Brand])\n6. Gestire stato 404 per brandId non esistente\n7. Aggiungere tab persistence via URL query params (es. ?tab=assets)\n8. Implementare skeleton loading states per ogni tab",
+            "status": "pending",
+            "testStrategy": "Test navigazione tra tabs. Test URL persistence del tab selezionato. Test 404 handling per brand inesistenti. Test loading states. Verificare che page params vengano correttamente estratti.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Sistema Upload Documenti con RAG Indexing Automatico",
+            "description": "Implementare l'upload di documenti brand guidelines (PDF, DOCX, MD) con indexing automatico nel sistema RAG per ricerca semantica.",
+            "dependencies": [
+              2
+            ],
+            "details": "1. Creare componente `GuidelinesUploader.svelte` in `src/lib/components/custom/`:\n   - Dropzone con drag-and-drop\n   - Supporto formati: PDF, DOCX, MD, TXT\n   - Progress bar upload\n   - Preview file caricati\n2. Implementare IPC handler in main process per salvataggio file:\n   - Salvare file in `userData/brands/[brandId]/guidelines/`\n   - Generare metadata (dimensione, tipo, data upload)\n3. Creare servizio RAG indexing nel main process:\n   - Estrarre testo da PDF (usando pdf-parse o simile)\n   - Estrarre testo da DOCX (usando mammoth)\n   - Chunking del testo estratto\n   - Generazione embeddings via LLM provider configurato\n   - Salvataggio in vector store locale (SQLite con sqlite-vec o ChromaDB)\n4. Implementare UI gestione documenti:\n   - Lista documenti caricati per brand\n   - Azioni: view, download, delete, re-index\n   - Stato indexing (pending, indexing, indexed, error)\n5. Creare endpoint IPC per query RAG sui documenti brand",
+            "status": "pending",
+            "testStrategy": "Test upload file di vari formati. Test estrazione testo da PDF e DOCX. Test chunking e generazione embeddings. Test query RAG con risultati attesi. Test UI stati upload e indexing.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Store Brand con SQLite Backend via IPC",
+            "description": "Creare lo store Svelte per gestione stato brands con persistenza SQLite tramite comunicazione IPC con main process Electron.",
+            "dependencies": [],
+            "details": "1. Creare schema SQLite per brands:\n```sql\nCREATE TABLE brands (\n  id TEXT PRIMARY KEY,\n  name TEXT NOT NULL,\n  description TEXT,\n  logo_path TEXT,\n  primary_color TEXT,\n  secondary_color TEXT,\n  category TEXT,\n  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE brand_assets (\n  id TEXT PRIMARY KEY,\n  brand_id TEXT REFERENCES brands(id),\n  file_path TEXT,\n  type TEXT,\n  metadata JSON,\n  created_at DATETIME\n);\n```\n2. Implementare IPC handlers in main process:\n   - `brands:list` - lista tutti i brand\n   - `brands:get` - dettaglio singolo brand\n   - `brands:create` - crea nuovo brand\n   - `brands:update` - aggiorna brand\n   - `brands:delete` - elimina brand (con cascade assets)\n3. Creare `src/lib/stores/brands.ts` con Svelte 5 runes:\n   - `$state` per lista brands e brand corrente\n   - Funzioni CRUD che chiamano IPC\n   - Gestione loading/error states\n4. Esporre API in preload.ts\n5. Implementare ottimistic updates con rollback su errore",
+            "status": "pending",
+            "testStrategy": "Test CRUD operations su SQLite. Test IPC handlers con mock database. Test store Svelte con operazioni async. Test rollback su errori. Verificare cascade delete assets.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Componenti AssetGrid, BrandColorPalette e SocialAccountConnector",
+            "description": "Implementare i tre componenti principali per visualizzazione assets, estrazione colori da guidelines e connessione account social OAuth.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "1. **AssetGrid.svelte** (`src/lib/components/custom/`):\n   - Griglia responsive con card per ogni asset\n   - Filtri: tipo (image, video, document), data, dimensione\n   - Ricerca full-text su nome/tag\n   - View modes: grid, list\n   - Selezione multipla con azioni batch (delete, export, tag)\n   - Lazy loading con virtual scrolling per performance\n   - Preview modal per assets selezionati\n\n2. **BrandColorPalette.svelte**:\n   - Estrazione automatica colori dominanti da logo/guidelines\n   - Display palette con HEX/RGB/HSL values\n   - Copy-to-clipboard per ogni colore\n   - Possibilità di aggiungere/rimuovere colori manualmente\n   - Suggerimenti colori complementari\n   - Export palette come JSON/CSS variables\n\n3. **SocialAccountConnector.svelte**:\n   - Lista piattaforme supportate (Instagram, TikTok, Facebook, Twitter, LinkedIn)\n   - Stato connessione per ogni piattaforma\n   - Bottone connect che avvia OAuth flow\n   - IPC handler per gestione OAuth in main process (aprire browser, catturare callback)\n   - Visualizzazione info account connesso (username, avatar, stats base)\n   - Azioni: disconnect, refresh token, view analytics",
+            "status": "pending",
+            "testStrategy": "Test AssetGrid con vari numeri di assets e filtri. Test performance virtual scrolling con 1000+ items. Test estrazione colori da immagini di test. Test OAuth flow con mock providers. Test UI stati connesso/disconnesso per social accounts.",
+            "tags": [
+              "frontend",
+              "ui-framework",
+              "phase-4-integration",
+              "svelte"
+            ]
+          }
+        ],
+        "tags": [
+          "frontend",
+          "ui-framework",
+          "phase-4-integration",
+          "svelte"
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Testing Suite Completa e CI/CD Setup",
+        "description": "Implementare suite di test completa con unit, integration, e E2E tests, insieme a pipeline CI/CD per build automatiche.",
+        "details": "1. Configurare test pyramid:\n   - 70% Unit tests (Vitest per frontend, pytest per Python)\n   - 20% Integration tests (IPC, agent communication)\n   - 10% E2E tests (Playwright)\n2. Creare `tests/` struttura:\n```\ntests/\n├── unit/\n│   ├── components/\n│   ├── services/\n│   └── stores/\n├── integration/\n│   ├── ipc/\n│   ├── agents/\n│   └── rag/\n└── e2e/\n    ├── workflows/\n    └── fixtures/\n```\n3. Test critici da implementare:\n   - Provider configuration validation\n   - Agent handoff context preservation\n   - A2UI component generation safety\n   - Timeline drag-drop scheduling\n   - Twick timeline rendering\n   - Electron context isolation\n4. CI/CD in `.github/workflows/`:\n   - Lint + Type check\n   - Unit tests\n   - Integration tests\n   - E2E tests\n   - Build artefatti per macOS/Windows/Linux\n5. Pre-commit hooks con husky",
+        "testStrategy": "Meta-testing: verificare copertura test >80%. Test che CI pipeline completi senza errori. Test build artefatti su tutte le piattaforme.",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurazione Test Pyramid e Struttura Directory",
+            "description": "Setup completo dell'infrastruttura di testing con Vitest, pytest e Playwright, creando la struttura directory standardizzata per unit, integration e E2E tests.",
+            "dependencies": [],
+            "details": "1. Creare la struttura directory `tests/` con subdirectory:\n   - `tests/unit/components/` per componenti Svelte\n   - `tests/unit/services/` per servizi TypeScript\n   - `tests/unit/stores/` per Svelte stores\n   - `tests/integration/ipc/` per test IPC Electron\n   - `tests/integration/agents/` per comunicazione agenti\n   - `tests/integration/rag/` per sistema RAG\n   - `tests/e2e/workflows/` per flussi utente\n   - `tests/e2e/fixtures/` per dati di test\n\n2. Configurare `vitest.config.ts` con:\n   - setupFiles per @testing-library/svelte e jest-dom\n   - Coverage reporter (istanbul/v8) target 80%\n   - Alias paths per import puliti\n   - Environment jsdom per componenti\n\n3. Creare `python/pytest.ini` e `python/conftest.py`:\n   - Fixtures condivise per mock agents\n   - Configurazione pytest-asyncio per async tests\n   - Markers per categorizzare test (unit, integration)\n\n4. Estendere `playwright.config.ts` per Electron:\n   - Configurare electronPath per test app nativa\n   - Setup fixtures per window e IPC context\n   - Timeout appropriati per operazioni async",
+            "status": "pending",
+            "testStrategy": "Verificare che la struttura directory sia creata correttamente. Eseguire `npm run test:unit` e `pytest` per confermare che la configurazione funzioni. Coverage report deve essere generato senza errori.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Unit Tests per Componenti Svelte e Servizi TypeScript",
+            "description": "Implementare unit tests completi per componenti Svelte UI e servizi TypeScript utilizzando Vitest e @testing-library/svelte.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Test per componenti Svelte critici:\n   - Timeline component: rendering, drag-drop events, date selection\n   - Provider configuration form: validation, state management\n   - A2UI components: generazione dinamica, props handling\n   - Twick timeline: rendering canvas/SVG, performance\n\n2. Test per servizi TypeScript:\n   - `cagent-config.ts`: generazione YAML corretta\n   - `postiz.ts`: API client methods, error handling\n   - IPC handlers: serializzazione messaggi, timeout\n\n3. Test per Svelte stores:\n   - Provider store: CRUD operations, persistence\n   - Agent state store: handoff context preservation\n   - UI state stores: sidebar, modal, notification states\n\n4. Setup test utilities:\n   - Custom render function con providers\n   - Mock per electron contextBridge API\n   - Factories per generare dati di test consistenti\n\n5. Target coverage: 70% per tutti i moduli frontend",
+            "status": "pending",
+            "testStrategy": "Ogni test deve essere isolato con proper cleanup. Utilizzare snapshot testing per componenti UI stabili. Mock tutte le dipendenze esterne (IPC, fetch). Verificare che tutti i test passino in CI environment.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Unit Tests Python per Agenti e Sistema RAG",
+            "description": "Implementare unit tests per agenti Python (extraction, editing, scheduling) e componenti del sistema RAG utilizzando pytest.",
+            "dependencies": [
+              1
+            ],
+            "details": "1. Test per ExtractionAgent:\n   - Mock osxphotos.PhotosDB per evitare dipendenza reale\n   - Test list_albums(), extract_photos() con vari filtri\n   - Test EXIF preservation e metadata extraction\n   - Test error handling per libreria Photos inaccessibile\n\n2. Test per EditingAgent:\n   - Mock MCP client per Cloudinary\n   - Test transform operations (upscale, crop, bg_remove)\n   - Test batch processing con multiple immagini\n   - Test retry logic e error recovery\n\n3. Test per SchedulingAgent:\n   - Mock Postiz API client\n   - Test schedule creation, update, delete\n   - Test conflict detection per scheduling\n   - Test webhook processing per analytics\n\n4. Test per sistema RAG:\n   - Mock vector store (ChromaDB/similar)\n   - Test embedding generation\n   - Test similarity search accuracy\n   - Test context retrieval per agents\n\n5. Setup pytest fixtures:\n   - conftest.py con fixtures condivise\n   - Mock factories per agents e responses\n   - pytest.mark.parametrize per test data-driven",
+            "status": "pending",
+            "testStrategy": "Utilizzare pytest-mock per dependency injection. Test async con pytest-asyncio. Verificare che mock siano realistici confrontando con API documentation. Target coverage 75% per codice Python.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Integration Tests per IPC e Agent Communication",
+            "description": "Implementare integration tests che verificano la comunicazione tra Electron main/renderer process e tra agenti nel sistema multi-agent.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "1. Test IPC Electron:\n   - Test bidirezionale main ↔ renderer\n   - Test context isolation e preload script\n   - Test serializzazione oggetti complessi\n   - Test timeout e retry per operazioni lente\n   - Test concurrent IPC calls e race conditions\n\n2. Test Agent Communication:\n   - Test handoff tra agents (extraction → editing → scheduling)\n   - Test context preservation durante handoffs\n   - Test error propagation attraverso agent chain\n   - Test rollback su failure intermedio\n\n3. Test cagent.yaml Integration:\n   - Test reload configurazione a runtime\n   - Test validazione schema YAML\n   - Test notifica sidecar su config change\n\n4. Test RAG Integration:\n   - Test query da agent a vector store\n   - Test embedding consistency\n   - Test performance con dataset realistici\n\n5. Setup test environment:\n   - Docker compose per servizi esterni\n   - Test database SQLite isolato\n   - Cleanup automatico tra test runs",
+            "status": "pending",
+            "testStrategy": "Integration tests devono usare servizi reali quando possibile (in container). Verificare latenza e throughput sono accettabili. Test devono essere idempotenti e ripetibili. Timeout appropriati per operazioni async.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "E2E Tests per Workflow Critici con Playwright",
+            "description": "Implementare E2E tests con Playwright per verificare i flussi utente end-to-end nell'applicazione Electron.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "1. E2E Test Workflow Estrazione:\n   - Apertura app → selezione album → preview foto\n   - Applicazione filtri (date, tags, favorites)\n   - Avvio estrazione → progress tracking → completion\n   - Verifica file estratti con metadata corretti\n\n2. E2E Test Workflow Editing:\n   - Selezione foto → apertura editor\n   - Applicazione trasformazioni Cloudinary\n   - Preview real-time → salvataggio\n   - Batch editing multiple foto\n\n3. E2E Test Workflow Scheduling:\n   - Creazione post con media\n   - Selezione piattaforme social\n   - Timeline drag-drop per scheduling\n   - Verifica Postiz API call\n\n4. E2E Test Provider Configuration:\n   - Setup nuovo provider LLM\n   - Validazione API key\n   - Test connection → conferma funzionante\n   - Salvataggio configurazione\n\n5. Test Fixtures:\n   - Sample images in tests/e2e/fixtures/\n   - Mock API responses per Cloudinary/Postiz\n   - Test user data per authentication flows\n\n6. Playwright Configuration:\n   - Video recording per debug failures\n   - Screenshot on failure\n   - Trace collection per analisi",
+            "status": "pending",
+            "testStrategy": "E2E tests eseguiti su build di produzione. Utilizzare page object pattern per manutenibilità. Test devono essere stabili e non flaky. Retry logic per operazioni network-dependent. Visual regression testing per UI critiche.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "CI/CD Pipeline GitHub Actions con Build Multi-Piattaforma",
+            "description": "Configurare pipeline CI/CD completa con GitHub Actions per lint, test automatici e build di artefatti Electron per macOS, Windows e Linux.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "1. Creare `.github/workflows/ci.yml`:\n   - Trigger: push, pull_request su main/develop\n   - Matrix: ubuntu-latest, macos-latest, windows-latest\n   - Node.js setup con cache npm/pnpm\n   - Python setup con cache pip\n\n2. Job Lint & Type Check:\n   - ESLint per TypeScript/Svelte\n   - svelte-check per Svelte components\n   - Pyright/mypy per Python type checking\n   - Prettier check per formatting\n\n3. Job Unit Tests:\n   - Vitest con coverage report\n   - pytest con coverage\n   - Upload coverage a Codecov\n   - Fail se coverage < 70%\n\n4. Job Integration Tests:\n   - Setup services (se necessari)\n   - Run integration test suite\n   - Artifact upload per test reports\n\n5. Job E2E Tests:\n   - Playwright install browsers\n   - Run E2E suite\n   - Upload video/screenshots su failure\n\n6. Job Build Artefatti:\n   - electron-forge make per ogni piattaforma\n   - macOS: DMG (richiede macos-latest runner)\n   - Windows: Squirrel installer\n   - Linux: deb, rpm, AppImage\n   - Upload artefatti come release assets\n\n7. Pre-commit Hooks (husky):\n   - Setup husky con lint-staged\n   - Pre-commit: lint, type-check, unit tests\n   - Commit-msg: conventional commits validation\n\n8. Caching Strategy:\n   - Cache node_modules, .vite, Playwright browsers\n   - Cache Python venv e pip\n   - Incremental builds quando possibile",
+            "status": "pending",
+            "testStrategy": "Pipeline deve completare in < 15 minuti per feedback veloce. Test matrice su tutte le piattaforme. Verificare che artefatti siano firmati correttamente (code signing per macOS). Monitorare flakiness rate e ottimizzare test instabili.",
+            "tags": [
+              "infrastructure",
+              "testing",
+              "phase-5-polish"
+            ]
+          }
+        ],
+        "tags": [
+          "infrastructure",
+          "testing",
+          "phase-5-polish"
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Electron Packaging e Distribuzione",
+        "description": "Configurare il packaging finale dell'applicazione Electron con bundling Python sidecar, code signing, e setup per distribuzione.",
+        "details": "1. Configurare Electron Forge in `forge.config.ts`:\n   - Maker DMG per macOS con notarization\n   - Maker Squirrel per Windows\n   - Maker DEB/RPM per Linux\n2. Bundling Python sidecar:\n   - Opzione A: PyInstaller per creare eseguibile standalone\n   - Opzione B: Embedded Python con venv\n```typescript\n// forge.config.ts\nconst config = {\n  packagerConfig: {\n    extraResource: ['./python-dist'],\n    osxSign: { identity: '...' },\n    osxNotarize: { appleId: '...', appleIdPassword: '...' }\n  },\n  makers: [\n    { name: '@electron-forge/maker-dmg', config: {} },\n    { name: '@electron-forge/maker-squirrel', config: {} },\n  ]\n};\n```\n3. Gestione aggiornamenti automatici con electron-updater\n4. Configurare code signing per macOS e Windows\n5. Setup GitHub Releases per distribuzione\n6. Documentazione installazione per utenti finali\n7. Verificare bundle size target: ~2.5MB (escludendo Python)",
+        "testStrategy": "Test build su macOS, Windows, Linux. Test installazione pulita su sistema vergine. Test auto-update flow. Verificare code signing valido.",
+        "priority": "low",
+        "dependencies": [
+          11,
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configurazione Electron Forge Maker DMG con Notarization macOS",
+            "description": "Configurare il maker DMG per macOS in forge.config.ts includendo code signing con certificato Developer ID Application e setup completo della notarization tramite Apple notary service per garantire che l'app sia firmata e autenticata correttamente per la distribuzione.",
+            "dependencies": [],
+            "details": "1. Installare dipendenze: `npm install @electron-forge/maker-dmg @electron/osx-sign @electron/notarize`\n2. Configurare `forge.config.ts` con packagerConfig:\n   - `osxSign`: identity Developer ID, hardened runtime abilitato, entitlements per sandbox\n   - `osxNotarize`: appleId, appleIdPassword (app-specific password), teamId\n3. Creare file `entitlements.plist` con permessi necessari:\n   - com.apple.security.cs.allow-jit\n   - com.apple.security.cs.allow-unsigned-executable-memory\n   - com.apple.security.automation.apple-events (per spawn sidecar)\n4. Configurare maker-dmg con background image, icon positions, window size\n5. Testare con `npm run make -- --platform darwin` su macOS\n6. Verificare firma con `codesign --verify --deep --strict` e `spctl --assess`",
+            "status": "pending",
+            "testStrategy": "Eseguire build completa su macOS. Verificare firma con codesign -dvv. Verificare notarization con spctl --assess --type exec. Testare installazione su Mac vergine senza Gatekeeper warning. Verificare che l'app si avvii correttamente dopo notarization.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Configurazione Maker Squirrel Windows con Code Signing",
+            "description": "Configurare il maker Squirrel per Windows con supporto al code signing tramite certificato Authenticode, setup delle icone e configurazione per installazione silente e aggiornamenti automatici.",
+            "dependencies": [],
+            "details": "1. Installare dipendenze: `npm install @electron-forge/maker-squirrel`\n2. Configurare maker-squirrel in forge.config.ts:\n   - `certificateFile`: path al certificato .pfx\n   - `certificatePassword`: password (da variabile ambiente CI)\n   - `setupIcon`, `iconUrl`: icone per installer e app\n   - `loadingGif`: splash screen durante installazione\n3. Configurare eventi Squirrel in main process:\n   - handleSquirrelEvent per --squirrel-install, --squirrel-updated, --squirrel-uninstall, --squirrel-obsolete\n   - Creare shortcut desktop/start menu su install\n4. Configurare `electronWinstallerConfig` per customizzazione NSIS\n5. Testare con `npm run make -- --platform win32` (cross-compile o su Windows)\n6. Verificare firma con signtool verify /pa",
+            "status": "pending",
+            "testStrategy": "Build su Windows o cross-compile. Verificare firma digitale tramite signtool verify. Testare installazione su Windows pulito. Verificare creazione shortcut. Testare flusso uninstall completo. Verificare che non ci siano warning SmartScreen.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Bundling Python Sidecar con PyInstaller Cross-Platform",
+            "description": "Creare il bundle standalone del sidecar Python utilizzando PyInstaller per generare eseguibili nativi per macOS, Windows e Linux, includendo tutte le dipendenze FastAPI e Cagent engine.",
+            "dependencies": [],
+            "details": "1. Creare `python/build_sidecar.py` script per orchestrare build:\n   - Rilevamento OS e architettura\n   - Configurazione PyInstaller per ogni piattaforma\n2. Creare `python/sidecar.spec` per PyInstaller:\n   - `hiddenimports`: moduli dinamici (uvicorn.logging, cagent.*)\n   - `datas`: file di configurazione, templates\n   - `onefile` mode per distribuzione semplice\n   - `console=False` per Windows (no cmd window)\n3. Configurare hook PyInstaller custom per cagent se necessario\n4. Aggiungere script npm: `\"build:sidecar\": \"cd python && pyinstaller sidecar.spec\"`\n5. Copiare output in `python-dist/` per inclusione in extraResource\n6. Verificare dimensione bundle: target ~50-100MB con Python + deps\n7. Testare eseguibile standalone su sistema senza Python installato",
+            "status": "pending",
+            "testStrategy": "Build PyInstaller su ogni OS target. Verificare che l'eseguibile parta senza Python installato. Testare health endpoint. Misurare dimensione bundle. Testare su sistemi vergini. Verificare che tutte le dipendenze siano incluse correttamente.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Implementazione Auto-Update con electron-updater",
+            "description": "Implementare il sistema di aggiornamenti automatici utilizzando electron-updater con supporto a GitHub Releases come backend, includendo UI per notifica aggiornamenti e progress download.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "1. Installare: `npm install electron-updater`\n2. Creare `electron/updater.ts`:\n   - Configurare autoUpdater con GitHub provider\n   - Eventi: checking-for-update, update-available, update-downloaded, error\n   - Metodo checkForUpdates() chiamato all'avvio\n3. Configurare publish in forge.config.ts:\n   ```typescript\n   publishers: [{\n     name: '@electron-forge/publisher-github',\n     config: { repository: { owner: '...', name: '...' }, prerelease: false }\n   }]\n   ```\n4. Implementare IPC per comunicare stato update al renderer:\n   - update:check, update:available, update:progress, update:ready\n5. Creare componente UI `UpdateNotification.svelte` con:\n   - Banner \"Nuovo aggiornamento disponibile\"\n   - Progress bar download\n   - Pulsante \"Installa e riavvia\"\n6. Gestire differenze macOS (app-update.yml) vs Windows (RELEASES)",
+            "status": "pending",
+            "testStrategy": "Creare release di test su GitHub. Verificare detection nuovo update. Testare download e progress. Verificare installazione automatica al riavvio. Testare rollback in caso di errore. Verificare che aggiornamento non perda dati utente.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Setup GitHub Releases e CI/CD Pipeline",
+            "description": "Configurare GitHub Actions workflow per build automatica multi-piattaforma, code signing in CI, e pubblicazione automatica su GitHub Releases con asset per macOS, Windows e Linux.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "1. Creare `.github/workflows/release.yml`:\n   - Trigger su push tag `v*`\n   - Matrix: macos-latest, windows-latest, ubuntu-latest\n   - Steps: checkout, setup-node, setup-python, build sidecar, npm run make, upload artifacts\n2. Configurare secrets GitHub:\n   - APPLE_DEVELOPER_CERTIFICATE_P12_BASE64, APPLE_DEVELOPER_CERTIFICATE_PASSWORD\n   - APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID\n   - WINDOWS_CERTIFICATE_P12_BASE64, WINDOWS_CERTIFICATE_PASSWORD\n   - GH_TOKEN per publish\n3. Script per import certificati in CI:\n   - macOS: import keychain temporaneo\n   - Windows: certutil -importpfx\n4. Configurare electron-forge publish automatico\n5. Generare changelog automatico con conventional-changelog\n6. Creare draft release per review manuale prima di publish",
+            "status": "pending",
+            "testStrategy": "Eseguire workflow su branch test. Verificare build su tutti e 3 gli OS. Verificare che artifacts siano firmati correttamente. Testare creazione release con tutti gli asset. Verificare che auto-update rilevi la nuova release.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Documentazione Installazione e Troubleshooting Utenti",
+            "description": "Creare documentazione completa per l'installazione su tutti i sistemi operativi supportati, includendo requisiti di sistema, guida passo-passo, risoluzione problemi comuni e FAQ.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              5
+            ],
+            "details": "1. Creare `docs/installation/` con pagine per OS:\n   - `macos.md`: download DMG, drag to Applications, gestione Gatekeeper first-launch\n   - `windows.md`: download installer, esecuzione setup, gestione SmartScreen\n   - `linux.md`: DEB per Debian/Ubuntu, RPM per Fedora/RHEL, AppImage alternativo\n2. Sezione requisiti di sistema:\n   - OS versioni minime (macOS 10.15+, Windows 10+, Ubuntu 20.04+)\n   - RAM minima, spazio disco\n   - Dipendenze runtime se necessarie\n3. Sezione troubleshooting:\n   - \"App non si avvia\": permessi, antivirus, reinstall\n   - \"Sidecar non risponde\": firewall, porta occupata\n   - \"Aggiornamento fallito\": download manuale, clear cache\n4. FAQ con problemi comuni\n5. Aggiungere link a docs da app (Help menu)\n6. Creare pagina web landing con download links",
+            "status": "pending",
+            "testStrategy": "Review documentazione con utenti beta. Testare ogni procedura su sistema pulito. Verificare che troubleshooting risolva effettivamente i problemi. Testare link download funzionanti. Verificare rendering corretto su GitHub/docs site.",
+            "tags": [
+              "infrastructure",
+              "deployment",
+              "phase-5-polish",
+              "electron"
+            ]
+          }
+        ],
+        "tags": [
+          "infrastructure",
+          "deployment",
+          "phase-5-polish",
+          "electron"
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-12-30T12:56:01.052Z",
+      "updated": "2025-12-30T12:56:01.052Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
