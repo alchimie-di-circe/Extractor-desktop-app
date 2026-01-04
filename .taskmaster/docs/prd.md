@@ -119,6 +119,118 @@ brand-asset-manager/
     └── vector-store/           # Cagent RAG storage (local SQLite)
 ```
 
+## 🔒 Security Architecture (NEW)
+
+### Process Isolation Model
+L'applicazione usa un'architettura multi-processo per la sicurezza:
+
+```
+┌─────────────────────────────────────────┐
+│  Electron Main Process                  │
+│  ├─ IPC Bridge                          │
+│  ├─ Keychain Manager                    │
+│  └─ Sidecar Lifecycle                   │
+└─────────────────────────────────────────┘
+             ↓ HTTP (localhost:8765)
+┌─────────────────────────────────────────┐
+│  FastAPI Sidecar                        │
+│  ├─ Orchestrator Agent                  │
+│  ├─ Editing Agent                       │
+│  ├─ Captioning Agent                    │
+│  └─ Proxy endpoint /agent/extract       │
+└─────────────────────────────────────────┘
+             ↓ Unix Socket
+┌─────────────────────────────────────────┐
+│  Sandboxed osxphotos Process (isolato)  │
+│  └─ ExtractionAgent SOLO                │
+└─────────────────────────────────────────┘
+```
+
+### osxphotos Sandboxing (CRITICAL)
+- **Problema**: osxphotos richiede Full Disk Access - rischio sicurezza se eseguito nello stesso processo del sidecar principale
+- **Soluzione**: Processo Python separato che comunica via Unix socket
+- **Caratteristiche**:
+  - NO accesso network
+  - Read-only su Photos Library
+  - Write SOLO su directory whitelist (~/Exports/, ~/Documents/TraeExports/)
+  - Auto-restart su crash con circuit breaker (max 3 restart in 5 min)
+  - JSON-RPC 2.0 per IPC
+
+### FastAPI Sidecar Hardening
+- NO accesso diretto a filesystem sensibili (Photos Library)
+- Proxy endpoint `/agent/extract` → Unix socket (forward-only)
+- Validazione path traversal con `os.path.realpath()` e `os.path.commonpath()`
+- Whitelist directory per export
+- Rate limiting: max 5 concurrent extraction jobs
+
+### Path Whitelist
+Export paths ristretti a:
+- `~/Exports/`
+- `~/Documents/TraeExports/`
+- `${app.getPath('userData')}/exports/`
+
+Validazione: reject path con `..` o symlink non risolti.
+
+### Permission Model
+| Componente | Photos Library | Network | Filesystem |
+|------------|----------------|---------|------------|
+| Electron Main | ❌ | ✅ | Whitelist only |
+| FastAPI Sidecar | ❌ | localhost | Whitelist only |
+| osxphotos Sandbox | ✅ Read | ❌ | Whitelist write |
+| MCP Gateway containers | ❌ | Isolated | Container-only |
+
+## 🐳 Docker MCP Gateway Integration (NEW)
+
+### Requisiti
+- **Docker Engine**: Richiesto per MCP Gateway (NO Docker Desktop necessario)
+- **Docker Desktop 4.40+**: Solo per Docker Model Runner (OPTIONAL UPGRADE)
+
+### MCP Gateway vs Local
+L'applicazione supporta due modalità per i tool MCP:
+
+| Modalità | Requisiti | Vantaggi | Svantaggi |
+|----------|-----------|----------|-----------|
+| Docker Gateway | Docker Engine | Auto-update, sandboxing, catalog curato | Richiede Docker |
+| Local (npx) | Node.js | Zero dipendenze extra | Gestione manuale updates |
+
+### Configurazione UI
+- Settings > Tools: toggle per-tool Cloud/Local
+- Auto-detect Docker Engine presenza (`docker info`)
+- Fallback automatico: Gateway → Local → Error con istruzioni
+
+### Tool Supportati via Gateway
+- `mcp/cloudinary` - Media management (background removal, upscale, crop)
+- `mcp/duckduckgo` - Web search (no API key required)
+
+### Installazione MCP Gateway
+```bash
+# Download binary da GitHub releases
+wget https://github.com/docker/mcp-gateway/releases/latest/download/docker-mcp-darwin-arm64
+mv docker-mcp-darwin-arm64 ~/.docker/cli-plugins/docker-mcp
+chmod +x ~/.docker/cli-plugins/docker-mcp
+
+# Abilita server
+docker mcp server enable cloudinary
+docker mcp gateway run
+```
+
+### Fallback Chain
+1. Docker MCP Gateway (se Docker running + Gateway installato)
+2. Local npx server (se API keys configurate)
+3. Error con istruzioni utente per installazione
+
+### Configurazione cagent.yaml Dinamica
+```yaml
+# Generato dinamicamente in base a user settings
+agents:
+  editing_agent:
+    toolsets:
+      - type: mcp
+        ref: ${MCP_CLOUDINARY_MODE}  # "mcp/cloudinary" | "npx @cloudinary/mcp-server"
+        env:
+          CLOUDINARY_URL: ${CLOUDINARY_URL}
+```
+
 ## 🔗 Dependency Chain (Critical for Task Master)
 
 ### Foundation Layer (Phase 0) - From v2.0
@@ -246,6 +358,66 @@ brand-asset-manager/
 5. **Model Assignment**: Optimal models for each agent's specialization (new)
 6. **A2UI Safety**: Constraints on agent-generated UI components (new)
 7. **Timeline Integration**: How A2UI widgets integrate with Twick timeline (new)
+
+## 🚀 Optional Advanced Features (Post-MVP)
+
+### UPGRADE-1: Docker Model Runner (Priority: LOW)
+Esecuzione locale di modelli LLM senza costi API.
+
+- **Prerequisito**: Docker Desktop 4.40+ (macOS/Windows) - NON funziona solo con Docker Engine
+- **Funzionalità**:
+  - LLM locali: Qwen, Llama, Mistral, Gemma
+  - UI Model Browser con download manager e progress bar
+  - Benchmark performance vs cloud prima di assegnare a ruoli
+- **Use case**: Privacy-first, zero costi API per ruoli secondari (captioning, extraction)
+- **Limitazioni**:
+  - Hardware: 16GB+ RAM per modelli 7B, Apple Silicon M1+ raccomandato
+  - Velocità: inferenza più lenta di cloud
+  - Qualità: modelli <7B inferiori a Claude/GPT-4
+- **Fallback**: local model failed → cloud provider automatico
+
+### UPGRADE-2: Local Media Processing (Priority: MEDIUM)
+Alternative locale a Cloudinary per utenti privacy-first.
+
+- **Background Removal**:
+  - Library: rembg (U2-Net model)
+  - Quality: ~90% accuratezza Cloudinary
+
+- **Upscaling**:
+  - Library: Real-ESRGAN
+  - Models: x2, x4 super-resolution
+  - Download on-demand (~100MB per modello)
+
+- **Smart Crop**:
+  - Library: OpenCV + face detection
+  - Fallback: center crop con aspect ratio
+
+- **Trade-offs**:
+  - ✅ 100% locale, nessun upload cloud
+  - ✅ Nessun costo API
+  - ⚠️ Più lento (dipende da hardware)
+  - ⚠️ Qualità leggermente inferiore per edge cases
+
+- **UI**: Settings toggle "Prefer local processing" checkbox
+- **Fallback**: Local → Cloudinary quando local fallisce
+
+### UPGRADE-3: MCP Deep Search (Priority: LOW)
+Ricerca web approfondita per research agent.
+
+- **Jina AI MCP**:
+  - Deep web search + reader
+  - Estrazione contenuto strutturato
+
+- **Firecrawl MCP**:
+  - Web scraping avanzato
+  - Crawling multi-pagina
+
+- **Features**:
+  - Rate limiting: 10 req/min default
+  - Quota tracking in UI
+  - Integration con CaptioningAgent per trend research
+
+- **Fallback**: Jina down → DuckDuckGo search (già disponibile)
 
 ## 📋 Task Master Integration
 
