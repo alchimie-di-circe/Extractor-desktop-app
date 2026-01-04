@@ -11,7 +11,9 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    arch: 'arm64',  // Build nativo per Apple Silicon M2
+    arch: process.platform === 'darwin' 
+      ? ['x64', 'arm64'] 
+      : process.arch,
   },
   rebuildConfig: {},
   makers: [
