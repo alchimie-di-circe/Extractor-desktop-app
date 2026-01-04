@@ -19,7 +19,7 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({}),
     new MakerDMG({
-      format: 'ULFO'
+      format: 'UDZO'
     }, ['darwin']),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
