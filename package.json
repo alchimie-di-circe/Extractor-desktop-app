@@ -50,7 +50,7 @@
     "svelte-check": "^4.1.0",
     "tailwindcss": "^4.0.3",
     "typescript": "^5.7.3",
-    "vite": "6.4.1",
+    "vite": "^6.4.1",
     "task-master-ai": "^0.40.1",
     "vitest": "^3.0.5"
   },
