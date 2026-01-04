@@ -21,7 +21,6 @@ const config: ForgeConfig = {
     new MakerDMG({
       format: 'UDZO'
     }, ['darwin']),
-    new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
