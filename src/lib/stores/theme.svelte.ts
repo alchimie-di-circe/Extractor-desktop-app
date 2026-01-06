@@ -100,7 +100,14 @@ function setupSystemThemeListener() {
 // Initialize on module load (only in browser)
 if (isBrowser) {
 	initializeTheme();
-	setupSystemThemeListener();
+	const cleanup = setupSystemThemeListener();
+	// @ts-ignore - Handle HMR
+	if (import.meta.hot) {
+		// @ts-ignore
+		import.meta.hot.dispose(() => {
+			cleanup?.();
+		});
+	}
 }
 
 /**

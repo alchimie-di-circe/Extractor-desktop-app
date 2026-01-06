@@ -35,8 +35,7 @@
 	</div>
 {:else if sidebar.isMobile}
 	<Sheet.Root
-		open={sidebar.openMobile}
-		on:openChange={(event) => sidebar.setOpenMobile(event.detail)}
+		bind:open={sidebar.openMobile}
 		{...restProps}
 	>
 		<Sheet.Content

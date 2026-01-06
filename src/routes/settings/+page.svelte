@@ -91,7 +91,7 @@
 						<Label for="openai-key">OpenAI API Key</Label>
 						<Input id="openai-key" type="password" placeholder="sk-..." />
 						<p class="text-xs text-muted-foreground">
-							Ottieni la tua API key da <a href="https://platform.openai.com" target="_blank" class="underline">platform.openai.com</a>
+							Ottieni la tua API key da <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" class="underline">platform.openai.com</a>
 						</p>
 					</div>
 
@@ -101,7 +101,7 @@
 						<Label for="anthropic-key">Anthropic API Key</Label>
 						<Input id="anthropic-key" type="password" placeholder="sk-ant-..." />
 						<p class="text-xs text-muted-foreground">
-							Ottieni la tua API key da <a href="https://console.anthropic.com" target="_blank" class="underline">console.anthropic.com</a>
+							Ottieni la tua API key da <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" class="underline">console.anthropic.com</a>
 						</p>
 					</div>
 
@@ -111,7 +111,7 @@
 						<Label for="google-key">Google AI API Key</Label>
 						<Input id="google-key" type="password" placeholder="AIza..." />
 						<p class="text-xs text-muted-foreground">
-							Ottieni la tua API key da <a href="https://aistudio.google.com" target="_blank" class="underline">aistudio.google.com</a>
+							Ottieni la tua API key da <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" class="underline">aistudio.google.com</a>
 						</p>
 					</div>
 				</Card.Content>
