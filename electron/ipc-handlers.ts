@@ -116,17 +116,37 @@ function registerKeychainHandlers(): void {
 function registerConfigHandlers(): void {
   ipcMain.handle(ConfigChannels.GET, (_event, key: string) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    return getConfig(key);
+    try {
+      return { success: true, data: getConfig(key) };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to get config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.SET, (_event, key: string, value: unknown) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    setConfig(key, value);
-    return true;
+    try {
+      setConfig(key, value);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.GET_ALL, () => {
