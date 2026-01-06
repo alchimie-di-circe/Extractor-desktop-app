@@ -31,6 +31,14 @@ const createWindow = () => {
       ),
     );
   }
+
+  // Handle load failures gracefully
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription) => {
+      console.error(`Failed to load: ${errorCode} ${errorDescription}`);
+    },
+  );
 };
 
 // This method will be called when Electron has finished
@@ -55,5 +63,11 @@ app.on("activate", () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled rejection at:", promise, "reason:", reason);
+});
