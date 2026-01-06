@@ -14,9 +14,11 @@ export interface KeychainResult<T> {
 }
 
 /**
- * Save a credential to the system keychain
- * @param account - The account identifier (e.g., "anthropic-api-key")
- * @param password - The secret value to store
+ * Stores a secret password in the system keychain under the given account.
+ *
+ * @param account - Identifier for the credential (e.g., "anthropic-api-key")
+ * @param password - Secret value to store
+ * @returns A KeychainResult: `success: true` when stored; otherwise `success: false` with `error.code` `"INVALID_INPUT"` if inputs are missing or `"KEYCHAIN_ERROR"` if the keychain operation fails (error message provided in `error.message`)
  */
 export async function saveCredential(
   account: string,
@@ -47,8 +49,10 @@ export async function saveCredential(
 }
 
 /**
- * Retrieve a credential from the system keychain
- * @param account - The account identifier
+ * Retrieve the stored password for an account from the system keychain.
+ *
+ * @param account - The account identifier whose credential to retrieve
+ * @returns On success, `data` contains the password string; on failure, `error` contains a `KeychainError` describing the problem
  */
 export async function getCredential(
   account: string
@@ -87,8 +91,10 @@ export async function getCredential(
 }
 
 /**
- * Delete a credential from the system keychain
- * @param account - The account identifier
+ * Delete a credential from the system keychain.
+ *
+ * @param account - The account identifier whose credential should be removed
+ * @returns `true` if a credential was deleted, `false` if no credential existed for the account
  */
 export async function deleteCredential(
   account: string
@@ -118,7 +124,9 @@ export async function deleteCredential(
 }
 
 /**
- * List all accounts stored for this service
+ * List all accounts stored for this service.
+ *
+ * @returns A result whose `data` is an array of objects each containing an `account` string when successful; otherwise `error` describes the failure.
  */
 export async function listCredentials(): Promise<
   KeychainResult<Array<{ account: string }>>
@@ -141,8 +149,10 @@ export async function listCredentials(): Promise<
 }
 
 /**
- * Check if a credential exists for the given account
- * @param account - The account identifier
+ * Determine whether a credential exists for the specified account.
+ *
+ * @param account - The account identifier to check
+ * @returns `true` if a credential exists for `account`, `false` otherwise. On failure the result's `error` field will be set (e.g., `INVALID_INPUT` for a missing account or `KEYCHAIN_ERROR` for keychain access failures).
  */
 export async function hasCredential(
   account: string

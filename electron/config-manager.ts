@@ -57,6 +57,12 @@ const store = new Store<AppConfig>({
  */
 export function getConfig<K extends keyof AppConfig>(key: K): AppConfig[K];
 export function getConfig<T = unknown>(key: string): T;
+/**
+ * Retrieve a value from the persistent configuration by key.
+ *
+ * @param key - The configuration key to read
+ * @returns The value stored for `key`, or `undefined` if the key does not exist
+ */
 export function getConfig(key: string): unknown {
   return store.get(key);
 }
@@ -71,59 +77,76 @@ export function setConfig<K extends keyof AppConfig>(
   value: AppConfig[K]
 ): void;
 export function setConfig(key: string, value: unknown): void;
+/**
+ * Store a value for the specified configuration key.
+ *
+ * @param key - The configuration key to set (may be a known AppConfig key or a dynamic string)
+ * @param value - The value to persist for `key`
+ */
 export function setConfig(key: string, value: unknown): void {
   store.set(key, value);
 }
 
 /**
- * Get the entire configuration object
+ * Retrieve the current in-memory application configuration.
+ *
+ * @returns The complete `AppConfig` object stored in the configuration store
  */
 export function getAllConfig(): AppConfig {
   return store.store;
 }
 
 /**
- * Set multiple configuration values at once
- * @param config - Partial configuration object
+ * Applies multiple configuration updates from a partial AppConfig, updating only the provided keys and leaving unspecified settings unchanged.
+ *
+ * @param config - Partial AppConfig whose specified properties will be written to the store
  */
 export function setAllConfig(config: Partial<AppConfig>): void {
   store.set(config);
 }
 
 /**
- * Delete a configuration key
- * @param key - The key to delete
+ * Removes the specified top-level configuration key from the store.
+ *
+ * @param key - The AppConfig property to remove
  */
 export function deleteConfig(key: keyof AppConfig): void {
   store.delete(key);
 }
 
 /**
- * Check if a configuration key exists
- * @param key - The key to check
+ * Determines whether the configuration contains the given key.
+ *
+ * @param key - The configuration key to check.
+ * @returns `true` if the key exists in the store, `false` otherwise.
  */
 export function hasConfig(key: string): boolean {
   return store.has(key);
 }
 
 /**
- * Reset configuration to defaults
+ * Clear all persisted configuration so the default settings are restored on next access.
+ *
+ * Subsequent reads will reflect the module's configured defaults.
  */
 export function resetConfig(): void {
   store.clear();
 }
 
 /**
- * Get the path to the configuration file
+ * Get the filesystem path to the current configuration file.
+ *
+ * @returns The absolute filesystem path of the store's configuration file
  */
 export function getConfigPath(): string {
   return store.path;
 }
 
 /**
- * Subscribe to configuration changes
- * @param callback - Function to call when config changes
- * @returns Unsubscribe function
+ * Register a listener that is invoked whenever any configuration value changes.
+ *
+ * @param callback - Called with the new and previous full configuration objects when a change occurs
+ * @returns A function that removes the registered listener
  */
 export function onConfigChange(
   callback: (newValue: AppConfig, oldValue: AppConfig) => void
@@ -132,10 +155,11 @@ export function onConfigChange(
 }
 
 /**
- * Subscribe to changes on a specific key
- * @param key - The key to watch
- * @param callback - Function to call when the key changes
- * @returns Unsubscribe function
+ * Watch changes to a specific configuration key.
+ *
+ * @param key - Configuration key to observe
+ * @param callback - Called with the new and previous values when the key changes
+ * @returns A function that removes the subscription when invoked
  */
 export function onConfigKeyChange<K extends keyof AppConfig>(
   key: K,
