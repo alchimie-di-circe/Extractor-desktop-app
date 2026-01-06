@@ -13,8 +13,8 @@
         "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
         "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
         "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-      }
+        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE",
+      },
     },
     "devserver-mcp": {
       "command": "tsx",
@@ -23,12 +23,16 @@
         "--monitor",
         "--port",
         "9338",
-        "pnpm run start"
-      ]
-    }
+        "pnpm run start",
+      ],
+    },
+    "svelte": {
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"],
+    },
   },
   "assistant": {
     "enabled": true,
-    "version": "2"
-  }
+    "version": "2",
+  },
 }

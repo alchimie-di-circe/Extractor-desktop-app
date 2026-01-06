@@ -8,6 +8,7 @@ Keep it short, actionable, and aligned with the PRD + Task Master graph.
 - [Task Master workflow](#task-master-workflow-daily)
 - [Dev commands](#dev-commands)
 - [Architecture boundaries](#architecture-boundaries)
+- [Svelte MCP (Documentation & Validation)](#svelte-mcp-documentation--validation)
 - [DevServer MCP (Development Monitoring)](#devserver-mcp-development-monitoring)
 - [Integrated Development Workflow](#integrated-development-workflow)
 - [Cagent (Docker) usage](#cagent-docker-usage)
@@ -58,6 +59,119 @@ task-master update-task --id=<id> --prompt="changes"
 
 ---
 
+## Svelte MCP (Documentation & Validation)
+
+Svelte MCP è il server MCP ufficiale del team Svelte che fornisce accesso diretto alla documentazione Svelte 5 e SvelteKit, più validazione del codice in tempo reale.
+
+### Perché usarlo
+- **Evita sintassi obsoleta**: Gli LLM spesso generano Svelte 4 syntax o React patterns
+- **Validazione automatica**: Il codice viene verificato prima di essere mostrato
+- **Docs sempre aggiornate**: Accesso diretto a Svelte 5 runes, SvelteKit 2, etc.
+- **Riduce iterazioni**: Da 3-4 fix per feature a 1-2
+
+### Tools MCP disponibili
+
+| Tool | Descrizione | Quando usarlo |
+|------|-------------|---------------|
+| `list-sections` | Lista tutte le sezioni docs con use-cases | **SEMPRE PRIMA** - per trovare docs rilevanti |
+| `get-documentation` | Recupera documentazione completa per sezioni | Dopo list-sections, per ottenere dettagli |
+| `svelte-autofixer` | Analizza codice Svelte e ritorna issues/suggerimenti | **SEMPRE** prima di fornire codice Svelte |
+| `playground-link` | Genera link al Svelte Playground con il codice | Per demo/debug/condivisione |
+
+### Workflow obbligatorio per codice Svelte
+
+**REGOLA: Quando generi codice Svelte, DEVI seguire questo flusso:**
+
+1. **Chiama `list-sections`** per trovare docs rilevanti al task
+2. **Chiama `get-documentation`** per recuperare le sezioni trovate
+3. **Genera il codice** basandoti sulla documentazione
+4. **Chiama `svelte-autofixer`** per validare il codice generato
+5. **Se ci sono errori**, correggi e ri-valida
+6. **Solo dopo validazione**, mostra il codice all'utente
+
+### Esempio di utilizzo corretto
+
+```
+# Task: Creare un form con validazione
+
+1. list-sections → trova "forms", "form-validation", "$state"
+2. get-documentation(["forms", "$state"]) → ottieni docs
+3. Genera codice usando $state, non vecchio syntax
+4. svelte-autofixer(code) → verifica errori
+5. Se OK → mostra codice
+   Se errori → correggi e torna a step 4
+```
+
+### Pattern Svelte 5 da usare (NON Svelte 4)
+
+```svelte
+<!-- ✅ CORRETTO: Svelte 5 runes -->
+<script>
+  let count = $state(0);
+  let doubled = $derived(count * 2);
+  
+  function increment() {
+    count++;
+  }
+</script>
+
+<!-- ❌ SBAGLIATO: Svelte 4 syntax -->
+<script>
+  let count = 0;
+  $: doubled = count * 2;
+</script>
+```
+
+### Configurazione
+
+**Zed IDE** (`.zed/settings.json`):
+```json
+{
+  "context_servers": {
+    "svelte": {
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"]
+    }
+  }
+}
+```
+
+**Claude Code** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "svelte": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"]
+    }
+  }
+}
+```
+
+### Troubleshooting
+
+**MCP non risponde:**
+```bash
+# Test manuale
+npx -y @sveltejs/mcp
+
+# Verifica versione
+npx @sveltejs/mcp --version
+```
+
+**Alternativa remota** (se locale non funziona):
+```json
+{
+  "svelte": {
+    "type": "http",
+    "url": "https://mcp.svelte.dev/mcp"
+  }
+}
+```
+
+---
+
 ## DevServer MCP (Development Monitoring)
 
 DevServer MCP monitora in tempo reale gli errori del dev server Vite/Electron e notifica Zed Agent di problemi TypeScript, Svelte, build e runtime.
@@ -76,7 +190,6 @@ DevServer MCP monitora in tempo reale gli errori del dev server Vite/Electron e 
 - Notifica Zed Agent entro 1-2 secondi dalla comparsa dell'errore
 
 ### Tools MCP disponibili per agent
-Questi tools sono invocabili automaticamente da Zed Agent:
 
 | Tool | Descrizione | Uso tipico |
 |------|-------------|------------|
@@ -121,9 +234,9 @@ tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --port 9339 --monitor "p
 
 ## Integrated Development Workflow
 
-### Pre-PR Checklist con DevServer MCP
+### Pre-PR Checklist con MCP Tools
 
-Questo workflow integra DevServer MCP con Task Master per garantire qualità prima di ogni PR.
+Questo workflow integra Svelte MCP + DevServer MCP + Task Master per garantire qualità prima di ogni PR.
 
 #### 1. Inizio Task (Branch Creation)
 
@@ -144,33 +257,36 @@ task-master set-status --id=<id> --status=in-progress
 # Avvia dev server (DevServer MCP monitora automaticamente)
 pnpm run start
 
-# Durante lo sviluppo, l'agent può usare questi tools:
-# - get_dev_server_status → verifica stato generale
-# - get_file_errors → errori sul file corrente
-# - get_error_summary → overview problemi
+# Durante lo sviluppo, l'agent usa questi tools:
+# - Svelte MCP: list-sections, get-documentation, svelte-autofixer
+# - DevServer MCP: get_dev_server_status, get_file_errors
 ```
 
 **Agent Behavior durante sviluppo:**
-- Monitorare errori in tempo reale via DevServer MCP
-- Correggere errori TypeScript/Svelte prima di procedere
-- Loggare progressi con `task-master update-subtask`
+1. **Prima di scrivere codice Svelte**: Consulta docs via `list-sections` + `get-documentation`
+2. **Dopo aver scritto codice**: Valida con `svelte-autofixer`
+3. **Durante sviluppo**: Monitora errori in tempo reale via DevServer MCP
+4. **Loggare progressi**: Usa `task-master update-subtask`
 
 #### 3. Pre-PR Validation Checklist
 
 Prima di creare una PR, l'agent DEVE verificare:
 
 ```bash
-# 1. Zero errori dal dev server
+# 1. Codice Svelte validato
+# Tool: svelte-autofixer → 0 issues
+
+# 2. Zero errori dal dev server
 # Tool: get_dev_server_status
 # Expected: { "status": "healthy", "errorCount": 0 }
 
-# 2. Type check passa
+# 3. Type check passa
 pnpm run check
 
-# 3. Tests passano (se applicabili)
+# 4. Tests passano (se applicabili)
 pnpm run test:unit
 
-# 4. Build di verifica
+# 5. Build di verifica
 pnpm run package
 ```
 
@@ -182,6 +298,7 @@ git add .
 git commit -m "feat(task-<id>): <description>
 
 - Implementation details
+- Validated via Svelte MCP: 0 issues
 - Verified via DevServer MCP: 0 errors
 - Type check: passed"
 
@@ -208,22 +325,24 @@ task-master set-status --id=<id> --status=done
 │                                                  ▼                │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │                 DEVELOPMENT LOOP                          │   │
-│  │  ┌────────────────┐    ┌────────────────┐                │   │
-│  │  │ DevServer MCP  │◀──▶│  Code Changes  │                │   │
-│  │  │ (monitoring)   │    │                │                │   │
-│  │  └────────────────┘    └────────────────┘                │   │
-│  │         │                      │                          │   │
-│  │         ▼                      ▼                          │   │
-│  │  ┌────────────────┐    ┌────────────────┐                │   │
-│  │  │ Error Detected │───▶│   Fix Error    │──┐             │   │
-│  │  └────────────────┘    └────────────────┘  │             │   │
-│  │         ▲                                   │             │   │
-│  │         └───────────────────────────────────┘             │   │
+│  │                                                           │   │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────┐   │   │
+│  │  │ Svelte MCP  │  │  Code Changes  │  │ DevServer MCP│   │   │
+│  │  │ (docs+valid)│◀▶│                │◀▶│ (monitoring) │   │   │
+│  │  └─────────────┘  └────────────────┘  └──────────────┘   │   │
+│  │        │                  │                   │           │   │
+│  │        ▼                  ▼                   ▼           │   │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────┐   │   │
+│  │  │ autofixer   │  │   Fix Issues   │◀─│Error Detected│   │   │
+│  │  │  validate   │─▶│                │  │              │   │   │
+│  │  └─────────────┘  └────────────────┘  └──────────────┘   │   │
+│  │                                                           │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                              │                                   │
 │                              ▼                                   │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │              PRE-PR VALIDATION                            │   │
+│  │  □ svelte-autofixer → 0 issues                           │   │
 │  │  □ get_dev_server_status → 0 errors                      │   │
 │  │  □ pnpm run check → passed                               │   │
 │  │  □ pnpm run test:unit → passed                           │   │
@@ -240,21 +359,22 @@ task-master set-status --id=<id> --status=done
 
 ### Agent Commands Summary
 
-| Fase | Comando Task Master | Tool DevServer MCP |
-|------|--------------------|--------------------|
-| Start | `task-master next` | - |
-| Begin | `set-status --status=in-progress` | `suggest_monitoring_setup` |
-| Develop | `update-subtask --prompt="..."` | `get_dev_server_status`, `get_file_errors` |
-| Validate | - | `get_error_summary` |
-| Complete | `set-status --status=done` | `get_dev_server_status` (final check) |
+| Fase | Task Master | Svelte MCP | DevServer MCP |
+|------|-------------|------------|---------------|
+| Start | `next` | - | - |
+| Begin | `set-status in-progress` | `list-sections` | `suggest_monitoring_setup` |
+| Develop | `update-subtask` | `get-documentation`, `svelte-autofixer` | `get_dev_server_status`, `get_file_errors` |
+| Validate | - | `svelte-autofixer` (final) | `get_error_summary` |
+| Complete | `set-status done` | `playground-link` (optional) | `get_dev_server_status` (final) |
 
 ### Best Practices
 
-1. **Sempre monitorare** - Tieni `pnpm run start` attivo durante lo sviluppo
-2. **Fix immediato** - Correggi errori non appena DevServer MCP li segnala
-3. **Log progressi** - Usa `update-subtask` per documentare decisioni e fix
-4. **Validate before PR** - Zero errori è prerequisito per ogni PR
-5. **Commit atomici** - Un commit per ogni fix significativo, referenzia task ID
+1. **Docs first** - Sempre consultare Svelte MCP prima di scrivere codice
+2. **Validate always** - Mai fornire codice Svelte senza `svelte-autofixer`
+3. **Monitor always** - Tieni `pnpm run start` attivo con DevServer MCP
+4. **Fix immediately** - Correggi errori non appena rilevati
+5. **Log progress** - Usa `update-subtask` per documentare decisioni
+6. **Zero issues pre-PR** - Prerequisito assoluto per ogni PR
 
 ---
 
@@ -314,9 +434,7 @@ If a web UI is added later, create a separate "Web UI rules" section.
 
 ## Configuration Reference
 
-### Zed MCP Configuration (`.zed/settings.json`)
-
-La configurazione completa per entrambi gli MCP server:
+### Complete Zed MCP Configuration (`.zed/settings.json`)
 
 ```json
 {
@@ -335,8 +453,14 @@ La configurazione completa per entrambi gli MCP server:
       "args": [
         "~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
         "--monitor",
+        "--port",
+        "9338",
         "pnpm run start"
       ]
+    },
+    "svelte": {
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"]
     }
   },
   "assistant": {
@@ -346,9 +470,31 @@ La configurazione completa per entrambi gli MCP server:
 }
 ```
 
-### Project-specific Config File (optional)
+### Complete Claude Code Configuration (`.mcp.json`)
 
-Crea `devserver-mcp.config.json` nella root del progetto:
+```json
+{
+  "mcpServers": {
+    "task-master-ai": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "task-master-ai"],
+      "env": {
+        "TASK_MASTER_TOOLS": "all",
+        "ANTHROPIC_API_KEY": "YOUR_KEY",
+        "PERPLEXITY_API_KEY": "YOUR_KEY"
+      }
+    },
+    "svelte": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sveltejs/mcp"]
+    }
+  }
+}
+```
+
+### DevServer MCP Config (`devserver-mcp.config.json`)
 
 ```json
 {
