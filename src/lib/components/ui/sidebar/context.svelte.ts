@@ -62,19 +62,19 @@ class SidebarState {
 const SYMBOL_KEY = "scn-sidebar";
 
 /**
- * Instantiates a new `SidebarState` instance and sets it in the context.
+ * Create a SidebarState instance and store it in the Svelte context under the module's sidebar symbol.
  *
- * @param props The constructor props for the `SidebarState` class.
- * @returns  The `SidebarState` instance.
+ * @param props - Sidebar state constructor properties (`open` getter and `setOpen` setter)
+ * @returns The created `SidebarState` instance
  */
 export function setSidebar(props: SidebarStateProps): SidebarState {
 	return setContext(Symbol.for(SYMBOL_KEY), new SidebarState(props));
 }
 
 /**
- * Retrieves the `SidebarState` instance from the context. This is a class instance,
- * so you cannot destructure it.
- * @returns The `SidebarState` instance.
+ * Retrieves the SidebarState instance from Svelte context; this is a class instance and must not be destructured.
+ *
+ * @returns The SidebarState instance.
  */
 export function useSidebar(): SidebarState {
 	return getContext(Symbol.for(SYMBOL_KEY));
