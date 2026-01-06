@@ -77,5 +77,9 @@ export function setSidebar(props: SidebarStateProps): SidebarState {
  * @returns The SidebarState instance.
  */
 export function useSidebar(): SidebarState {
-	return getContext(Symbol.for(SYMBOL_KEY));
+	const sidebar = getContext<SidebarState | undefined>(Symbol.for(SYMBOL_KEY));
+	if (!sidebar) {
+		throw new Error("Sidebar context not found. Wrap your component tree with `Sidebar.Provider`.");
+	}
+	return sidebar;
 }
