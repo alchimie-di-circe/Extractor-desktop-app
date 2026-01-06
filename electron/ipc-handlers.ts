@@ -44,8 +44,9 @@ export const ConfigChannels = {
 } as const;
 
 /**
- * Register all IPC handlers for the application
- * Should be called once during app initialization
+ * Initialize and register all IPC handlers for keychain and configuration operations.
+ *
+ * This registers the application's IPC listeners and should be called once during app startup.
  */
 export function registerIpcHandlers(): void {
   registerKeychainHandlers();
@@ -53,7 +54,9 @@ export function registerIpcHandlers(): void {
 }
 
 /**
- * Register keychain-related IPC handlers
+ * Register IPC handlers that expose keychain operations to renderer processes.
+ *
+ * Registers handlers for the SAVE, GET, DELETE, LIST, and HAS channels; each handler validates input types and, on valid input, delegates to the corresponding credential operation. When input types are invalid the handlers return a structured error object with `success: false` and `error.code` set to `"INVALID_INPUT"`.
  */
 function registerKeychainHandlers(): void {
   ipcMain.handle(
@@ -105,7 +108,10 @@ function registerKeychainHandlers(): void {
 }
 
 /**
- * Register config-related IPC handlers
+ * Register IPC handlers for configuration operations (GET, SET, GET_ALL, SET_ALL, DELETE, HAS, RESET, GET_PATH).
+ *
+ * Each handler validates incoming argument types and will throw an Error when required arguments are invalid.
+ * On success handlers delegate to the config API and return either the requested value, a boolean confirmation, or the config path as appropriate.
  */
 function registerConfigHandlers(): void {
   ipcMain.handle(ConfigChannels.GET, (_event, key: string) => {
