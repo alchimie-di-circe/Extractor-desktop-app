@@ -5,28 +5,12 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script>
-      // Anti-FOUC: Apply theme before page renders to prevent flash
+      // Anti-FOUC: Apply dark mode class if needed before Svelte loads
       (function () {
         const stored = localStorage.getItem("theme");
-        const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)",
-        ).matches;
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-        let theme;
-        if (
-          stored === "dark" ||
-          (stored === "system" && prefersDark) ||
-          (!stored && prefersDark)
-        ) {
-          theme = "dark";
-        } else if (stored === "light") {
-          theme = "light";
-        } else {
-          // Default to system preference
-          theme = prefersDark ? "dark" : "light";
-        }
-
-        if (theme === "dark") {
+        if (stored === "dark" || (stored !== "light" && prefersDark)) {
           document.documentElement.classList.add("dark");
         }
       })();

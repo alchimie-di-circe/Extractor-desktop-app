@@ -122,9 +122,6 @@
 		</Tabs.Content>
 
 		<!-- Appearance Tab -->
-		<Tabs.Content value="api" class="mt-6">
-			<!-- This is intentionally the same as api tab content for the hidden appearance -->
-		</Tabs.Content>
 
 		<Tabs.Content value="appearance" class="mt-6">
 			<Card.Root>

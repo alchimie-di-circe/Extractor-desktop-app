@@ -70,6 +70,5 @@ export {
 	Rail as SidebarRail,
 	Separator as SidebarSeparator,
 	Trigger as SidebarTrigger,
-	Trigger,
 	useSidebar,
 };

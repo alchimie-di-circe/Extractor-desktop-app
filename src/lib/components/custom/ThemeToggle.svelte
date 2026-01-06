@@ -5,8 +5,10 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 
 	// Get reactive state
-	let currentTheme = $derived(theme.preference);
-	let resolvedTheme = $derived(theme.resolved);
+	let currentTheme: Theme;
+	let resolvedTheme: 'light' | 'dark';
+	$: currentTheme = theme.preference;
+	$: resolvedTheme = theme.resolved;
 
 	function handleThemeChange(newTheme: Theme) {
 		theme.set(newTheme);
