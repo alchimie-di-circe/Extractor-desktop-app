@@ -13,25 +13,25 @@
     },
     {
       "name": "electron-preload-error",
-      "pattern": "\\[Preload\\].*(?:Error|error)",
+      "pattern": "\\[Preload\\].*(?:Error|error|ERROR)",
       "category": "runtime",
       "severity": "critical"
     },
     {
       "name": "vite-build-error",
-      "pattern": "\\[vite\\].*(?:Error|Failed)",
+      "pattern": "\\[vite\\].*(?:Error|error|ERROR|Failed|failed|FAILED)",
       "category": "build",
       "severity": "critical"
     },
     {
       "name": "svelte-compile-error",
-      "pattern": "(?:svelte|Svelte).*(?:Error|error)",
+      "pattern": "(?:svelte|Svelte).*(?:Error|error|ERROR)",
       "category": "build",
       "severity": "critical"
     },
     {
       "name": "svelte-warning",
-      "pattern": "(?:svelte|Svelte).*(?:Warning|warning)",
+      "pattern": "(?:svelte|Svelte).*(?:Warning|warning|WARNING)",
       "category": "build",
       "severity": "warning"
     },
@@ -43,7 +43,7 @@
     },
     {
       "name": "ipc-error",
-      "pattern": "IPC.*(?:Error|error|failed)",
+      "pattern": "IPC.*(?:Error|error|ERROR|Failed|failed|FAILED)",
       "category": "runtime",
       "severity": "critical"
     }
