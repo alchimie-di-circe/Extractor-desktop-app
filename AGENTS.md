@@ -333,7 +333,7 @@ La configurazione completa per entrambi gli MCP server:
     "devserver-mcp": {
       "command": "tsx",
       "args": [
-        "/Users/alexandthemusic/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
+        "~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
         "--monitor",
         "pnpm run start"
       ]
