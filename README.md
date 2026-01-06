@@ -1,116 +1,104 @@
-# SveltronKit
+# Extractor Desktop App (Trae Extractor)
 
-A minimal template for building Electron apps with SvelteKit.
+Local-first AI command center for content creators. Extract photos from Apple Photos, edit with AI,
+generate captions, and schedule posts without uploading personal media to external servers by default.
 
-Includes native support for Typscript and uses Electron's official recommended Electron Forge for packaging.
+## Visione
+- Automatizzare l'80% del workflow media con agenti AI e controllo umano nei punti critici.
+- Mantenere la privacy: dati locali, API key in keychain, processi isolati.
+- UI desktop reattiva e leggera con Svelte + shadcn-svelte.
 
-Everything you can do in SvelteKit, you can do in SveltronKit; meaning that you can use component
-libraries like [Shadcn-Svelte](https://next.shadcn-svelte.com/).
+## Stato e roadmap
+La pianificazione e il tracking sono gestiti in `.taskmaster/`. Vedi:
+- `/.taskmaster/docs/prd.md` per la visione completa.
+- `/.taskmaster/tasks/tasks.json` per l'elenco aggiornato delle task.
 
-> [!IMPORTANT]
-> This template uses SvelteKit's [hash router](https://svelte.dev/docs/kit/configuration#router) to
-> create a single-page app. The only difference you'll have to look out for is to start all your routed
-> links with `#/` instead of `/`.
+Focus attuale (estratto dalle task principali):
+- Base UI con shadcn-svelte + routing hash.
+- IPC bridge sicuro + keychain.
+- Configurazione multi-provider LLM.
+- Sidecar Python (FastAPI) per agenti.
+- Agenti: extraction (osxphotos), editing (Cloudinary MCP), captioning (RAG), scheduling (Postiz).
+- A2UI widgets + timeline (Twick).
 
-## Dependencies & Frameworks
+## Stack principale
+- Electron 36 + Electron Forge (main/renderer separati, context isolation).
+- SvelteKit 2 + Svelte 5 Runes.
+- shadcn-svelte + TailwindCSS 4.
+- Task Master AI per PRD e task graph.
+- Python sidecar (FastAPI) per agenti e strumenti AI.
+- Cagent by Docker per definizione agenti e orchestrazione via YAML (non richiede Docker attivo).
 
-- [SvelteKit](https://kit.svelte.dev/)
-- [Electron](https://www.electronjs.org/)
-- [Electron Forge](https://www.electronforge.io/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [TailwindCSS](https://tailwindcss.com/)
+## Architettura (high level)
+```
+Renderer (Svelte UI)
+  -> services (IPC client)
+    -> Electron preload (contextBridge)
+      -> Electron main (IPC handlers, keychain, sidecar manager)
+        -> Python sidecar (FastAPI, agenti Cagent)
+          -> osxphotos sandbox / MCP tools / Postiz API
+```
 
-> [!NOTE]
-> I've included TailwindCSS in this template because I use it in my own projects, but you can remove
-> it easily if you don't want it.
+Principi chiave:
+- Renderer solo UI, niente I/O pesante o logica di business.
+- Operazioni costose in main process o sidecar.
+- IPC tipizzato e minimale.
 
-## Getting Started
+## Struttura progetto (attuale + pianificata)
+```
+electron/                   # Electron main + preload
+src/                        # SvelteKit renderer
+  lib/components/ui/        # shadcn-svelte
+  lib/components/custom/    # componenti app
+  lib/services/             # wrapper IPC
+  lib/stores/               # Svelte 5 runes
+.taskmaster/                # PRD + task graph
+python/                     # (planned) sidecar agenti FastAPI
+```
 
-> [!WARNING]
-> This project uses [`pnpm`](https://pnpm.io/) and uses [patching](https://pnpm.io/cli/patch) to work
-> around some issues with SvelteKit. When this [PR](https://github.com/sveltejs/kit/pull/13812) merges,
-> you can remove the patching and use the latest version of SvelteKit.
+## Sviluppo locale
+Requisiti: Node.js + pnpm.
 
-Start by installing the dependencies:
-
+Installazione:
 ```
 pnpm install
 ```
 
-**Development:**
-
+Dev server Electron:
 ```
 pnpm run start
 ```
 
-[Electron Forge](https://www.electronforge.io/) with the [Vite plugin](https://www.electronforge.io/plugins/vite)
-will take care of running the development server and building the app for you. You don't need to run
-`vite dev` or `vite build` yourself. This also means that it supports hot module replacement (HMR).
+Check e test:
+```
+pnpm run check
+pnpm run test:unit
+pnpm run test:e2e
+```
 
-**Production:**
-
+Build:
 ```
 pnpm run package
-```
-
-This will build the app and you can find the output in the `out` directory. You can run the production
-app by opening the `.app` file in the `out` directory. This will not create your app's installer
-for distribution though.
-
-To create a distributable installer, you can use:
-
-```
 pnpm run make
 ```
 
-This will create a distributable installer for your app. You can configure this in the `makers` section
-in `forge.config.ts`. Reference the [makers documentation](https://www.electronforge.io/makers) for more
-information.
+Note:
+- Routing hash: usare `#/route` nei link.
+- Il progetto usa patching di SvelteKit (vedi `package.json`).
+- La configurazione agenti vive in YAML (Cagent) e viene generata da settings UI.
 
-# Electron Crash Course
-
-> [!NOTE]
-> This is a super simplified version of the Electron documentation meant to give you a general idea
-> of how Electron works and how each file corresponds to responsibilities in Electron. For a more
-> accurate description of how Electron works, you can refer to the [official documentation](https://www.electronjs.org/docs).
-
-I found that most of the problems I encountered when setting up Electron were because I didn't know
-how Electron works and that the documentation was too dense to get up to speed with, so I'll include
-a crash course here. _I will be making a lot of analogies to web development_ as it seems like a lot
-of people who are new to Electron come from web development.
-
-Because everything in Electron is client based, you'll need to host your own server if you want to
-access any sensitive logic like a database or authentication, etc.
-
-## main.ts
-
-This file defines what the main process will do. The process runs your app. It's the one that
-creates and manages windows and also has permissions to access the file system. You also define
-"_signals_"/"_endpoints_", through IPC, that let the renderer process (browser that runs your app)
-can "_call_" to interact with the file system.
-
-By default, Electron will block off file system access to the renderer process as a security measure,
-which is the reason why you need to use IPC to interact with the file system.
-
-## preload.ts
-
-Think about this as a "bridge" or a "network"/"proxy" between the main process and the renderer process.
-You specify what functions that the renderer process can call and these functions will usually be
-interacting with the file system through the main process.
-
-## renderer
-
-The renderer process is the browser that runs your app. Just treat this like another SvelteKit app.
-
-## Overview
-
-```mermaid
-flowchart LR
-  subgraph main[Main Process]
-    electron
-  end
-  subgraph renderer[Renderer Process]
-    browser
-  end
-  electron <-- preload --> renderer
+## Task Master (workflow rapido)
 ```
+task-master list
+task-master next
+task-master show <id>
+task-master set-status --id=<id> --status=done
+```
+
+## Cagent (Docker) - note rapide
+- Gli agenti e l'orchestrazione sono definiti in YAML (Cagent).
+- Non serve Docker attivo sulla macchina host per usare Cagent.
+- I tool MCP possono comunque usare Docker MCP Gateway se disponibile.
+
+## Contributing
+Linee guida per sviluppo e AI agents in `AGENTS.md`.
