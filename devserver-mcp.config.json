@@ -1,0 +1,51 @@
+{
+  "processPatterns": ["pnpm run start", "pnpm run dev"],
+  "historyLimit": 1000,
+  "correlationWindow": 5000,
+  "watchPaths": ["src", "electron"],
+  "excludePaths": ["node_modules", ".svelte-kit", ".vite", "dist"],
+  "patterns": [
+    {
+      "name": "electron-main-error",
+      "pattern": "\\[Main\\].*(?:Error|error|ERROR)",
+      "category": "runtime",
+      "severity": "critical"
+    },
+    {
+      "name": "electron-preload-error",
+      "pattern": "\\[Preload\\].*(?:Error|error)",
+      "category": "runtime",
+      "severity": "critical"
+    },
+    {
+      "name": "vite-build-error",
+      "pattern": "\\[vite\\].*(?:Error|Failed)",
+      "category": "build",
+      "severity": "critical"
+    },
+    {
+      "name": "svelte-compile-error",
+      "pattern": "(?:svelte|Svelte).*(?:Error|error)",
+      "category": "build",
+      "severity": "critical"
+    },
+    {
+      "name": "svelte-warning",
+      "pattern": "(?:svelte|Svelte).*(?:Warning|warning)",
+      "category": "build",
+      "severity": "warning"
+    },
+    {
+      "name": "typescript-error",
+      "pattern": "TS\\d+:",
+      "category": "type",
+      "severity": "critical"
+    },
+    {
+      "name": "ipc-error",
+      "pattern": "IPC.*(?:Error|error|failed)",
+      "category": "runtime",
+      "severity": "critical"
+    }
+  ]
+}
