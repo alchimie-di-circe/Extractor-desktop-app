@@ -1,20 +1,43 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import started from "electron-squirrel-startup";
+import { registerIpcHandlers } from "./ipc-handlers";
+import { getConfig, setConfig } from "./config-manager";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
+// Register IPC handlers early
+registerIpcHandlers();
+
+let mainWindow: BrowserWindow | null = null;
+
 const createWindow = () => {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+  // Get saved window bounds from config
+  const windowBounds = getConfig("windowBounds");
+
+  // Create the browser window with security settings
+  mainWindow = new BrowserWindow({
+    width: windowBounds.width,
+    height: windowBounds.height,
+    x: windowBounds.x,
+    y: windowBounds.y,
     webPreferences: {
       preload: path.join(import.meta.dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
+  });
+
+  // Save window bounds on resize/move
+  mainWindow.on("close", () => {
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      setConfig("windowBounds", bounds);
+    }
   });
 
   // and load the index.html of the app.
