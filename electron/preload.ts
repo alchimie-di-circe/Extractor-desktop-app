@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { KeychainChannels, ConfigChannels } from "./ipc-handlers";
+import { KeychainChannels, ConfigChannels } from "../shared/ipc-channels";
 import type { KeychainResult, AppConfig } from "../shared/types";
 
 /**

@@ -18,6 +18,7 @@ import {
   getConfigPath,
   validateConfigValue,
 } from "./config-manager";
+import { KeychainChannels, ConfigChannels } from "../shared/ipc-channels";
 import type { AppConfig } from "../shared/types";
 
 /**
@@ -29,6 +30,11 @@ import type { AppConfig } from "../shared/types";
  */
 function validateAndNormalizePath(userPath: string): string {
   if (!userPath) return ""; // Empty path is allowed (means no default)
+
+  // CRITICAL: Check for traversal sequences BEFORE normalization
+  if (userPath.includes("..") || userPath.split(/[\\/]/).some(segment => segment === "..")) {
+    throw new Error("Path contains invalid traversal sequences (..)");
+  }
 
   if (userPath.includes("\0")) {
     throw new Error("Path contains invalid characters");
@@ -58,39 +64,8 @@ function validateAndNormalizePath(userPath: string): string {
 }
 
 /**
- * IPC Channel names for keychain operations
- */
-export const KeychainChannels = {
-  SAVE: "keychain:save",
-  GET: "keychain:get",
-  DELETE: "keychain:delete",
-  LIST: "keychain:list",
-  HAS: "keychain:has",
-} as const;
-
-/**
- * IPC Channel names for config operations
- */
-export const ConfigChannels = {
-  GET: "config:get",
-  SET: "config:set",
-  GET_ALL: "config:get-all",
-  SET_ALL: "config:set-all",
-  DELETE: "config:delete",
-  HAS: "config:has",
-  RESET: "config:reset",
-  GET_PATH: "config:get-path",
-} as const;
-
-/**
  * Initialize and register all IPC handlers for keychain and configuration operations.
- *
- * This registers the application's IPC listeners and should be called once during app startup.
  */
-export function registerIpcHandlers(): void {
-  registerKeychainHandlers();
-  registerConfigHandlers();
-}
 
 /**
  * Register IPC handlers that expose keychain operations to renderer processes.
@@ -162,18 +137,28 @@ function registerConfigHandlers(): void {
 
   ipcMain.handle(ConfigChannels.SET, (_event, key: string, value: unknown) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
 
-    let finalValue = value;
-    if (key === "exportSettings.defaultPath" && typeof value === "string") {
-      finalValue = validateAndNormalizePath(value);
+    try {
+      let finalValue = value;
+      if (key === "exportSettings.defaultPath" && typeof value === "string") {
+        finalValue = validateAndNormalizePath(value);
+      }
+
+      validateConfigValue(key, finalValue);
+      setConfig(key, finalValue);
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set config" }
+      };
     }
-
-    validateConfigValue(key, finalValue);
-    setConfig(key, finalValue);
-
-    return true;
   });
 
   ipcMain.handle(ConfigChannels.GET_ALL, () => {
@@ -182,52 +167,62 @@ function registerConfigHandlers(): void {
 
   ipcMain.handle(ConfigChannels.SET_ALL, (_event, config: Partial<AppConfig>) => {
     if (typeof config !== "object" || config === null) {
-      throw new Error("Config must be an object");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Config must be an object" }
+      };
     }
 
-    if (config.theme !== undefined) {
-      validateConfigValue("theme", config.theme);
-    }
+    try {
+      if (config.theme !== undefined) {
+        validateConfigValue("theme", config.theme);
+      }
 
-    if (config.language !== undefined) {
-      validateConfigValue("language", config.language);
-    }
+      if (config.language !== undefined) {
+        validateConfigValue("language", config.language);
+      }
 
-    if (config.defaultProvider !== undefined) {
-      validateConfigValue("defaultProvider", config.defaultProvider);
-    }
+      if (config.defaultProvider !== undefined) {
+        validateConfigValue("defaultProvider", config.defaultProvider);
+      }
 
-    if (config.windowBounds !== undefined) {
-      validateConfigValue("windowBounds", config.windowBounds);
-    }
+      if (config.windowBounds !== undefined) {
+        validateConfigValue("windowBounds", config.windowBounds);
+      }
 
-    if (config.exportSettings?.defaultPath !== undefined) {
-      config.exportSettings.defaultPath = validateAndNormalizePath(
-        config.exportSettings.defaultPath
-      );
-      validateConfigValue(
-        "exportSettings.defaultPath",
-        config.exportSettings.defaultPath
-      );
-    }
+      if (config.exportSettings?.defaultPath !== undefined) {
+        config.exportSettings.defaultPath = validateAndNormalizePath(
+          config.exportSettings.defaultPath
+        );
+        validateConfigValue(
+          "exportSettings.defaultPath",
+          config.exportSettings.defaultPath
+        );
+      }
 
-    if (config.exportSettings?.format !== undefined) {
-      validateConfigValue("exportSettings.format", config.exportSettings.format);
-    }
+      if (config.exportSettings?.format !== undefined) {
+        validateConfigValue("exportSettings.format", config.exportSettings.format);
+      }
 
-    if (config.llmProviders) {
-      Object.entries(config.llmProviders).forEach(([provider, settings]) => {
-        if (settings?.enabled !== undefined) {
-          validateConfigValue(`llmProviders.${provider}.enabled`, settings.enabled);
-        }
-        if (settings?.model !== undefined) {
-          validateConfigValue(`llmProviders.${provider}.model`, settings.model);
-        }
-      });
-    }
+      if (config.llmProviders) {
+        Object.entries(config.llmProviders).forEach(([provider, settings]) => {
+          if (settings?.enabled !== undefined) {
+            validateConfigValue(`llmProviders.${provider}.enabled`, settings.enabled);
+          }
+          if (settings?.model !== undefined) {
+            validateConfigValue(`llmProviders.${provider}.model`, settings.model);
+          }
+        });
+      }
 
-    setAllConfig(config);
-    return true;
+      setAllConfig(config);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set all config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.DELETE, (_event, key: keyof AppConfig) => {
