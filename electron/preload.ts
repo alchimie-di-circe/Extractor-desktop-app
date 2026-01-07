@@ -25,33 +25,33 @@ const keychainApi = {
 /**
  * Config API exposed to renderer
  */
+type IpcOk<T> = { success: true; data: T };
+type IpcOkVoid = { success: true };
+type IpcErr = { success: false; error: { code: string; message: string } };
+type IpcResult<T> = IpcOk<T> | IpcErr;
+
 const configApi = {
-  type IpcOk<T> = { success: true; data: T };
-  type IpcOkVoid = { success: true };
-  type IpcErr = { success: false; error: { code: string; message: string } };
-  type IpcResult<T> = IpcOk<T> | IpcErr;
+  get: <T = unknown>(key: string): Promise<IpcResult<T>> =>
+    ipcRenderer.invoke(ConfigChannels.GET, key),
 
-  const configApi = {
-    get: <T = unknown>(key: string): Promise<IpcResult<T>> =>
-      ipcRenderer.invoke(ConfigChannels.GET, key),
+  set: (key: string, value: unknown): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(ConfigChannels.SET, key, value),
 
-    set: (key: string, value: unknown): Promise<IpcOkVoid | IpcErr> =>
-      ipcRenderer.invoke(ConfigChannels.SET, key, value),
+  getAll: (): Promise<AppConfig> =>
+    ipcRenderer.invoke(ConfigChannels.GET_ALL),
 
-    getAll: (): Promise<AppConfig> =>
-      ipcRenderer.invoke(ConfigChannels.GET_ALL),
+  setAll: (config: Partial<AppConfig>): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(ConfigChannels.SET_ALL, config),
 
-    setAll: (config: Partial<AppConfig>): Promise<IpcOkVoid | IpcErr> =>
-      ipcRenderer.invoke(ConfigChannels.SET_ALL, config),
+  delete: (key: keyof AppConfig): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(ConfigChannels.DELETE, key),
 
-    delete: (key: keyof AppConfig): Promise<IpcOkVoid | IpcErr> =>
-      ipcRenderer.invoke(ConfigChannels.DELETE, key),
+  has: (key: string): Promise<boolean> =>
+    ipcRenderer.invoke(ConfigChannels.HAS, key),
 
-    has: (key: string): Promise<boolean> =>
-      ipcRenderer.invoke(ConfigChannels.HAS, key),
+  reset: (): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(ConfigChannels.RESET),
 
-    reset: (): Promise<IpcOkVoid | IpcErr> =>
-      ipcRenderer.invoke(ConfigChannels.RESET),
   getPath: (): Promise<string> =>
     ipcRenderer.invoke(ConfigChannels.GET_PATH),
 };

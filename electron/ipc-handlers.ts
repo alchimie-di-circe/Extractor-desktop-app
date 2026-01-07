@@ -72,7 +72,7 @@ function validateAndNormalizePath(userPath: string): string {
  *
  * Registers handlers for the SAVE, GET, DELETE, LIST, and HAS channels; each handler validates input types and, on valid input, delegates to the corresponding credential operation. When input types are invalid the handlers return a structured error object with `success: false` and `error.code` set to `"INVALID_INPUT"`.
  */
-function registerKeychainHandlers(): void {
+export function registerKeychainHandlers(): void {
   ipcMain.handle(
     KeychainChannels.SAVE,
     async (_event, account: string, password: string) => {
@@ -127,12 +127,22 @@ function registerKeychainHandlers(): void {
  * Each handler validates incoming argument types and will throw an Error when required arguments are invalid.
  * On success handlers delegate to the config API and return either the requested value, a boolean confirmation, or the config path as appropriate.
  */
-function registerConfigHandlers(): void {
+export function registerConfigHandlers(): void {
   ipcMain.handle(ConfigChannels.GET, (_event, key: string) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    return getConfig(key);
+    try {
+      return { success: true, data: getConfig(key) };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to get config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.SET, (_event, key: string, value: unknown) => {
@@ -227,22 +237,49 @@ function registerConfigHandlers(): void {
 
   ipcMain.handle(ConfigChannels.DELETE, (_event, key: keyof AppConfig) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    deleteConfig(key);
-    return true;
+    try {
+      deleteConfig(key);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to delete config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.HAS, (_event, key: string) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    return hasConfig(key);
+    try {
+      return { success: true, data: hasConfig(key) };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to check config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.RESET, () => {
-    resetConfig();
-    return true;
+    try {
+      resetConfig();
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to reset config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.GET_PATH, () => {

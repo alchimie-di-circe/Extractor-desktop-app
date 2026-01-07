@@ -7,7 +7,7 @@ const defaults: AppConfig = {
   llmProviders: {
     anthropic: { enabled: false, model: "claude-sonnet-4-20250514" },
     openai: { enabled: false, model: "gpt-4o" },
-    google: { enabled: false, model: "gemini-1.5-pro" },
+    google: { enabled: false, model: "gemini-2.5-pro" },
     perplexity: { enabled: false, model: "sonar" },
   },
   defaultProvider: null,
@@ -117,6 +117,7 @@ export function setConfig(key: string, value: unknown): void;
  * @param value - The value to persist for `key`
  */
 export function setConfig(key: string, value: unknown): void {
+  validateConfigValue(key, value);
   store.set(key, value);
 }
 

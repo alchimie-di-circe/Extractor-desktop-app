@@ -15,13 +15,13 @@ interface ElectronAPI {
 		has: (account: string) => Promise<KeychainResult<boolean>>;
 	};
 	config: {
-		get: <T = unknown>(key: string) => Promise<T>;
-		set: (key: string, value: unknown) => Promise<boolean>;
+		get: <K extends keyof AppConfig>(key: K) => Promise<AppConfig[K] | undefined>;
+		set: (key: keyof AppConfig, value: AppConfig[keyof AppConfig]) => Promise<void>;
 		getAll: () => Promise<AppConfig>;
-		setAll: (config: Partial<AppConfig>) => Promise<boolean>;
-		delete: (key: keyof AppConfig) => Promise<boolean>;
-		has: (key: string) => Promise<boolean>;
-		reset: () => Promise<boolean>;
+		setAll: (config: Partial<AppConfig>) => Promise<void>;
+		delete: (key: keyof AppConfig) => Promise<void>;
+		has: (key: keyof AppConfig) => Promise<boolean>;
+		reset: () => Promise<void>;
 		getPath: () => Promise<string>;
 	};
 	platform: NodeJS.Platform;
