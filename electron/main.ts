@@ -40,11 +40,22 @@ const createWindow = () => {
   });
 
   // Save window bounds on resize/move
-  mainWindow.on("close", () => {
+  const saveBounds = () => {
     if (mainWindow) {
       const bounds = mainWindow.getBounds();
       setConfig("windowBounds", bounds);
     }
+  };
+
+  mainWindow.on("resize", saveBounds);
+  mainWindow.on("move", saveBounds);
+
+  mainWindow.on("close", () => {
+    saveBounds();
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 
   // and load the index.html of the app.

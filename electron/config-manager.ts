@@ -1,29 +1,5 @@
 import Store from "electron-store";
-
-/**
- * Application configuration schema
- */
-export interface AppConfig {
-  theme: "light" | "dark" | "system";
-  language: string;
-  llmProviders: {
-    anthropic: { enabled: boolean; model: string };
-    openai: { enabled: boolean; model: string };
-    google: { enabled: boolean; model: string };
-    perplexity: { enabled: boolean; model: string };
-  };
-  defaultProvider: "anthropic" | "openai" | "google" | "perplexity" | null;
-  exportSettings: {
-    defaultPath: string;
-    format: "json" | "csv" | "markdown";
-  };
-  windowBounds: {
-    width: number;
-    height: number;
-    x?: number;
-    y?: number;
-  };
-}
+import type { AppConfig } from "../shared/types";
 
 const defaults: AppConfig = {
   theme: "system",
@@ -31,8 +7,8 @@ const defaults: AppConfig = {
   llmProviders: {
     anthropic: { enabled: false, model: "claude-sonnet-4-20250514" },
     openai: { enabled: false, model: "gpt-4o" },
-    google: { enabled: false, model: "gemini-pro" },
-    perplexity: { enabled: false, model: "llama-3.1-sonar-large-128k-online" },
+    google: { enabled: false, model: "gemini-1.5-pro" },
+    perplexity: { enabled: false, model: "sonar" },
   },
   defaultProvider: null,
   exportSettings: {
