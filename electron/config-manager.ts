@@ -52,6 +52,63 @@ const store = new Store<AppConfig>({
 });
 
 /**
+ * Validate a configuration value for a given key
+ * @param key - The configuration key
+ * @param value - The value to validate
+ * @throws Error if validation fails
+ */
+export function validateConfigValue(key: string, value: unknown): void {
+  // Handle dot notation keys
+  if (key === "theme") {
+    if (value !== "light" && value !== "dark" && value !== "system") {
+      throw new Error(`Invalid theme value: ${value}`);
+    }
+  } else if (key === "language") {
+    if (typeof value !== "string" || value.length === 0) {
+      throw new Error("Language must be a non-empty string");
+    }
+  } else if (key === "windowBounds") {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      typeof (value as any).width !== "number" ||
+      typeof (value as any).height !== "number"
+    ) {
+      throw new Error("Invalid windowBounds object");
+    }
+  } else if (key === "exportSettings.defaultPath") {
+    if (typeof value !== "string") {
+      throw new Error("exportSettings.defaultPath must be a string");
+    }
+  } else if (key === "exportSettings.format") {
+    if (value !== "json" && value !== "csv" && value !== "markdown") {
+      throw new Error(`Invalid export format: ${value}`);
+    }
+  } else if (key.startsWith("llmProviders.")) {
+    // Basic validation for LLM providers
+    if (key.endsWith(".enabled")) {
+      if (typeof value !== "boolean") {
+        throw new Error(`${key} must be a boolean`);
+      }
+    } else if (key.endsWith(".model")) {
+      if (typeof value !== "string") {
+        throw new Error(`${key} must be a string`);
+      }
+    }
+  } else if (key === "defaultProvider") {
+    if (
+      value !== null &&
+      value !== "anthropic" &&
+      value !== "openai" &&
+      value !== "google" &&
+      value !== "perplexity"
+    ) {
+      throw new Error(`Invalid defaultProvider: ${value}`);
+    }
+  }
+}
+
+/**
  * Get a configuration value by key path
  * @param key - Dot notation path to the config value
  */

@@ -1,4 +1,5 @@
-import { ipcMain } from "electron";
+import { ipcMain, app } from "electron";
+import path from "node:path";
 import {
   saveCredential,
   getCredential,
@@ -15,8 +16,40 @@ import {
   hasConfig,
   resetConfig,
   getConfigPath,
+  validateConfigValue,
 } from "./config-manager";
 import type { AppConfig } from "./config-manager";
+
+/**
+ * Validate and normalize a file path
+ * Ensures the path is safe and within allowed directories (e.g. user home)
+ * @param userPath - The path to validate
+ * @returns The normalized path
+ * @throws Error if path is invalid or unsafe
+ */
+function validateAndNormalizePath(userPath: string): string {
+  if (!userPath) return ""; // Empty path is allowed (means no default)
+
+  const normalizedPath = path.normalize(userPath);
+  
+  // Basic check: ensure it's an absolute path
+  if (!path.isAbsolute(normalizedPath)) {
+    throw new Error("Path must be absolute");
+  }
+
+  // Check for directory traversal attempts
+  if (normalizedPath.includes("..")) {
+     throw new Error("Path contains traversal characters");
+  }
+
+  // Optional: Restrict to home directory?
+  // const homeDir = app.getPath("home");
+  // if (!normalizedPath.startsWith(homeDir)) {
+  //   throw new Error("Path must be within user home directory");
+  // }
+
+  return normalizedPath;
+}
 
 /**
  * IPC Channel names for keychain operations
@@ -139,7 +172,16 @@ function registerConfigHandlers(): void {
       };
     }
     try {
-      setConfig(key, value);
+      let finalValue = value;
+      // specific validation for paths
+      if (key === "exportSettings.defaultPath" && typeof value === "string") {
+        finalValue = validateAndNormalizePath(value);
+      }
+
+      // General config validation
+      validateConfigValue(key, finalValue);
+
+      setConfig(key, finalValue);
       return { success: true };
     } catch (err) {
       return {
@@ -155,30 +197,71 @@ function registerConfigHandlers(): void {
 
   ipcMain.handle(ConfigChannels.SET_ALL, (_event, config: Partial<AppConfig>) => {
     if (typeof config !== "object" || config === null) {
-      throw new Error("Config must be an object");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Config must be an object" }
+      };
     }
-    setAllConfig(config);
-    return true;
+
+    try {
+      // Validate specific fields if present
+      if (config.exportSettings?.defaultPath) {
+        config.exportSettings.defaultPath = validateAndNormalizePath(config.exportSettings.defaultPath);
+      }
+      
+      // Shallow validation of known keys
+      Object.entries(config).forEach(([key, value]) => {
+          validateConfigValue(key, value);
+      });
+
+      setAllConfig(config);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set all config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.DELETE, (_event, key: keyof AppConfig) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
-    deleteConfig(key);
-    return true;
+    try {
+      deleteConfig(key);
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to delete config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.HAS, (_event, key: string) => {
     if (typeof key !== "string") {
-      throw new Error("Key must be a string");
+      return {
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Key must be a string" }
+      };
     }
     return hasConfig(key);
   });
 
   ipcMain.handle(ConfigChannels.RESET, () => {
-    resetConfig();
-    return true;
+    try {
+      resetConfig();
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to reset config" }
+      };
+    }
   });
 
   ipcMain.handle(ConfigChannels.GET_PATH, () => {
