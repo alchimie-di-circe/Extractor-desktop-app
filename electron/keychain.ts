@@ -1,17 +1,7 @@
 import keytar from "keytar";
+import type { KeychainError, KeychainResult } from "../shared/types";
 
 const SERVICE_NAME = "TraeExtractor";
-
-export interface KeychainError {
-  code: "INVALID_INPUT" | "KEYCHAIN_ERROR" | "NOT_FOUND";
-  message: string;
-}
-
-export interface KeychainResult<T> {
-  success: boolean;
-  data?: T;
-  error?: KeychainError;
-}
 
 /**
  * Stores a secret password in the system keychain under the given account.

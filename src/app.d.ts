@@ -1,42 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 
-/**
- * Keychain operation result
- */
-interface KeychainResult<T> {
-	success: boolean;
-	data?: T;
-	error?: {
-		code: "INVALID_INPUT" | "KEYCHAIN_ERROR" | "NOT_FOUND";
-		message: string;
-	};
-}
-
-/**
- * Application configuration schema
- */
-interface AppConfig {
-	theme: "light" | "dark" | "system";
-	language: string;
-	llmProviders: {
-		anthropic: { enabled: boolean; model: string };
-		openai: { enabled: boolean; model: string };
-		google: { enabled: boolean; model: string };
-		perplexity: { enabled: boolean; model: string };
-	};
-	defaultProvider: "anthropic" | "openai" | "google" | "perplexity" | null;
-	exportSettings: {
-		defaultPath: string;
-		format: "json" | "csv" | "markdown";
-	};
-	windowBounds: {
-		width: number;
-		height: number;
-		x?: number;
-		y?: number;
-	};
-}
+import type { KeychainResult, AppConfig } from "../shared/types";
 
 /**
  * Electron API exposed via contextBridge
