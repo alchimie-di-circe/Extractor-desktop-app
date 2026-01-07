@@ -30,7 +30,7 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
 		<DropdownMenu.Item
-			on:click={() => handleThemeChange('light')}
+			onclick={() => handleThemeChange('light')}
 			class="gap-2"
 		>
 			<Sun class="size-4" />
@@ -40,7 +40,7 @@
 			{/if}
 		</DropdownMenu.Item>
 		<DropdownMenu.Item
-			on:click={() => handleThemeChange('dark')}
+			onclick={() => handleThemeChange('dark')}
 			class="gap-2"
 		>
 			<Moon class="size-4" />
@@ -50,7 +50,7 @@
 			{/if}
 		</DropdownMenu.Item>
 		<DropdownMenu.Item
-			on:click={() => handleThemeChange('system')}
+			onclick={() => handleThemeChange('system')}
 			class="gap-2"
 		>
 			<Monitor class="size-4" />

@@ -46,6 +46,7 @@ export {
 	Rail,
 	Root,
 	Separator,
+	Trigger,
 	//
 	Root as Sidebar,
 	Content as SidebarContent,
