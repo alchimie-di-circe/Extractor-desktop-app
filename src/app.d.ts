@@ -24,7 +24,10 @@ interface ElectronAPI {
 		reset: () => Promise<void>;
 		getPath: () => Promise<string>;
 	};
-	platform: NodeJS.Platform;
+	/**
+	 * Get the current platform (async via IPC for sandbox compatibility)
+	 */
+	getPlatform: () => Promise<NodeJS.Platform>;
 }
 
 declare global {

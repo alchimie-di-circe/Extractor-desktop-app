@@ -22,3 +22,10 @@ export const ConfigChannels = {
   RESET: "config:reset",
   GET_PATH: "config:get-path",
 } as const;
+
+/**
+ * IPC Channel names for system operations
+ */
+export const SystemChannels = {
+  GET_PLATFORM: "system:get-platform",
+} as const;

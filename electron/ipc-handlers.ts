@@ -18,7 +18,7 @@ import {
   getConfigPath,
   validateConfigValue,
 } from "./config-manager";
-import { KeychainChannels, ConfigChannels } from "../shared/ipc-channels";
+import { KeychainChannels, ConfigChannels, SystemChannels } from "../shared/ipc-channels";
 import type { AppConfig } from "../shared/types";
 
 /**
@@ -243,6 +243,13 @@ export function registerConfigHandlers(): void {
       };
     }
     try {
+      const defaultConfig = getAllConfig();
+      if (!Object.prototype.hasOwnProperty.call(defaultConfig, key)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: `Invalid config key to delete: ${key}` }
+        };
+      }
       deleteConfig(key);
       return { success: true };
     } catch (err) {
@@ -288,6 +295,22 @@ export function registerConfigHandlers(): void {
 }
 
 /**
+ * Register all IPC handlers by calling both keychain, config, and system handlers.
+ */
+export function registerIpcHandlers(): void {
+  registerKeychainHandlers();
+  registerConfigHandlers();
+  registerSystemHandlers();
+}
+
+/**
+ * Register IPC handlers for system operations (GET_PLATFORM).
+ */
+export function registerSystemHandlers(): void {
+  ipcMain.handle(SystemChannels.GET_PLATFORM, () => process.platform);
+}
+
+/**
  * Unregister all IPC handlers
  * Useful for cleanup or testing
  */
@@ -296,6 +319,9 @@ export function unregisterIpcHandlers(): void {
     ipcMain.removeHandler(channel);
   });
   Object.values(ConfigChannels).forEach((channel) => {
+    ipcMain.removeHandler(channel);
+  });
+  Object.values(SystemChannels).forEach((channel) => {
     ipcMain.removeHandler(channel);
   });
 }

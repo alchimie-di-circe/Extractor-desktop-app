@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { KeychainChannels, ConfigChannels } from "../shared/ipc-channels";
+import { KeychainChannels, ConfigChannels, SystemChannels } from "../shared/ipc-channels";
 import type { KeychainResult, AppConfig } from "../shared/types";
 
 /**
@@ -62,7 +62,8 @@ const configApi = {
 const desktopApi = {
   keychain: keychainApi,
   config: configApi,
-  platform: process.platform,
+  getPlatform: (): Promise<NodeJS.Platform> =>
+    ipcRenderer.invoke(SystemChannels.GET_PLATFORM),
 };
 
 // Expose the API to the renderer process
