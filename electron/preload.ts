@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { KeychainChannels, ConfigChannels } from "./ipc-handlers";
-import type { KeychainResult } from "./keychain";
-import type { AppConfig } from "./config-manager";
+import type { KeychainResult, AppConfig } from "../shared/types";
 
 /**
  * Keychain API exposed to renderer

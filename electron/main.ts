@@ -16,7 +16,14 @@ let mainWindow: BrowserWindow | null = null;
 
 const createWindow = () => {
   // Get saved window bounds from config
-  const windowBounds = getConfig("windowBounds");
+  const rawBounds = getConfig("windowBounds") as unknown;
+  const windowBounds =
+    rawBounds &&
+    typeof rawBounds === "object" &&
+    typeof (rawBounds as any).width === "number" &&
+    typeof (rawBounds as any).height === "number"
+      ? (rawBounds as { width: number; height: number; x?: number; y?: number })
+      : { width: 1200, height: 800 };
 
   // Create the browser window with security settings
   mainWindow = new BrowserWindow({

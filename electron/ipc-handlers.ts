@@ -18,7 +18,7 @@ import {
   getConfigPath,
   validateConfigValue,
 } from "./config-manager";
-import type { AppConfig } from "./config-manager";
+import type { AppConfig } from "../shared/types";
 
 /**
  * Validate and normalize a file path
@@ -30,25 +30,31 @@ import type { AppConfig } from "./config-manager";
 function validateAndNormalizePath(userPath: string): string {
   if (!userPath) return ""; // Empty path is allowed (means no default)
 
-  const normalizedPath = path.normalize(userPath);
-  
+  if (userPath.includes("\0")) {
+    throw new Error("Path contains invalid characters");
+  }
+
+  const resolvedPath = path.resolve(userPath);
+
   // Basic check: ensure it's an absolute path
-  if (!path.isAbsolute(normalizedPath)) {
+  if (!path.isAbsolute(resolvedPath)) {
     throw new Error("Path must be absolute");
   }
 
-  // Check for directory traversal attempts
-  if (normalizedPath.includes("..")) {
-     throw new Error("Path contains traversal characters");
+  const homeDir = app.getPath("home");
+  const homeDirWithSep = homeDir.endsWith(path.sep) ? homeDir : `${homeDir}${path.sep}`;
+  const resolvedWithSep = resolvedPath.endsWith(path.sep)
+    ? resolvedPath
+    : `${resolvedPath}${path.sep}`;
+
+  if (
+    resolvedWithSep !== homeDirWithSep &&
+    !resolvedWithSep.startsWith(homeDirWithSep)
+  ) {
+    throw new Error("Path must be within user home directory");
   }
 
-  // Optional: Restrict to home directory?
-  // const homeDir = app.getPath("home");
-  // if (!normalizedPath.startsWith(homeDir)) {
-  //   throw new Error("Path must be within user home directory");
-  // }
-
-  return normalizedPath;
+  return resolvedPath;
 }
 
 /**
@@ -149,46 +155,25 @@ function registerKeychainHandlers(): void {
 function registerConfigHandlers(): void {
   ipcMain.handle(ConfigChannels.GET, (_event, key: string) => {
     if (typeof key !== "string") {
-      return {
-        success: false,
-        error: { code: "INVALID_INPUT", message: "Key must be a string" }
-      };
+      throw new Error("Key must be a string");
     }
-    try {
-      return { success: true, data: getConfig(key) };
-    } catch (err) {
-      return {
-        success: false,
-        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to get config" }
-      };
-    }
+    return getConfig(key);
   });
 
   ipcMain.handle(ConfigChannels.SET, (_event, key: string, value: unknown) => {
     if (typeof key !== "string") {
-      return {
-        success: false,
-        error: { code: "INVALID_INPUT", message: "Key must be a string" }
-      };
+      throw new Error("Key must be a string");
     }
-    try {
-      let finalValue = value;
-      // specific validation for paths
-      if (key === "exportSettings.defaultPath" && typeof value === "string") {
-        finalValue = validateAndNormalizePath(value);
-      }
 
-      // General config validation
-      validateConfigValue(key, finalValue);
-
-      setConfig(key, finalValue);
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set config" }
-      };
+    let finalValue = value;
+    if (key === "exportSettings.defaultPath" && typeof value === "string") {
+      finalValue = validateAndNormalizePath(value);
     }
+
+    validateConfigValue(key, finalValue);
+    setConfig(key, finalValue);
+
+    return true;
   });
 
   ipcMain.handle(ConfigChannels.GET_ALL, () => {
@@ -197,71 +182,72 @@ function registerConfigHandlers(): void {
 
   ipcMain.handle(ConfigChannels.SET_ALL, (_event, config: Partial<AppConfig>) => {
     if (typeof config !== "object" || config === null) {
-      return {
-        success: false,
-        error: { code: "INVALID_INPUT", message: "Config must be an object" }
-      };
+      throw new Error("Config must be an object");
     }
 
-    try {
-      // Validate specific fields if present
-      if (config.exportSettings?.defaultPath) {
-        config.exportSettings.defaultPath = validateAndNormalizePath(config.exportSettings.defaultPath);
-      }
-      
-      // Shallow validation of known keys
-      Object.entries(config).forEach(([key, value]) => {
-          validateConfigValue(key, value);
+    if (config.theme !== undefined) {
+      validateConfigValue("theme", config.theme);
+    }
+
+    if (config.language !== undefined) {
+      validateConfigValue("language", config.language);
+    }
+
+    if (config.defaultProvider !== undefined) {
+      validateConfigValue("defaultProvider", config.defaultProvider);
+    }
+
+    if (config.windowBounds !== undefined) {
+      validateConfigValue("windowBounds", config.windowBounds);
+    }
+
+    if (config.exportSettings?.defaultPath !== undefined) {
+      config.exportSettings.defaultPath = validateAndNormalizePath(
+        config.exportSettings.defaultPath
+      );
+      validateConfigValue(
+        "exportSettings.defaultPath",
+        config.exportSettings.defaultPath
+      );
+    }
+
+    if (config.exportSettings?.format !== undefined) {
+      validateConfigValue("exportSettings.format", config.exportSettings.format);
+    }
+
+    if (config.llmProviders) {
+      Object.entries(config.llmProviders).forEach(([provider, settings]) => {
+        if (settings?.enabled !== undefined) {
+          validateConfigValue(`llmProviders.${provider}.enabled`, settings.enabled);
+        }
+        if (settings?.model !== undefined) {
+          validateConfigValue(`llmProviders.${provider}.model`, settings.model);
+        }
       });
-
-      setAllConfig(config);
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to set all config" }
-      };
     }
+
+    setAllConfig(config);
+    return true;
   });
 
   ipcMain.handle(ConfigChannels.DELETE, (_event, key: keyof AppConfig) => {
     if (typeof key !== "string") {
-      return {
-        success: false,
-        error: { code: "INVALID_INPUT", message: "Key must be a string" }
-      };
+      throw new Error("Key must be a string");
     }
-    try {
-      deleteConfig(key);
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to delete config" }
-      };
-    }
+    deleteConfig(key);
+    return true;
   });
 
   ipcMain.handle(ConfigChannels.HAS, (_event, key: string) => {
     if (typeof key !== "string") {
-      return {
-        success: false,
-        error: { code: "INVALID_INPUT", message: "Key must be a string" }
-      };
+      throw new Error("Key must be a string");
     }
     return hasConfig(key);
   });
 
   ipcMain.handle(ConfigChannels.RESET, () => {
-    try {
-      resetConfig();
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: { code: "CONFIG_ERROR", message: err instanceof Error ? err.message : "Failed to reset config" }
-      };
-    }
+    resetConfig();
+    return true;
   });
 
   ipcMain.handle(ConfigChannels.GET_PATH, () => {
