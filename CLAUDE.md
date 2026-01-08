@@ -7,3 +7,9 @@
 ## Agent Integration Guide
 **Import DevServer MCP and integrated workflow documentation.**
 @./AGENTS.md
+
+## Additional References
+- `/.taskmaster/docs/electron-forge.md` (Electron Forge CLI)
+- `/.taskmaster/docs/shadcn-svelte.md` (UI components and CLI)
+- `/.taskmaster/docs/github-cli.md` (GitHub CLI workflow)
+- `/docs/ELECTRON_FORGE_SETUP_FIX.md` (macOS dev workaround)

@@ -19,12 +19,12 @@
     "devserver-mcp": {
       "command": "tsx",
       "args": [
-        "~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
+        "/Users/alexandthemusic/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
         "--monitor",
         "--port",
         "9338",
-        "pnpm run start",
-      ],
+        "pnpm run dev"
+      ]
     },
     "svelte": {
       "command": "npx",

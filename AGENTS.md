@@ -7,6 +7,9 @@ Keep it short, actionable, and aligned with the PRD + Task Master graph.
 - [Source of truth](#source-of-truth)
 - [Task Master workflow](#task-master-workflow-daily)
 - [Dev commands](#dev-commands)
+- [Electron Forge CLI](#electron-forge-cli)
+- [shadcn-svelte CLI](#shadcn-svelte-cli)
+- [GitHub CLI](#github-cli)
 - [Architecture boundaries](#architecture-boundaries)
 - [Svelte MCP (Documentation & Validation)](#svelte-mcp-documentation--validation)
 - [DevServer MCP (Development Monitoring)](#devserver-mcp-development-monitoring)
@@ -43,11 +46,27 @@ task-master update-task --id=<id> --prompt="changes"
 
 ## Dev commands
 - Install: `pnpm install`
-- Dev app: `pnpm run start`
+- Dev app: `pnpm run dev` (preferred on macOS; see `/docs/ELECTRON_FORGE_SETUP_FIX.md`) or `pnpm run start`
 - Type check: `pnpm run check`
 - Unit tests: `pnpm run test:unit`
 - E2E tests: `pnpm run test:e2e`
-- Build: `pnpm run package` / `pnpm run make`
+- Build: `pnpm run package` / `pnpm run make` (Ref: `/.taskmaster/docs/electron-forge.md`)
+- Publish: `pnpm run publish` (Ref: `/.taskmaster/docs/electron-forge.md`)
+
+## Electron Forge CLI
+- **Reference:** `/.taskmaster/docs/electron-forge.md`
+- Prefer `pnpm run dev` if `pnpm run start` exits early on macOS (workaround in `/docs/ELECTRON_FORGE_SETUP_FIX.md`).
+- Use `pnpm run package` / `pnpm run make` / `pnpm run publish` for builds and releases.
+
+## shadcn-svelte CLI
+- **Reference:** `/.taskmaster/docs/shadcn-svelte.md`
+- Install components with `npx shadcn-svelte@latest add <component-name>`.
+- Components live in `src/lib/components/ui/`; keep imports minimal.
+
+## GitHub CLI
+- **Reference:** `/.taskmaster/docs/github-cli.md`
+- Use `gh pr create` for PRs and `gh pr view` for review feedback.
+- Authenticate with `gh auth status` before PR workflows.
 
 ## Architecture boundaries
 - Renderer (Svelte) is UI only: no heavy I/O, no CPU-intensive work.
@@ -61,68 +80,68 @@ task-master update-task --id=<id> --prompt="changes"
 
 ## Svelte MCP (Documentation & Validation)
 
-Svelte MCP è il server MCP ufficiale del team Svelte che fornisce accesso diretto alla documentazione Svelte 5 e SvelteKit, più validazione del codice in tempo reale.
+Svelte MCP is the official MCP server from the Svelte team, providing direct access to Svelte 5 and SvelteKit documentation, plus real-time code validation.
 
-### Perché usarlo
-- **Evita sintassi obsoleta**: Gli LLM spesso generano Svelte 4 syntax o React patterns
-- **Validazione automatica**: Il codice viene verificato prima di essere mostrato
-- **Docs sempre aggiornate**: Accesso diretto a Svelte 5 runes, SvelteKit 2, etc.
-- **Riduce iterazioni**: Da 3-4 fix per feature a 1-2
+### Why use it
+- **Avoid outdated syntax**: LLMs often generate Svelte 4 syntax or React patterns
+- **Automatic validation**: Code is verified before being shown to users
+- **Always up-to-date docs**: Direct access to Svelte 5 runes, SvelteKit 2, etc.
+- **Reduce iterations**: From 3-4 fixes per feature to 1-2
 
-### Tools MCP disponibili
+### Available MCP Tools
 
-| Tool | Descrizione | Quando usarlo |
-|------|-------------|---------------|
-| `list-sections` | Lista tutte le sezioni docs con use-cases | **SEMPRE PRIMA** - per trovare docs rilevanti |
-| `get-documentation` | Recupera documentazione completa per sezioni | Dopo list-sections, per ottenere dettagli |
-| `svelte-autofixer` | Analizza codice Svelte e ritorna issues/suggerimenti | **SEMPRE** prima di fornire codice Svelte |
-| `playground-link` | Genera link al Svelte Playground con il codice | Per demo/debug/condivisione |
+| Tool | Description | When to use |
+|------|-------------|-------------|
+| `list-sections` | Lists all doc sections with use-cases | **ALWAYS FIRST** - to find relevant docs |
+| `get-documentation` | Retrieves complete documentation for sections | After list-sections, to get details |
+| `svelte-autofixer` | Analyzes Svelte code and returns issues/suggestions | **ALWAYS** before providing Svelte code |
+| `playground-link` | Generates a link to Svelte Playground with the code | For demo/debug/sharing |
 
-### Workflow obbligatorio per codice Svelte
+### Mandatory workflow for Svelte code
 
-**REGOLA: Quando generi codice Svelte, DEVI seguire questo flusso:**
+**RULE: When generating Svelte code, you MUST follow this flow:**
 
-1. **Chiama `list-sections`** per trovare docs rilevanti al task
-2. **Chiama `get-documentation`** per recuperare le sezioni trovate
-3. **Genera il codice** basandoti sulla documentazione
-4. **Chiama `svelte-autofixer`** per validare il codice generato
-5. **Se ci sono errori**, correggi e ri-valida
-6. **Solo dopo validazione**, mostra il codice all'utente
+1. **Call `list-sections`** to find docs relevant to the task
+2. **Call `get-documentation`** to retrieve the found sections
+3. **Generate the code** based on the documentation
+4. **Call `svelte-autofixer`** to validate the generated code
+5. **If there are errors**, fix and re-validate
+6. **Only after validation**, show the code to the user
 
-### Esempio di utilizzo corretto
+### Correct usage example
 
 ```
-# Task: Creare un form con validazione
+# Task: Create a form with validation
 
-1. list-sections → trova "forms", "form-validation", "$state"
-2. get-documentation(["forms", "$state"]) → ottieni docs
-3. Genera codice usando $state, non vecchio syntax
-4. svelte-autofixer(code) → verifica errori
-5. Se OK → mostra codice
-   Se errori → correggi e torna a step 4
+1. list-sections -> find "forms", "form-validation", "$state"
+2. get-documentation(["forms", "$state"]) -> get docs
+3. Generate code using $state, not old syntax
+4. svelte-autofixer(code) -> check for errors
+5. If OK -> show code
+   If errors -> fix and go back to step 4
 ```
 
-### Pattern Svelte 5 da usare (NON Svelte 4)
+### Svelte 5 patterns to use (NOT Svelte 4)
 
 ```svelte
-<!-- ✅ CORRETTO: Svelte 5 runes -->
+<!-- CORRECT: Svelte 5 runes -->
 <script>
   let count = $state(0);
   let doubled = $derived(count * 2);
-  
+
   function increment() {
     count++;
   }
 </script>
 
-<!-- ❌ SBAGLIATO: Svelte 4 syntax -->
+<!-- WRONG: Svelte 4 syntax -->
 <script>
   let count = 0;
   $: doubled = count * 2;
 </script>
 ```
 
-### Configurazione
+### Configuration
 
 **Zed IDE** (`.zed/settings.json`):
 ```json
@@ -151,16 +170,16 @@ Svelte MCP è il server MCP ufficiale del team Svelte che fornisce accesso diret
 
 ### Troubleshooting
 
-**MCP non risponde:**
+**MCP not responding:**
 ```bash
-# Test manuale
+# Manual test
 npx -y @sveltejs/mcp
 
-# Verifica versione
+# Check version
 npx @sveltejs/mcp --version
 ```
 
-**Alternativa remota** (se locale non funziona):
+**Remote alternative** (if local doesn't work):
 ```json
 {
   "svelte": {
@@ -174,119 +193,179 @@ npx @sveltejs/mcp --version
 
 ## DevServer MCP (Development Monitoring)
 
-DevServer MCP monitora in tempo reale gli errori del dev server Vite/Electron e notifica Zed Agent di problemi TypeScript, Svelte, build e runtime.
+DevServer MCP monitors Vite/Electron dev server errors in real-time and notifies agents of TypeScript, Svelte, build, and runtime issues.
 
-### Setup e verifica
-- **Installazione**: DevServer MCP è installato globalmente in `~/MCP-SERVERS/devserver/devserver-mcp/`
-- **Modalità**: Esegue sorgenti TypeScript direttamente con `tsx` (no build necessario)
-- **Verifica locale**: `tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --help`
-- **Config Zed**: `~/.config/zed/settings.json` oppure `.zed/settings.json` (project-level)
+### How it works
+- DevServer MCP connects to your IDE/agent via Model Context Protocol
+- Monitors the output of `pnpm run dev` or `pnpm run start` in background
+- Parses errors from Vite, TypeScript compiler, Svelte compiler, Electron
+- Categorizes errors by severity (error, warning, info) and type (syntax, type, build, runtime)
+- Notifies agents within 1-2 seconds of error occurrence
 
-### Come funziona
-- DevServer MCP si connette a Zed IDE tramite Model Context Protocol
-- Monitora l'output del comando `pnpm run start` in background
-- Parser errori da Vite, TypeScript compiler, Svelte compiler, Electron
-- Categorizza errori per severità (error, warning, info) e tipo (syntax, type, build, runtime)
-- Notifica Zed Agent entro 1-2 secondi dalla comparsa dell'errore
+### Available MCP Tools
 
-### Tools MCP disponibili per agent
+| Tool | Description | Typical use |
+|------|-------------|-------------|
+| `get_dev_server_status` | Server health status and current error count | Initial check, post-fix verification |
+| `get_error_summary` | Errors grouped by type and severity | Quick overview of issues |
+| `get_error_history` | Complete chronological error list with filters | Deep debugging |
+| `get_file_errors` | File-specific errors with line and column | Targeted fixes on specific file |
+| `suggest_monitoring_setup` | Configuration recommendations for the project | Initial setup |
 
-| Tool | Descrizione | Uso tipico |
-|------|-------------|------------|
-| `get_dev_server_status` | Stato di salute del server e conteggio errori correnti | Check iniziale, verifica post-fix |
-| `get_error_summary` | Errori raggruppati per tipo e severità | Overview rapida dei problemi |
-| `get_error_history` | Lista cronologica completa degli errori con filtri | Debug approfondito |
-| `get_file_errors` | Errori specifici per file con linea e colonna | Fix mirati su file specifico |
-| `suggest_monitoring_setup` | Raccomandazioni di configurazione per il progetto | Setup iniziale |
+### Setup for Zed IDE
+
+Zed starts DevServer MCP automatically via `context_servers` configuration.
+
+**Configuration** (`.zed/settings.json`):
+```json
+{
+  "context_servers": {
+    "devserver-mcp": {
+      "command": "tsx",
+      "args": [
+        "/Users/alexandthemusic/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
+        "--monitor",
+        "--port",
+        "9338",
+        "pnpm run dev"
+      ]
+    }
+  }
+}
+```
+
+No manual setup required - Zed launches the server when the project opens.
+
+### Setup for Claude Code (IMPORTANT)
+
+**Claude Code cannot start long-running processes.** You must start DevServer MCP manually before Claude Code can use it.
+
+**Step 1: Start DevServer MCP in a separate terminal:**
+```bash
+tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts \
+  --port 9338 --monitor "pnpm run dev"
+```
+
+**Step 2: Verify the server is running:**
+- Check for output on `http://127.0.0.1:9338/sse`
+- You should see SSE events when the dev server produces output
+
+**Step 3: Claude Code connects via SSE:**
+Configuration in `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "devserver-mcp": {
+      "type": "sse",
+      "url": "http://127.0.0.1:9338/sse"
+    }
+  }
+}
+```
+
+**Alternative workflow (without MCP):**
+If DevServer MCP is not running, Claude Code can:
+- Run `pnpm run dev` in background and read stderr/stdout
+- Use `pnpm run check` for explicit type checking
+- Parse build output manually
+
+### Installation & verification
+- **Location**: DevServer MCP is installed in `~/MCP-SERVERS/devserver/devserver-mcp/`
+- **Runtime**: Runs TypeScript sources directly with `tsx` (no build required)
+- **Verify**: `tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --help`
 
 ### Troubleshooting
 
-**DevServer MCP non si connette:**
+**DevServer MCP not connecting:**
 ```bash
-# Riavvia Zed
+# Restart Zed
 pkill -9 Zed && open -a Zed
 
-# Verifica tsx è installato
-which tsx  # deve mostrare path a tsx
+# Verify tsx is installed
+which tsx  # should show path to tsx
 
-# Test manuale del server
+# Manual server test
 tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --help
 ```
 
-**Verifica config MCP in Zed:**
-- `⌘+,` → cerca "context_servers"
-- Controlla che `devserver-mcp` sia presente nella configurazione
+**Verify MCP config in Zed:**
+- `Cmd+,` -> search "context_servers"
+- Check that `devserver-mcp` is present in configuration
 
-**Log di debug:**
-- DevServer MCP mostra output SSE su `http://127.0.0.1:9338/sse`
-- Per porta custom: usa `--port 9339` nel comando
+**Debug logs:**
+- DevServer MCP shows SSE output on `http://127.0.0.1:9338/sse`
+- For custom port: use `--port 9339` in the command
 
-**Porta già in uso:**
+**Port already in use:**
 ```bash
-# Trova processo sulla porta
+# Find process on port
 lsof -i :9338
 
-# Usa porta alternativa
-tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --port 9339 --monitor "pnpm run start"
+# Use alternative port
+tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --port 9339 --monitor "pnpm run dev"
 ```
 
 ---
 
 ## Integrated Development Workflow
 
-### Pre-PR Checklist con MCP Tools
+### Pre-PR Checklist with MCP Tools
 
-Questo workflow integra Svelte MCP + DevServer MCP + Task Master per garantire qualità prima di ogni PR.
+This workflow integrates Svelte MCP + DevServer MCP + Task Master to ensure quality before every PR.
 
-#### 1. Inizio Task (Branch Creation)
+#### 1. Task Start (Branch Creation)
 
 ```bash
-# Ottieni prossimo task
+# Get next task
 task-master next
 
-# Crea branch per il task
+# Create branch for the task
 git checkout -b feature/task-<id>-<short-description>
 
-# Segna task come in-progress
+# Mark task as in-progress
 task-master set-status --id=<id> --status=in-progress
 ```
 
-#### 2. Development con Monitoring Attivo
+#### 2. Development with Active Monitoring
+
+**For Zed IDE:** DevServer MCP starts automatically with your config.
+
+**For Claude Code:** Start DevServer MCP manually first (see DevServer MCP section above).
 
 ```bash
-# Avvia dev server (DevServer MCP monitora automaticamente)
-pnpm run start
+# Start dev server
+pnpm run dev
 
-# Durante lo sviluppo, l'agent usa questi tools:
+# During development, the agent uses these tools:
 # - Svelte MCP: list-sections, get-documentation, svelte-autofixer
 # - DevServer MCP: get_dev_server_status, get_file_errors
 ```
 
-**Agent Behavior durante sviluppo:**
-1. **Prima di scrivere codice Svelte**: Consulta docs via `list-sections` + `get-documentation`
-2. **Dopo aver scritto codice**: Valida con `svelte-autofixer`
-3. **Durante sviluppo**: Monitora errori in tempo reale via DevServer MCP
-4. **Loggare progressi**: Usa `task-master update-subtask`
+**Agent behavior during development:**
+1. **Before writing Svelte code**: Consult docs via `list-sections` + `get-documentation`
+2. **After writing code**: Validate with `svelte-autofixer`
+3. **During development**: Monitor errors in real-time via DevServer MCP
+4. **Log progress**: Use `task-master update-subtask`
 
 #### 3. Pre-PR Validation Checklist
 
-Prima di creare una PR, l'agent DEVE verificare:
+Before creating a PR, the agent MUST verify:
 
 ```bash
-# 1. Codice Svelte validato
-# Tool: svelte-autofixer → 0 issues
+# 1. Svelte code validated
+# Tool: svelte-autofixer -> 0 issues
 
-# 2. Zero errori dal dev server
+# 2. Zero errors from dev server
 # Tool: get_dev_server_status
 # Expected: { "status": "healthy", "errorCount": 0 }
 
-# 3. Type check passa
+# 3. Type check passes
 pnpm run check
 
-# 4. Tests passano (se applicabili)
+# 4. Tests pass (if applicable)
 pnpm run test:unit
 
-# 5. Build di verifica
+# 5. Verification build
 pnpm run package
 ```
 
@@ -302,11 +381,11 @@ git commit -m "feat(task-<id>): <description>
 - Verified via DevServer MCP: 0 errors
 - Type check: passed"
 
-# Push e crea PR
+# Push and create PR
 git push -u origin feature/task-<id>-<short-description>
 gh pr create --title "Task <id>: <title>" --body "..."
 
-# Marca task come done
+# Mark task as done
 task-master set-status --id=<id> --status=done
 ```
 
@@ -319,7 +398,7 @@ task-master set-status --id=<id> --status=done
 │                                                                  │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
 │  │ task-master  │───▶│ Create Branch │───▶│ Start Dev    │       │
-│  │    next      │    │ feature/...   │    │ pnpm start   │       │
+│  │    next      │    │ feature/...   │    │ pnpm run dev │       │
 │  └──────────────┘    └──────────────┘    └──────────────┘       │
 │                                                  │                │
 │                                                  ▼                │
@@ -359,8 +438,8 @@ task-master set-status --id=<id> --status=done
 
 ### Agent Commands Summary
 
-| Fase | Task Master | Svelte MCP | DevServer MCP |
-|------|-------------|------------|---------------|
+| Phase | Task Master | Svelte MCP | DevServer MCP |
+|-------|-------------|------------|---------------|
 | Start | `next` | - | - |
 | Begin | `set-status in-progress` | `list-sections` | `suggest_monitoring_setup` |
 | Develop | `update-subtask` | `get-documentation`, `svelte-autofixer` | `get_dev_server_status`, `get_file_errors` |
@@ -369,12 +448,12 @@ task-master set-status --id=<id> --status=done
 
 ### Best Practices
 
-1. **Docs first** - Sempre consultare Svelte MCP prima di scrivere codice
-2. **Validate always** - Mai fornire codice Svelte senza `svelte-autofixer`
-3. **Monitor always** - Tieni `pnpm run start` attivo con DevServer MCP
-4. **Fix immediately** - Correggi errori non appena rilevati
-5. **Log progress** - Usa `update-subtask` per documentare decisioni
-6. **Zero issues pre-PR** - Prerequisito assoluto per ogni PR
+1. **Docs first** - Always consult Svelte MCP before writing code
+2. **Validate always** - Never provide Svelte code without `svelte-autofixer`
+3. **Monitor always** - Keep `pnpm run dev` active with DevServer MCP
+4. **Fix immediately** - Fix errors as soon as they are detected
+5. **Log progress** - Use `update-subtask` to document decisions
+6. **Zero issues pre-PR** - Absolute prerequisite for every PR
 
 ---
 
@@ -393,6 +472,7 @@ task-master set-status --id=<id> --status=done
 - Validate YAML output when changing schema (tests or sidecar startup check).
 
 ## Desktop UI rules (Electron + Svelte + shadcn-svelte)
+- **Reference:** See `/.taskmaster/docs/shadcn-svelte.md` for component list and docs.
 - Use Svelte idiomatically: simple props + stores, avoid deep state nesting.
 - Import only the shadcn-svelte components used in the current file.
 - Keep components small and focused (view/panel + reusable subcomponents).
@@ -428,6 +508,7 @@ If a web UI is added later, create a separate "Web UI rules" section.
 
 ## Docs hygiene
 - Update `README.md` if architecture, commands, or scope changes.
+- Keep `/.taskmaster/docs/electron-forge.md`, `/.taskmaster/docs/shadcn-svelte.md`, and `/.taskmaster/docs/github-cli.md` in sync with workflow changes.
 - Keep this file aligned with the PRD and task graph.
 
 ---
@@ -451,11 +532,11 @@ If a web UI is added later, create a separate "Web UI rules" section.
     "devserver-mcp": {
       "command": "tsx",
       "args": [
-        "~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
+        "/Users/alexandthemusic/MCP-SERVERS/devserver/devserver-mcp/src/server.ts",
         "--monitor",
         "--port",
         "9338",
-        "pnpm run start"
+        "pnpm run dev"
       ]
     },
     "svelte": {
@@ -469,6 +550,8 @@ If a web UI is added later, create a separate "Web UI rules" section.
   }
 }
 ```
+
+**Note:** Replace the DevServer MCP path with your actual installation path. The `~` shorthand may not be expanded in JSON.
 
 ### Complete Claude Code Configuration (`.mcp.json`)
 
@@ -489,33 +572,21 @@ If a web UI is added later, create a separate "Web UI rules" section.
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@sveltejs/mcp"]
+    },
+    "devserver-mcp": {
+      "type": "sse",
+      "url": "http://127.0.0.1:9338/sse"
     }
   }
 }
 ```
 
-### DevServer MCP Config (`devserver-mcp.config.json`)
+**Note:** DevServer MCP requires manual startup before Claude Code can connect. See "Setup for Claude Code" in the DevServer MCP section.
 
-```json
-{
-  "processPatterns": ["pnpm run start", "pnpm run dev"],
-  "historyLimit": 1000,
-  "correlationWindow": 5000,
-  "watchPaths": ["src", "electron"],
-  "excludePaths": ["node_modules", ".svelte-kit", ".vite"],
-  "patterns": [
-    {
-      "name": "electron-error",
-      "pattern": "\\[Electron\\].*ERROR",
-      "category": "runtime",
-      "severity": "critical"
-    },
-    {
-      "name": "svelte-warning",
-      "pattern": "svelte.*warning",
-      "category": "build",
-      "severity": "warning"
-    }
-  ]
-}
-```
+### DevServer MCP Config (Optional)
+
+DevServer MCP works with default patterns out of the box. A custom config file is **optional** and only needed if you want to add custom error patterns.
+
+**If you need custom patterns**, create `devserver-mcp.config.json` in the project root. Check the DevServer MCP source code at `~/MCP-SERVERS/devserver/devserver-mcp/src/config/schema.ts` for the correct schema.
+
+**Recommendation:** Use the default patterns. They already cover Vite, TypeScript, Svelte, and Electron errors.

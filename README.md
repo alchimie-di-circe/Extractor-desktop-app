@@ -66,8 +66,9 @@ pnpm install
 
 Dev server Electron:
 ```
-pnpm run start
+pnpm run dev
 ```
+> **Note:** On macOS, `pnpm run dev` is preferred over `pnpm run start` due to a process signal issue with electron-forge. See `/docs/ELECTRON_FORGE_SETUP_FIX.md` for details.
 
 Check e test:
 ```
