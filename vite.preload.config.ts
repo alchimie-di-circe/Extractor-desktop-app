@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: ".vite/build",
     lib: {
-      formats: ["es"],
+      formats: ["cjs"],
       entry: "electron/preload.ts",
       fileName: () => "preload.js", // Force .js extension
     },
