@@ -25,6 +25,14 @@
     "devserver-mcp": {
       "type": "sse",
       "url": "http://127.0.0.1:9338/sse"
+    },
+    "shadcn-svelte": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp"
+      ]
     }
   }
 }
