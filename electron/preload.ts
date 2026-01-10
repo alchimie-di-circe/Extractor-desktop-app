@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { KeychainChannels, ConfigChannels, SystemChannels } from "../shared/ipc-channels";
-import type { KeychainResult, AppConfig } from "../shared/types";
+import { KeychainChannels, ConfigChannels, SystemChannels, LLMChannels } from "../shared/ipc-channels";
+import type {
+  KeychainResult,
+  AppConfig,
+  LLMProviderId,
+  LLMConnectionResult,
+  ModelRoleConfig,
+} from "../shared/types";
 
 /**
  * Keychain API exposed to renderer
@@ -57,11 +63,49 @@ const configApi = {
 };
 
 /**
+ * LLM Provider API exposed to renderer
+ */
+const llmApi = {
+  testConnection: (
+    providerId: LLMProviderId,
+    apiKey: string,
+    model: string
+  ): Promise<LLMConnectionResult> =>
+    ipcRenderer.invoke(LLMChannels.TEST_CONNECTION, providerId, apiKey, model),
+
+  saveApiKey: (
+    providerId: LLMProviderId,
+    apiKey: string
+  ): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(LLMChannels.SAVE_API_KEY, providerId, apiKey),
+
+  getApiKey: (providerId: LLMProviderId): Promise<IpcResult<string>> =>
+    ipcRenderer.invoke(LLMChannels.GET_API_KEY, providerId),
+
+  deleteApiKey: (providerId: LLMProviderId): Promise<IpcResult<boolean>> =>
+    ipcRenderer.invoke(LLMChannels.DELETE_API_KEY, providerId),
+
+  hasApiKey: (providerId: LLMProviderId): Promise<KeychainResult<boolean>> =>
+    ipcRenderer.invoke(LLMChannels.HAS_API_KEY, providerId),
+
+  setModelRole: (
+    role: string,
+    providerId: LLMProviderId | null,
+    model: string | null
+  ): Promise<IpcOkVoid | IpcErr> =>
+    ipcRenderer.invoke(LLMChannels.SET_MODEL_ROLE, role, providerId, model),
+
+  getModelRoles: (): Promise<IpcResult<ModelRoleConfig>> =>
+    ipcRenderer.invoke(LLMChannels.GET_MODEL_ROLES),
+};
+
+/**
  * Desktop API - main interface exposed to renderer via contextBridge
  */
 const desktopApi = {
   keychain: keychainApi,
   config: configApi,
+  llm: llmApi,
   getPlatform: (): Promise<NodeJS.Platform> =>
     ipcRenderer.invoke(SystemChannels.GET_PLATFORM),
 };

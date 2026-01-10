@@ -1,7 +1,21 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 
-import type { KeychainResult, AppConfig } from "../shared/types";
+import type {
+	KeychainResult,
+	AppConfig,
+	LLMProviderId,
+	LLMConnectionResult,
+	ModelRoleConfig,
+} from "../shared/types";
+
+/**
+ * IPC Result types
+ */
+type IpcOk<T> = { success: true; data: T };
+type IpcOkVoid = { success: true };
+type IpcErr = { success: false; error: { code: string; message: string } };
+type IpcResult<T> = IpcOk<T> | IpcErr;
 
 /**
  * Electron API exposed via contextBridge
@@ -15,14 +29,34 @@ interface ElectronAPI {
 		has: (account: string) => Promise<KeychainResult<boolean>>;
 	};
 	config: {
-		get: <K extends keyof AppConfig>(key: K) => Promise<AppConfig[K] | undefined>;
-		set: (key: keyof AppConfig, value: AppConfig[keyof AppConfig]) => Promise<void>;
+		get: <T = unknown>(key: string) => Promise<IpcResult<T>>;
+		set: (key: string, value: unknown) => Promise<IpcOkVoid | IpcErr>;
 		getAll: () => Promise<AppConfig>;
-		setAll: (config: Partial<AppConfig>) => Promise<void>;
-		delete: (key: keyof AppConfig) => Promise<void>;
-		has: (key: keyof AppConfig) => Promise<boolean>;
-		reset: () => Promise<void>;
+		setAll: (config: Partial<AppConfig>) => Promise<IpcOkVoid | IpcErr>;
+		delete: (key: keyof AppConfig) => Promise<IpcOkVoid | IpcErr>;
+		has: (key: string) => Promise<boolean>;
+		reset: () => Promise<IpcOkVoid | IpcErr>;
 		getPath: () => Promise<string>;
+	};
+	llm: {
+		testConnection: (
+			providerId: LLMProviderId,
+			apiKey: string,
+			model: string
+		) => Promise<LLMConnectionResult>;
+		saveApiKey: (
+			providerId: LLMProviderId,
+			apiKey: string
+		) => Promise<IpcOkVoid | IpcErr>;
+		getApiKey: (providerId: LLMProviderId) => Promise<IpcResult<string>>;
+		deleteApiKey: (providerId: LLMProviderId) => Promise<IpcResult<boolean>>;
+		hasApiKey: (providerId: LLMProviderId) => Promise<KeychainResult<boolean>>;
+		setModelRole: (
+			role: string,
+			providerId: LLMProviderId | null,
+			model: string | null
+		) => Promise<IpcOkVoid | IpcErr>;
+		getModelRoles: () => Promise<IpcResult<ModelRoleConfig>>;
 	};
 	/**
 	 * Get the current platform (async via IPC for sandbox compatibility)

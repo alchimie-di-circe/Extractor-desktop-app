@@ -29,3 +29,17 @@ export const ConfigChannels = {
 export const SystemChannels = {
   GET_PLATFORM: "system:get-platform",
 } as const;
+
+/**
+ * IPC Channel names for LLM provider operations
+ */
+export const LLMChannels = {
+  TEST_CONNECTION: "llm:test-connection",
+  GET_PROVIDER_STATUS: "llm:get-provider-status",
+  SAVE_API_KEY: "llm:save-api-key",
+  GET_API_KEY: "llm:get-api-key",
+  DELETE_API_KEY: "llm:delete-api-key",
+  HAS_API_KEY: "llm:has-api-key",
+  SET_MODEL_ROLE: "llm:set-model-role",
+  GET_MODEL_ROLES: "llm:get-model-roles",
+} as const;

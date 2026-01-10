@@ -187,7 +187,7 @@
           "1",
           "2"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -195,9 +195,10 @@
             "description": "Creare la pagina principale di configurazione dei provider LLM con navigazione a tab per ogni provider supportato (Anthropic, OpenAI, Google, Perplexity).",
             "dependencies": [],
             "details": "1. Creare la struttura delle cartelle: `src/routes/settings/llm-providers/+page.svelte`\n2. Importare componenti shadcn-svelte: Tabs, TabsList, TabsTrigger, TabsContent\n3. Definire i 4 provider con i loro metadati (id, name, logo, modelli disponibili)\n4. Implementare layout responsive con tab orizzontali su desktop e verticali su mobile\n5. Aggiungere breadcrumb navigation: Settings > LLM Providers\n6. Configurare SvelteKit routing con hash-based navigation per Electron compatibility",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Verificare che la route sia accessibile, che i tab cambino correttamente e che il layout sia responsive.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-01-10T10:10:25.272Z"
           },
           {
             "id": 2,
@@ -207,9 +208,10 @@
               1
             ],
             "details": "1. Creare `src/lib/components/custom/LLMProviderCard.svelte` con Card shadcn-svelte\n2. Implementare form con Input per API key (tipo password con toggle visibilità)\n3. Creare Select/Dropdown per selezione modello dal provider\n4. Aggiungere stati visivi per connectionStatus: idle, testing, success, error con icone appropriate\n5. Implementare validazione form: API key required, formato minimo caratteri\n6. Usare Svelte 5 runes ($state, $derived) per gestione stato locale\n7. Aggiungere skeleton loading durante operazioni async",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test unitari per validazione form, test rendering degli stati connessione, test toggle visibilità password.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-01-10T10:10:25.305Z"
           },
           {
             "id": 3,
@@ -219,9 +221,10 @@
               1
             ],
             "details": "1. Creare `src/lib/stores/llm-providers.svelte.ts`\n2. Definire interfacce TypeScript: LLMProvider, LLMProviderState, ModelRole\n3. Implementare stato con $state rune per: providers[], selectedModels, connectionStatuses\n4. Creare $derived per computed properties: hasValidMainProvider, configuredProviders\n5. Implementare funzioni per update stato: setApiKey, setModel, updateConnectionStatus\n6. Aggiungere persistenza preferenze modello per ruolo (main, fallback, research)\n7. Creare funzione initFromStorage per caricare configurazione salvata all'avvio",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test unitari per tutte le funzioni dello store, test reattività con mock data, test persistenza.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-01-10T10:10:25.316Z"
           },
           {
             "id": 4,
@@ -232,9 +235,10 @@
               3
             ],
             "details": "1. Estendere `electron/main.ts` con ipcMain.handle per 'llm:test-connection'\n2. Creare `electron/services/llm-connector.ts` con classe LLMConnector\n3. Implementare metodi specifici per ogni provider:\n   - testAnthropicConnection(apiKey, model) - POST a api.anthropic.com/v1/messages\n   - testOpenAIConnection(apiKey, model) - POST a api.openai.com/v1/chat/completions\n   - testGoogleConnection(apiKey, model) - POST a generativelanguage.googleapis.com\n   - testPerplexityConnection(apiKey, model) - POST a api.perplexity.ai\n4. Gestire timeout (10s) e error handling specifico per ogni provider\n5. Esporre via preload.ts: window.electronAPI.testLLMConnection()",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test con mock HTTP responses, test timeout handling, test error codes specifici per provider.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-01-10T10:10:25.321Z"
           },
           {
             "id": 5,
@@ -246,9 +250,10 @@
               4
             ],
             "details": "1. Creare `src/lib/services/llm-config.ts` per interazione con IPC\n2. Implementare funzioni:\n   - saveProviderCredentials(providerId, apiKey) - salva in keychain via IPC\n   - loadProviderCredentials(providerId) - recupera da keychain\n   - deleteProviderCredentials(providerId) - rimuove da keychain\n3. Creare UI per assegnazione ruoli: main (uso primario), fallback (backup), research (Perplexity)\n4. Implementare Select component per scegliere quale provider usare per ogni ruolo\n5. Salvare configurazione ruoli in electron-store (non sensibile)\n6. Aggiungere validazione: almeno un provider main configurato prima di procedere\n7. Creare Toast notifications per feedback operazioni (save success/error)",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test E2E flusso completo: inserimento key -> test connessione -> salvataggio keychain -> assegnazione ruolo.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2026-01-10T10:10:25.325Z"
           }
         ],
         "tags": [
@@ -259,7 +264,8 @@
         ],
         "complexity": 6,
         "recommendedSubtasks": 5,
-        "expansionPrompt": "Espandi in subtask: 1) Creazione route settings/llm-providers con layout tab, 2) Implementazione componente LLMProviderCard.svelte con form validazione e stato connessione, 3) Creazione store llm-providers.svelte.ts con Svelte 5 runes per stato globale, 4) Implementazione IPC handlers per test connessione multi-provider (Anthropic, OpenAI, Google, Perplexity), 5) Integrazione con keychain per salvataggio sicuro API keys e configurazione ruoli modello (main, fallback, research)"
+        "expansionPrompt": "Espandi in subtask: 1) Creazione route settings/llm-providers con layout tab, 2) Implementazione componente LLMProviderCard.svelte con form validazione e stato connessione, 3) Creazione store llm-providers.svelte.ts con Svelte 5 runes per stato globale, 4) Implementazione IPC handlers per test connessione multi-provider (Anthropic, OpenAI, Google, Perplexity), 5) Integrazione con keychain per salvataggio sicuro API keys e configurazione ruoli modello (main, fallback, research)",
+        "updatedAt": "2026-01-10T10:10:25.325Z"
       },
       {
         "id": "4",
@@ -1652,9 +1658,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-08T22:14:15.200Z",
+      "lastModified": "2026-01-10T10:10:25.326Z",
       "taskCount": 19,
-      "completedCount": 2,
+      "completedCount": 3,
       "tags": [
         "master"
       ]
