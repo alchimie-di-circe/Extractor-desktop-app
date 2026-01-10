@@ -1,9 +1,12 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { AppSidebar } from '$lib/components/custom/index.js';
+	import { Toaster } from '$lib/components/ui/sonner/index.js';
 
 	let { children } = $props();
 </script>
+
+<Toaster richColors closeButton position="bottom-right" />
 
 <Sidebar.Provider>
 	<AppSidebar />

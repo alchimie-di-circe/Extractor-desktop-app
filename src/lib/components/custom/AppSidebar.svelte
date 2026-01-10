@@ -11,14 +11,16 @@
 		{ path: '/extract', label: 'Estrai', icon: Image },
 		{ path: '/edit', label: 'Modifica', icon: Pencil },
 		{ path: '/publish', label: 'Pubblica', icon: Send },
-		{ path: '/settings', label: 'Impostazioni', icon: Settings }
+		{ path: '/settings/llm-providers', label: 'Impostazioni', icon: Settings }
 	];
 
 	// Check if route is active (works with hash routing)
 	function isActive(path: string): boolean {
-		const currentPath = $page.url.pathname;
+		// Use hash for routing - remove leading # if present
+		const hash = $page.url.hash;
+		const currentPath = hash.startsWith('#') ? hash.slice(1) : hash;
 		if (path === '/') {
-			return currentPath === '/' || currentPath === '';
+			return currentPath === '/' || currentPath === '' || !currentPath;
 		}
 		return currentPath.startsWith(path);
 	}
@@ -52,7 +54,7 @@
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={isActive(route.path)} tooltipContent={route.label}>
 								{#snippet child({ props })}
-									<a href={route.path} {...props}>
+									<a href="#{route.path}" {...props}>
 										<route.icon class="size-4" />
 										<span>{route.label}</span>
 									</a>
