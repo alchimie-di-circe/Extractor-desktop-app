@@ -129,18 +129,19 @@
 	}
 
 	// Handle delete API key
-	async function handleDeleteApiKey(providerId: LLMProviderId): Promise<void> {
+	async function handleDeleteApiKey(providerId: LLMProviderId): Promise<boolean> {
 		const providerName = LLM_PROVIDERS[providerId].name;
 		const result = await window.electronAPI.llm.deleteApiKey(providerId);
 		if (!result.success) {
 			toast.error(`Eliminazione ${providerName} fallita`, {
 				description: result.error?.message ?? 'Errore sconosciuto'
 			});
-			throw new Error(result.error?.message ?? 'Eliminazione fallita');
+			return false;
 		}
 		toast.success(`API key ${providerName} eliminata`, {
 			description: 'Credenziali rimosse dal keychain'
 		});
+		return true;
 	}
 
 	// Handle agent role change

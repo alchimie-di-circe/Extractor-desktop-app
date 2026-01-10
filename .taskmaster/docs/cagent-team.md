@@ -252,7 +252,7 @@ interface A2AMessage {
     content: unknown;
     context?: Record<string, unknown>;
   };
-  timestamp: Date;
+  timestamp: string; // ISO 8601 format
 }
 ```
 

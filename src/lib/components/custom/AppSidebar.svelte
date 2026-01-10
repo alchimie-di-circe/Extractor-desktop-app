@@ -54,7 +54,7 @@
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={isActive(route.path)} tooltipContent={route.label}>
 								{#snippet child({ props })}
-									<a href="#{route.path}" {...props}>
+									<a href={'#' + route.path} {...props}>
 										<route.icon class="size-4" />
 										<span>{route.label}</span>
 									</a>

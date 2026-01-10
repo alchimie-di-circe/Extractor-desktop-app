@@ -116,9 +116,11 @@
 
 		isDeleting = true;
 		try {
-			await onDeleteApiKey(provider.id);
-			llmProviders.setHasApiKey(provider.id, false);
-			llmProviders.setConnectionStatus(provider.id, 'idle');
+			const success = await onDeleteApiKey(provider.id);
+			if (success) {
+				llmProviders.setHasApiKey(provider.id, false);
+				llmProviders.setConnectionStatus(provider.id, 'idle');
+			}
 		} catch (error) {
 			console.error('Failed to delete API key:', error);
 		} finally {
@@ -187,11 +189,11 @@
 	<Card.Content class="space-y-4">
 		<!-- API Key Section -->
 		<div class="space-y-2">
-			<Label for="api-key-{provider.id}">API Key</Label>
+			<Label for={'api-key-' + provider.id}>API Key</Label>
 			<div class="flex gap-2">
 				<div class="relative flex-1">
 					<Input
-						id="api-key-{provider.id}"
+						id={'api-key-' + provider.id}
 						type={showApiKey ? 'text' : 'password'}
 						placeholder={hasApiKey
 							? '••••••••••••••••'

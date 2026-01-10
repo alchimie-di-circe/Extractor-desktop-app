@@ -113,21 +113,25 @@ const configuredAgentCount = $derived.by(() => {
  * Should be called on app startup
  */
 async function initFromStorage(): Promise<void> {
-  if (!isBrowser || isInitialized) return;
+  if (!isBrowser || isInitialized || isLoading) return;
 
   isLoading = true;
 
   try {
     // Check which providers have API keys stored (using LLM-specific API)
-    for (const providerId of getAllProviderIds()) {
+    const keyChecks = getAllProviderIds().map(async (providerId) => {
       const hasKey = await window.electronAPI.llm.hasApiKey(providerId);
       if (hasKey.success && hasKey.data) {
         providersState[providerId].hasApiKey = true;
       }
-    }
+    });
 
     // Load model roles from config (using LLM-specific API)
-    const rolesResult = await window.electronAPI.llm.getModelRoles();
+    const rolesPromise = window.electronAPI.llm.getModelRoles();
+
+    await Promise.all([...keyChecks, rolesPromise]);
+
+    const rolesResult = await rolesPromise;
     if (rolesResult.success && rolesResult.data) {
       // Merge with defaults to handle migration from old format
       const loadedRoles = rolesResult.data;
