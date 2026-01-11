@@ -203,11 +203,11 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 #### Anthropic (Direct API)
 | Agent | Default Model |
 |-------|--------------|
-| Orchestrator | claude-opus-4.5 |
-| Extraction | claude-haiku-4.5 |
-| Editing | claude-sonnet-4.5 |
-| Captioning | claude-sonnet-4.5 |
-| Scheduling | claude-haiku-4.5 |
+| Orchestrator | claude-opus-4-20250514 |
+| Extraction | claude-3-5-haiku-20241022 |
+| Editing | claude-sonnet-4-20250514 |
+| Captioning | claude-sonnet-4-20250514 |
+| Scheduling | claude-3-5-haiku-20241022 |
 
 #### OpenAI (Direct API)
 | Agent | Default Model |
@@ -226,6 +226,15 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | gemini-3-pro |
 | Captioning | gemini-3-pro |
 | Scheduling | gemini-3-flash |
+
+#### Perplexity (Direct API)
+| Agent | Default Model |
+|-------|--------------|
+| Orchestrator | sonar-pro |
+| Extraction | sonar |
+| Editing | sonar-pro |
+| Captioning | sonar-reasoning-pro |
+| Scheduling | sonar |
 
 #### OpenRouter (Unified API)
 | Agent | Default Model |
