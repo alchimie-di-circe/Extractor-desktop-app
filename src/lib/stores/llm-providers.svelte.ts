@@ -73,6 +73,7 @@ let modelRoles = $state<ModelRoleConfig>(createInitialModelRoles());
 
 let isLoading = $state<boolean>(false);
 let isInitialized = $state<boolean>(false);
+let initError = $state<string | null>(null);
 
 // ============================================
 // Derived State
@@ -116,11 +117,15 @@ async function initFromStorage(): Promise<void> {
   if (!isBrowser || isInitialized || isLoading) return;
 
   isLoading = true;
+  initError = null;
 
   try {
     // Check which providers have API keys stored (using LLM-specific API)
     const keyChecks = getAllProviderIds().map(async (providerId) => {
       const hasKey = await window.electronAPI.llm.hasApiKey(providerId);
+      if (!hasKey.success) {
+        throw new Error(hasKey.error?.message ?? "Failed to read keychain status");
+      }
       if (hasKey.success && hasKey.data) {
         providersState[providerId].hasApiKey = true;
       }
@@ -132,7 +137,10 @@ async function initFromStorage(): Promise<void> {
     await Promise.all([...keyChecks, rolesPromise]);
 
     const rolesResult = await rolesPromise;
-    if (rolesResult.success && rolesResult.data) {
+    if (!rolesResult.success) {
+      throw new Error(rolesResult.error?.message ?? "Failed to load model roles");
+    }
+    if (rolesResult.data) {
       // Merge with defaults to handle migration from old format
       const loadedRoles = rolesResult.data;
       const defaultRoles = createInitialModelRoles();
@@ -153,6 +161,7 @@ async function initFromStorage(): Promise<void> {
     isInitialized = true;
   } catch (error) {
     console.error("Failed to initialize LLM providers store:", error);
+    initError = "Impossibile caricare le configurazioni LLM.";
   } finally {
     isLoading = false;
   }
@@ -199,7 +208,8 @@ async function setModelRole(
   role: AgentRole,
   providerId: LLMProviderId | null,
   model: string | null
-): Promise<void> {
+): Promise<boolean> {
+  const previousConfig = modelRoles[role];
   modelRoles[role] = { providerId, model };
 
   // Persist to config using LLM-specific API
@@ -207,22 +217,32 @@ async function setModelRole(
     try {
       const result = await window.electronAPI.llm.setModelRole(role, providerId, model);
       if (!result.success) {
+        modelRoles[role] = previousConfig;
         console.error("Failed to save model role:", result.error?.message);
+        return false;
       }
+      return true;
     } catch (error) {
+      modelRoles[role] = previousConfig;
       console.error("Failed to save model roles:", error);
+      return false;
     }
   }
+  return true;
 }
 
 /**
  * Auto-configure all agent roles with recommended models for a given provider
  */
-async function autoConfigureAgentRoles(providerId: LLMProviderId): Promise<void> {
+async function autoConfigureAgentRoles(providerId: LLMProviderId): Promise<boolean> {
   const defaults = DEFAULT_AGENT_MODELS[providerId];
   for (const role of getAllAgentRoles()) {
-    await setModelRole(role, providerId, defaults[role]);
+    const saved = await setModelRole(role, providerId, defaults[role]);
+    if (!saved) {
+      return false;
+    }
   }
+  return true;
 }
 
 /**
@@ -242,6 +262,7 @@ function reset(): void {
   providersState = createInitialState();
   modelRoles = createInitialModelRoles();
   isInitialized = false;
+  initError = null;
 }
 
 // ============================================
@@ -261,6 +282,9 @@ export const llmProviders = {
   },
   get isInitialized() {
     return isInitialized;
+  },
+  get initError() {
+    return initError;
   },
   get configuredProviders() {
     return configuredProviders;
@@ -282,6 +306,9 @@ export const llmProviders = {
   setHasApiKey,
   setModelRole,
   autoConfigureAgentRoles,
+  clearInitError: () => {
+    initError = null;
+  },
   getProviderWithState,
   reset,
 };

@@ -32,7 +32,7 @@
 			model: string
 		) => Promise<void>;
 		onSaveApiKey?: (providerId: LLMProviderId, apiKey: string) => Promise<void>;
-		onDeleteApiKey?: (providerId: LLMProviderId) => Promise<void>;
+		onDeleteApiKey?: (providerId: LLMProviderId) => Promise<boolean>;
 	}
 
 	let { provider, onTestConnection, onSaveApiKey, onDeleteApiKey }: Props = $props();
@@ -105,6 +105,11 @@
 			apiKeyInput = ''; // Clear input after successful save
 		} catch (error) {
 			console.error('Failed to save API key:', error);
+			llmProviders.setConnectionStatus(
+				provider.id,
+				'error',
+				'Errore salvataggio API key'
+			);
 		} finally {
 			isSaving = false;
 		}
@@ -123,6 +128,11 @@
 			}
 		} catch (error) {
 			console.error('Failed to delete API key:', error);
+			llmProviders.setConnectionStatus(
+				provider.id,
+				'error',
+				'Errore eliminazione API key'
+			);
 		} finally {
 			isDeleting = false;
 		}

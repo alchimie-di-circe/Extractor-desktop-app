@@ -73,6 +73,12 @@
 	// Initialize store on mount
 	onMount(async () => {
 		await llmProviders.initFromStorage();
+		if (llmProviders.initError) {
+			toast.error('Impossibile caricare le configurazioni LLM', {
+				description: 'Riprova o verifica i permessi del keychain.'
+			});
+			llmProviders.clearInitError();
+		}
 	});
 
 	// Handle test connection
@@ -94,18 +100,25 @@
 					description: `Latenza: ${result.latencyMs}ms`
 				});
 			} else {
-				const errorMsg = result.error?.message ?? 'Test connessione fallito';
-				llmProviders.setConnectionStatus(providerId, 'error', errorMsg);
+				console.error('Test connessione fallito:', result.error);
+				llmProviders.setConnectionStatus(
+					providerId,
+					'error',
+					'Test connessione fallito'
+				);
 				toast.error(`Connessione a ${providerName} fallita`, {
-					description: errorMsg
+					description: 'Verifica la chiave API e la rete, poi riprova.'
 				});
 			}
 		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : 'Errore sconosciuto';
-			llmProviders.setConnectionStatus(providerId, 'error', message);
+			console.error('Errore connessione:', error);
+			llmProviders.setConnectionStatus(
+				providerId,
+				'error',
+				'Errore di connessione'
+			);
 			toast.error(`Errore connessione ${providerName}`, {
-				description: message
+				description: 'Impossibile completare il test, riprova.'
 			});
 		}
 	}
@@ -118,10 +131,11 @@
 		const providerName = LLM_PROVIDERS[providerId].name;
 		const result = await window.electronAPI.llm.saveApiKey(providerId, apiKey);
 		if (!result.success) {
+			console.error('Salvataggio API key fallito:', result.error);
 			toast.error(`Salvataggio ${providerName} fallito`, {
-				description: result.error?.message ?? 'Errore sconosciuto'
+				description: 'Impossibile salvare la chiave, riprova.'
 			});
-			throw new Error(result.error?.message ?? 'Salvataggio fallito');
+			throw new Error('Salvataggio API key fallito');
 		}
 		toast.success(`API key ${providerName} salvata`, {
 			description: 'Credenziali memorizzate in modo sicuro nel keychain'
@@ -133,8 +147,9 @@
 		const providerName = LLM_PROVIDERS[providerId].name;
 		const result = await window.electronAPI.llm.deleteApiKey(providerId);
 		if (!result.success) {
+			console.error('Eliminazione API key fallita:', result.error);
 			toast.error(`Eliminazione ${providerName} fallita`, {
-				description: result.error?.message ?? 'Errore sconosciuto'
+				description: 'Impossibile eliminare la chiave, riprova.'
 			});
 			return false;
 		}
@@ -158,9 +173,23 @@
 			}
 
 			// Parse value: "providerId:modelId"
+			if (!value.includes(':')) {
+				toast.error('Formato valore non valido');
+				return;
+			}
 			const [providerId, ...modelParts] = value.split(':') as [LLMProviderId, ...string[]];
 			const modelId = modelParts.join(':'); // Handle model IDs with colons (e.g., "google/gemini-3-flash:free")
-			await llmProviders.setModelRole(role, providerId, modelId);
+			if (!modelId) {
+				toast.error('Modello non specificato');
+				return;
+			}
+			const saved = await llmProviders.setModelRole(role, providerId, modelId);
+			if (!saved) {
+				toast.error(`Errore configurazione ${roleLabel} Agent`, {
+					description: 'Impossibile salvare la configurazione.'
+				});
+				return;
+			}
 
 			const providerName = LLM_PROVIDERS[providerId].name;
 			const modelName =
@@ -171,7 +200,7 @@
 			});
 		} catch (error) {
 			toast.error(`Errore configurazione ${roleLabel} Agent`, {
-				description: error instanceof Error ? error.message : 'Errore sconosciuto'
+				description: 'Impossibile salvare la configurazione.'
 			});
 		}
 	}
@@ -180,13 +209,19 @@
 	async function handleAutoConfig(providerId: LLMProviderId): Promise<void> {
 		const providerName = LLM_PROVIDERS[providerId].name;
 		try {
-			await llmProviders.autoConfigureAgentRoles(providerId);
+			const saved = await llmProviders.autoConfigureAgentRoles(providerId);
+			if (!saved) {
+				toast.error('Errore configurazione automatica', {
+					description: 'Impossibile salvare la configurazione.'
+				});
+				return;
+			}
 			toast.success(`Tutti gli agent configurati con ${providerName}`, {
 				description: 'Modelli consigliati assegnati automaticamente'
 			});
 		} catch (error) {
 			toast.error('Errore configurazione automatica', {
-				description: error instanceof Error ? error.message : 'Errore sconosciuto'
+				description: 'Impossibile salvare la configurazione.'
 			});
 		}
 	}
@@ -246,7 +281,7 @@
 <div class="flex flex-col gap-6 py-4">
 	<!-- Header with back button -->
 	<div class="flex items-center gap-4">
-		<a href="#/settings" class="text-muted-foreground hover:text-foreground">
+		<a href="/settings" class="text-muted-foreground hover:text-foreground">
 			<ArrowLeft class="size-5" />
 		</a>
 		<div class="flex flex-col gap-1">
