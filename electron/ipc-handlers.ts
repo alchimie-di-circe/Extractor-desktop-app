@@ -18,10 +18,11 @@ import {
   getConfigPath,
   validateConfigValue,
 } from "./config-manager";
+import { logAuditEvent } from "./audit-log";
 import { testLLMConnection } from "./llm-connector";
 import { KeychainChannels, ConfigChannels, SystemChannels, LLMChannels } from "../shared/ipc-channels";
 import type { AppConfig, LLMProviderId, ModelRoleConfig } from "../shared/types";
-import { getAllProviderIds } from "../shared/llm-providers";
+import { getAllProviderIds, LLM_PROVIDERS } from "../shared/llm-providers";
 
 /**
  * Validate and normalize a file path
@@ -226,6 +227,9 @@ export function registerConfigHandlers(): void {
           }
         });
       }
+      if (config.modelRoles !== undefined) {
+        validateConfigValue("modelRoles", config.modelRoles);
+      }
 
       setAllConfig(config);
       return { success: true };
@@ -351,6 +355,12 @@ export function registerLLMHandlers(): void {
           error: { code: "INVALID_INPUT", message: "Model is required" },
         };
       }
+      if (apiKey !== undefined && apiKey !== null && apiKey !== "" && typeof apiKey !== "string") {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "API key must be a string" },
+        };
+      }
 
       // If no API key provided, try to get from keychain
       let keyToUse = apiKey;
@@ -374,19 +384,42 @@ export function registerLLMHandlers(): void {
     LLMChannels.SAVE_API_KEY,
     async (_event, providerId: LLMProviderId, apiKey: string) => {
       if (!isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.saveApiKey",
+          providerId: typeof providerId === "string" ? providerId : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
         return {
           success: false,
           error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
         };
       }
       if (typeof apiKey !== "string" || !apiKey) {
+        logAuditEvent({
+          action: "llm.saveApiKey",
+          providerId,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
         return {
           success: false,
           error: { code: "INVALID_INPUT", message: "API key is required" },
         };
       }
 
-      return saveCredential(getLLMKeychainAccount(providerId), apiKey);
+      const result = await saveCredential(getLLMKeychainAccount(providerId), apiKey);
+      logAuditEvent({
+        action: "llm.saveApiKey",
+        providerId,
+        success: result.success === true,
+        errorCode: result.success ? undefined : result.error?.code,
+        metadata: {
+          keySuffix: apiKey.slice(-4),
+          keyLength: apiKey.length,
+        },
+      });
+      return result;
     }
   );
 
@@ -421,13 +454,29 @@ export function registerLLMHandlers(): void {
     LLMChannels.DELETE_API_KEY,
     async (_event, providerId: LLMProviderId) => {
       if (!isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.deleteApiKey",
+          providerId: typeof providerId === "string" ? providerId : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
         return {
           success: false,
           error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
         };
       }
 
-      return deleteCredential(getLLMKeychainAccount(providerId));
+      const result = await deleteCredential(getLLMKeychainAccount(providerId));
+      logAuditEvent({
+        action: "llm.deleteApiKey",
+        providerId,
+        success: result.success === true,
+        errorCode: result.success ? undefined : result.error?.code,
+        metadata: {
+          deleted: result.success ? result.data === true : false,
+        },
+      });
+      return result;
     }
   );
 
@@ -459,6 +508,14 @@ export function registerLLMHandlers(): void {
     ) => {
       const validRoles = ["orchestrator", "extraction", "editing", "captioning", "scheduling"];
       if (!validRoles.includes(role)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role: typeof role === "string" ? role : null,
+          providerId: typeof providerId === "string" ? providerId : null,
+          model: typeof model === "string" ? model : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
         return {
           success: false,
           error: { code: "INVALID_INPUT", message: "Invalid role" },
@@ -466,10 +523,55 @@ export function registerLLMHandlers(): void {
       }
 
       if (providerId !== null && !isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId: typeof providerId === "string" ? providerId : null,
+          model: typeof model === "string" ? model : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
         return {
           success: false,
           error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
         };
+      }
+      if ((providerId === null) !== (model === null)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: {
+            code: "INVALID_INPUT",
+            message: "Provider and model must both be set or both be null",
+          },
+        };
+      }
+      if (providerId !== null && model !== null) {
+        const provider = LLM_PROVIDERS[providerId];
+        if (!provider.models.some((providerModel) => providerModel.id === model)) {
+          logAuditEvent({
+            action: "llm.setModelRole",
+            role,
+            providerId,
+            model,
+            success: false,
+            errorCode: "INVALID_INPUT",
+          });
+          return {
+            success: false,
+            error: {
+              code: "INVALID_INPUT",
+              message: `Model "${model}" not found for provider "${providerId}"`,
+            },
+          };
+        }
       }
 
       try {
@@ -488,8 +590,23 @@ export function registerLLMHandlers(): void {
         // Save back to config
         setConfig("modelRoles", currentRoles);
 
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: true,
+        });
         return { success: true };
       } catch (err) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: false,
+          errorCode: "CONFIG_ERROR",
+        });
         return {
           success: false,
           error: {
@@ -525,6 +642,34 @@ export function registerLLMHandlers(): void {
       };
     }
   });
+
+  ipcMain.handle(
+    LLMChannels.GET_PROVIDER_STATUS,
+    async (_event, providerId: LLMProviderId) => {
+      if (!isValidProviderId(providerId)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+
+      try {
+        const hasKey = await hasCredential(getLLMKeychainAccount(providerId));
+        return {
+          success: true,
+          data: { providerId, hasApiKey: hasKey.success && hasKey.data === true },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: {
+            code: "PROVIDER_ERROR",
+            message: err instanceof Error ? err.message : "Failed",
+          },
+        };
+      }
+    }
+  );
 }
 
 /**

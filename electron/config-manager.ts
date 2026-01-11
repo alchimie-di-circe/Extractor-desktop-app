@@ -1,5 +1,6 @@
 import Store from "electron-store";
-import type { AppConfig } from "../shared/types";
+import type { AppConfig, LLMProviderId } from "../shared/types";
+import { LLM_PROVIDERS, getAllAgentRoles, getAllProviderIds } from "../shared/llm-providers";
 
 const defaults: AppConfig = {
   theme: "system",
@@ -9,8 +10,16 @@ const defaults: AppConfig = {
     openai: { enabled: false, model: "gpt-4o" },
     google: { enabled: false, model: "gemini-2.5-pro" },
     perplexity: { enabled: false, model: "sonar" },
+    openrouter: { enabled: false, model: "anthropic/claude-sonnet-4.5" },
   },
   defaultProvider: null,
+  modelRoles: {
+    orchestrator: { providerId: null, model: null },
+    extraction: { providerId: null, model: null },
+    editing: { providerId: null, model: null },
+    captioning: { providerId: null, model: null },
+    scheduling: { providerId: null, model: null },
+  },
   exportSettings: {
     defaultPath: "",
     format: "json",
@@ -52,6 +61,17 @@ export function validateConfigValue(key: string, value: unknown): void {
     ) {
       throw new Error("Invalid windowBounds object");
     }
+  } else if (key === "exportSettings") {
+    if (typeof value !== "object" || value === null) {
+      throw new Error("exportSettings must be an object");
+    }
+    const settings = value as { defaultPath?: unknown; format?: unknown };
+    if (settings.defaultPath !== undefined) {
+      validateConfigValue("exportSettings.defaultPath", settings.defaultPath);
+    }
+    if (settings.format !== undefined) {
+      validateConfigValue("exportSettings.format", settings.format);
+    }
   } else if (key === "exportSettings.defaultPath") {
     if (typeof value !== "string") {
       throw new Error("exportSettings.defaultPath must be a string");
@@ -59,6 +79,24 @@ export function validateConfigValue(key: string, value: unknown): void {
   } else if (key === "exportSettings.format") {
     if (value !== "json" && value !== "csv" && value !== "markdown") {
       throw new Error(`Invalid export format: ${value}`);
+    }
+  } else if (key === "llmProviders") {
+    if (typeof value !== "object" || value === null) {
+      throw new Error("llmProviders must be an object");
+    }
+    const providers = value as Record<string, { enabled?: unknown; model?: unknown }>;
+    const validProviders = getAllProviderIds();
+    for (const providerId of Object.keys(providers)) {
+      if (!validProviders.includes(providerId as LLMProviderId)) {
+        throw new Error(`Invalid provider in llmProviders: ${providerId}`);
+      }
+      const settings = providers[providerId];
+      if (settings?.enabled !== undefined) {
+        validateConfigValue(`llmProviders.${providerId}.enabled`, settings.enabled);
+      }
+      if (settings?.model !== undefined) {
+        validateConfigValue(`llmProviders.${providerId}.model`, settings.model);
+      }
     }
   } else if (key.startsWith("llmProviders.")) {
     // Basic validation for LLM providers
@@ -70,6 +108,52 @@ export function validateConfigValue(key: string, value: unknown): void {
       if (typeof value !== "string") {
         throw new Error(`${key} must be a string`);
       }
+      const match = key.match(/^llmProviders\.([^.]+)\.model$/);
+      if (match) {
+        const providerId = match[1];
+        const provider = LLM_PROVIDERS[providerId as keyof typeof LLM_PROVIDERS];
+        if (!provider) {
+          throw new Error(`Invalid provider in llmProviders: ${providerId}`);
+        }
+        if (!provider.models.some((model) => model.id === value)) {
+          throw new Error(`Invalid model "${value}" for provider "${providerId}"`);
+        }
+      }
+    }
+  } else if (key === "modelRoles") {
+    if (typeof value !== "object" || value === null) {
+      throw new Error("modelRoles must be an object");
+    }
+    const roles = value as Record<string, { providerId?: unknown; model?: unknown }>;
+    const validRoles = getAllAgentRoles();
+    for (const roleKey of Object.keys(roles)) {
+      if (!validRoles.includes(roleKey as (typeof validRoles)[number])) {
+        throw new Error(`Invalid role in modelRoles: ${roleKey}`);
+      }
+    }
+    for (const role of validRoles) {
+      const roleConfig = roles[role];
+      if (roleConfig === undefined) continue;
+      if (typeof roleConfig !== "object" || roleConfig === null) {
+        throw new Error(`modelRoles.${role} must be an object`);
+      }
+      const providerId = roleConfig.providerId ?? null;
+      const model = roleConfig.model ?? null;
+      if ((providerId === null) !== (model === null)) {
+        throw new Error(`modelRoles.${role} must include providerId and model together`);
+      }
+      if (providerId !== null) {
+        if (typeof providerId !== "string" || !getAllProviderIds().includes(providerId as LLMProviderId)) {
+          throw new Error(`modelRoles.${role}.providerId is invalid`);
+        }
+        if (typeof model !== "string") {
+          throw new Error(`modelRoles.${role}.model must be a string`);
+        }
+        const provider = LLM_PROVIDERS[providerId as keyof typeof LLM_PROVIDERS];
+        if (provider && !provider.models.some((providerModel) => providerModel.id === model)) {
+          throw new Error(`Invalid model "${model}" for provider "${providerId}"`);
+        }
+      }
     }
   } else if (key === "defaultProvider") {
     if (
@@ -77,7 +161,8 @@ export function validateConfigValue(key: string, value: unknown): void {
       value !== "anthropic" &&
       value !== "openai" &&
       value !== "google" &&
-      value !== "perplexity"
+      value !== "perplexity" &&
+      value !== "openrouter"
     ) {
       throw new Error(`Invalid defaultProvider: ${value}`);
     }
@@ -136,6 +221,9 @@ export function getAllConfig(): AppConfig {
  * @param config - Partial AppConfig whose specified properties will be written to the store
  */
 export function setAllConfig(config: Partial<AppConfig>): void {
+  Object.entries(config).forEach(([key, value]) => {
+    validateConfigValue(key, value);
+  });
   store.set(config);
 }
 

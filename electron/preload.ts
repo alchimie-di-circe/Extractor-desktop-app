@@ -88,6 +88,11 @@ const llmApi = {
   hasApiKey: (providerId: LLMProviderId): Promise<KeychainResult<boolean>> =>
     ipcRenderer.invoke(LLMChannels.HAS_API_KEY, providerId),
 
+  getProviderStatus: (
+    providerId: LLMProviderId
+  ): Promise<IpcResult<{ providerId: LLMProviderId; hasApiKey: boolean }>> =>
+    ipcRenderer.invoke(LLMChannels.GET_PROVIDER_STATUS, providerId),
+
   setModelRole: (
     role: string,
     providerId: LLMProviderId | null,

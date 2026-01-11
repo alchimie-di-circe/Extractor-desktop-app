@@ -18,26 +18,26 @@ export const LLM_PROVIDERS: Record<LLMProviderId, LLMProviderInfo> = {
     apiKeyPlaceholder: "sk-ant-api03-...",
     models: [
       {
-        id: "claude-opus-4.5",
+        id: "claude-opus-4-20250514",
         name: "Claude Opus 4.5",
         description: "Most capable model, best for complex reasoning",
         contextWindow: 200000,
       },
       {
-        id: "claude-sonnet-4.5",
+        id: "claude-sonnet-4-20250514",
         name: "Claude Sonnet 4.5",
         description: "Best balance of intelligence and speed",
         contextWindow: 200000,
         recommended: true,
       },
       {
-        id: "claude-haiku-4.5",
+        id: "claude-3-5-haiku-20241022",
         name: "Claude Haiku 4.5",
         description: "Fastest model, great for simple tasks",
         contextWindow: 200000,
       },
       {
-        id: "claude-opus-4.1",
+        id: "claude-opus-4-1-20250805",
         name: "Claude Opus 4.1",
         description: "Previous flagship, still excellent",
         contextWindow: 200000,
@@ -292,11 +292,11 @@ export const LLM_PROVIDERS: Record<LLMProviderId, LLMProviderInfo> = {
  */
 export const DEFAULT_AGENT_MODELS: Record<LLMProviderId, Record<AgentRole, string>> = {
   anthropic: {
-    orchestrator: "claude-opus-4.5",
-    extraction: "claude-haiku-4.5",
-    editing: "claude-sonnet-4.5",
-    captioning: "claude-sonnet-4.5",
-    scheduling: "claude-haiku-4.5",
+    orchestrator: "claude-opus-4-20250514",
+    extraction: "claude-3-5-haiku-20241022",
+    editing: "claude-sonnet-4-20250514",
+    captioning: "claude-sonnet-4-20250514",
+    scheduling: "claude-3-5-haiku-20241022",
   },
   openai: {
     orchestrator: "gpt-5.2",

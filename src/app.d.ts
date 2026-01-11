@@ -51,6 +51,9 @@ interface ElectronAPI {
 		getApiKey: (providerId: LLMProviderId) => Promise<IpcResult<string>>;
 		deleteApiKey: (providerId: LLMProviderId) => Promise<IpcResult<boolean>>;
 		hasApiKey: (providerId: LLMProviderId) => Promise<KeychainResult<boolean>>;
+		getProviderStatus: (
+			providerId: LLMProviderId
+		) => Promise<IpcResult<{ providerId: LLMProviderId; hasApiKey: boolean }>>;
 		setModelRole: (
 			role: string,
 			providerId: LLMProviderId | null,
