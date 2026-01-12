@@ -199,6 +199,7 @@
 				description: `${providerName} - ${modelName}`
 			});
 		} catch (error) {
+			console.error(`Failed to configure ${roleLabel} Agent:`, error);
 			toast.error(`Errore configurazione ${roleLabel} Agent`, {
 				description: 'Impossibile salvare la configurazione.'
 			});
@@ -220,6 +221,7 @@
 				description: 'Modelli consigliati assegnati automaticamente'
 			});
 		} catch (error) {
+			console.error('Failed to auto-configure agents:', error);
 			toast.error('Errore configurazione automatica', {
 				description: 'Impossibile salvare la configurazione.'
 			});
