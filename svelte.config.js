@@ -7,9 +7,6 @@ const config = {
     adapter: adapter({
       pages: ".vite/renderer/main_window",
     }),
-    router: {
-      type: "hash",
-    },
   },
 };
 
