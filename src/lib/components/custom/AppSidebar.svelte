@@ -11,14 +11,14 @@
 		{ path: '/extract', label: 'Estrai', icon: Image },
 		{ path: '/edit', label: 'Modifica', icon: Pencil },
 		{ path: '/publish', label: 'Pubblica', icon: Send },
-		{ path: '/settings', label: 'Impostazioni', icon: Settings }
+		{ path: '/settings/llm-providers', label: 'Impostazioni', icon: Settings }
 	];
 
-	// Check if route is active (works with hash routing)
+	// Check if route is active (pathname routing)
 	function isActive(path: string): boolean {
 		const currentPath = $page.url.pathname;
 		if (path === '/') {
-			return currentPath === '/' || currentPath === '';
+			return currentPath === '/' || currentPath === '' || !currentPath;
 		}
 		return currentPath.startsWith(path);
 	}

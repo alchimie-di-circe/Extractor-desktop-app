@@ -18,8 +18,11 @@ import {
   getConfigPath,
   validateConfigValue,
 } from "./config-manager";
-import { KeychainChannels, ConfigChannels, SystemChannels } from "../shared/ipc-channels";
-import type { AppConfig } from "../shared/types";
+import { logAuditEvent } from "./audit-log";
+import { testLLMConnection } from "./llm-connector";
+import { KeychainChannels, ConfigChannels, SystemChannels, LLMChannels } from "../shared/ipc-channels";
+import type { AppConfig, LLMProviderId, ModelRoleConfig } from "../shared/types";
+import { getAllProviderIds, LLM_PROVIDERS } from "../shared/llm-providers";
 
 /**
  * Validate and normalize a file path
@@ -224,6 +227,9 @@ export function registerConfigHandlers(): void {
           }
         });
       }
+      if (config.modelRoles !== undefined) {
+        validateConfigValue("modelRoles", config.modelRoles);
+      }
 
       setAllConfig(config);
       return { success: true };
@@ -295,12 +301,13 @@ export function registerConfigHandlers(): void {
 }
 
 /**
- * Register all IPC handlers by calling both keychain, config, and system handlers.
+ * Register all IPC handlers by calling keychain, config, system, and LLM handlers.
  */
 export function registerIpcHandlers(): void {
   registerKeychainHandlers();
   registerConfigHandlers();
   registerSystemHandlers();
+  registerLLMHandlers();
 }
 
 /**
@@ -308,6 +315,361 @@ export function registerIpcHandlers(): void {
  */
 export function registerSystemHandlers(): void {
   ipcMain.handle(SystemChannels.GET_PLATFORM, () => process.platform);
+}
+
+/**
+ * Helper to get keychain account name for LLM provider
+ */
+function getLLMKeychainAccount(providerId: LLMProviderId): string {
+  return `llm-provider:${providerId}`;
+}
+
+/**
+ * Validate that a provider ID is valid
+ */
+function isValidProviderId(providerId: unknown): providerId is LLMProviderId {
+  const validIds = getAllProviderIds();
+  return typeof providerId === "string" && validIds.includes(providerId as LLMProviderId);
+}
+
+/**
+ * Register IPC handlers for LLM provider operations.
+ *
+ * Handlers for testing connections, managing API keys via keychain,
+ * and managing model role assignments.
+ */
+export function registerLLMHandlers(): void {
+  // Test connection to an LLM provider
+  ipcMain.handle(
+    LLMChannels.TEST_CONNECTION,
+    async (_event, providerId: LLMProviderId, apiKey: string, model: string) => {
+      if (!isValidProviderId(providerId)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+      if (typeof model !== "string" || !model) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Model is required" },
+        };
+      }
+      if (apiKey !== undefined && apiKey !== null && apiKey !== "" && typeof apiKey !== "string") {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "API key must be a string" },
+        };
+      }
+
+      // If no API key provided, try to get from keychain
+      let keyToUse = apiKey;
+      if (!keyToUse) {
+        const keychainResult = await getCredential(getLLMKeychainAccount(providerId));
+        if (!keychainResult.success || !keychainResult.data) {
+          return {
+            success: false,
+            error: { code: "INVALID_INPUT", message: "No API key provided or stored" },
+          };
+        }
+        keyToUse = keychainResult.data;
+      }
+
+      return testLLMConnection(providerId, keyToUse, model);
+    }
+  );
+
+  // Save API key to keychain
+  ipcMain.handle(
+    LLMChannels.SAVE_API_KEY,
+    async (_event, providerId: LLMProviderId, apiKey: string) => {
+      if (!isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.saveApiKey",
+          providerId: typeof providerId === "string" ? providerId : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+      if (typeof apiKey !== "string" || !apiKey) {
+        logAuditEvent({
+          action: "llm.saveApiKey",
+          providerId,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "API key is required" },
+        };
+      }
+
+      const result = await saveCredential(getLLMKeychainAccount(providerId), apiKey);
+      logAuditEvent({
+        action: "llm.saveApiKey",
+        providerId,
+        success: result.success === true,
+        errorCode: result.success ? undefined : result.error?.code,
+        metadata: {
+          keySuffix: apiKey.slice(-4),
+          keyLength: apiKey.length,
+        },
+      });
+      return result;
+    }
+  );
+
+  // Get API key from keychain (for internal use - returns masked key for UI)
+  ipcMain.handle(
+    LLMChannels.GET_API_KEY,
+    async (_event, providerId: LLMProviderId) => {
+      if (!isValidProviderId(providerId)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+
+      const result = await getCredential(getLLMKeychainAccount(providerId));
+      if (!result.success || !result.data) {
+        return result;
+      }
+
+      // Return masked key for security - only show last 4 chars
+      const masked =
+        result.data.length > 4
+          ? "•".repeat(result.data.length - 4) + result.data.slice(-4)
+          : "•".repeat(result.data.length);
+
+      return { success: true, data: masked };
+    }
+  );
+
+  // Delete API key from keychain
+  ipcMain.handle(
+    LLMChannels.DELETE_API_KEY,
+    async (_event, providerId: LLMProviderId) => {
+      if (!isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.deleteApiKey",
+          providerId: typeof providerId === "string" ? providerId : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+
+      const result = await deleteCredential(getLLMKeychainAccount(providerId));
+      logAuditEvent({
+        action: "llm.deleteApiKey",
+        providerId,
+        success: result.success === true,
+        errorCode: result.success ? undefined : result.error?.code,
+        metadata: {
+          deleted: result.success ? result.data === true : false,
+        },
+      });
+      return result;
+    }
+  );
+
+  // Check if API key exists in keychain
+  ipcMain.handle(
+    LLMChannels.HAS_API_KEY,
+    async (_event, providerId: LLMProviderId) => {
+      if (!isValidProviderId(providerId)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+
+      return hasCredential(getLLMKeychainAccount(providerId));
+    }
+  );
+
+  // Set model role assignment (stored in config)
+  // Cagent roles: orchestrator, extraction, editing, captioning, scheduling
+  // Reference: .taskmaster/docs/cagent-team.md
+  ipcMain.handle(
+    LLMChannels.SET_MODEL_ROLE,
+    async (
+      _event,
+      role: string,
+      providerId: LLMProviderId | null,
+      model: string | null
+    ) => {
+      const validRoles = ["orchestrator", "extraction", "editing", "captioning", "scheduling"];
+      if (!validRoles.includes(role)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role: typeof role === "string" ? role : null,
+          providerId: typeof providerId === "string" ? providerId : null,
+          model: typeof model === "string" ? model : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid role" },
+        };
+      }
+
+      if (providerId !== null && !isValidProviderId(providerId)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId: typeof providerId === "string" ? providerId : null,
+          model: typeof model === "string" ? model : null,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+      if ((providerId === null) !== (model === null)) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: false,
+          errorCode: "INVALID_INPUT",
+        });
+        return {
+          success: false,
+          error: {
+            code: "INVALID_INPUT",
+            message: "Provider and model must both be set or both be null",
+          },
+        };
+      }
+      if (providerId !== null && model !== null) {
+        const provider = LLM_PROVIDERS[providerId];
+        if (!provider.models.some((providerModel) => providerModel.id === model)) {
+          logAuditEvent({
+            action: "llm.setModelRole",
+            role,
+            providerId,
+            model,
+            success: false,
+            errorCode: "INVALID_INPUT",
+          });
+          return {
+            success: false,
+            error: {
+              code: "INVALID_INPUT",
+              message: `Model "${model}" not found for provider "${providerId}"`,
+            },
+          };
+        }
+      }
+
+      try {
+        // Get current roles
+        const currentRoles = (getConfig("modelRoles") as ModelRoleConfig) || {
+          orchestrator: { providerId: null, model: null },
+          extraction: { providerId: null, model: null },
+          editing: { providerId: null, model: null },
+          captioning: { providerId: null, model: null },
+          scheduling: { providerId: null, model: null },
+        };
+
+        // Update the specific role
+        currentRoles[role as keyof ModelRoleConfig] = { providerId, model };
+
+        // Save back to config
+        setConfig("modelRoles", currentRoles);
+
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: true,
+        });
+        return { success: true };
+      } catch (err) {
+        logAuditEvent({
+          action: "llm.setModelRole",
+          role,
+          providerId,
+          model,
+          success: false,
+          errorCode: "CONFIG_ERROR",
+        });
+        return {
+          success: false,
+          error: {
+            code: "CONFIG_ERROR",
+            message: err instanceof Error ? err.message : "Failed to set model role",
+          },
+        };
+      }
+    }
+  );
+
+  // Get all model role assignments
+  ipcMain.handle(LLMChannels.GET_MODEL_ROLES, () => {
+    try {
+      const roles = getConfig("modelRoles") as ModelRoleConfig | undefined;
+      return {
+        success: true,
+        data: roles || {
+          orchestrator: { providerId: null, model: null },
+          extraction: { providerId: null, model: null },
+          editing: { providerId: null, model: null },
+          captioning: { providerId: null, model: null },
+          scheduling: { providerId: null, model: null },
+        },
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_ERROR",
+          message: err instanceof Error ? err.message : "Failed to get model roles",
+        },
+      };
+    }
+  });
+
+  ipcMain.handle(
+    LLMChannels.GET_PROVIDER_STATUS,
+    async (_event, providerId: LLMProviderId) => {
+      if (!isValidProviderId(providerId)) {
+        return {
+          success: false,
+          error: { code: "INVALID_INPUT", message: "Invalid provider ID" },
+        };
+      }
+
+      try {
+        const hasKey = await hasCredential(getLLMKeychainAccount(providerId));
+        return {
+          success: true,
+          data: { providerId, hasApiKey: hasKey.success && hasKey.data === true },
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: {
+            code: "PROVIDER_ERROR",
+            message: err instanceof Error ? err.message : "Failed",
+          },
+        };
+      }
+    }
+  );
 }
 
 /**
@@ -322,6 +684,9 @@ export function unregisterIpcHandlers(): void {
     ipcMain.removeHandler(channel);
   });
   Object.values(SystemChannels).forEach((channel) => {
+    ipcMain.removeHandler(channel);
+  });
+  Object.values(LLMChannels).forEach((channel) => {
     ipcMain.removeHandler(channel);
   });
 }

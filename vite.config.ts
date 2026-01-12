@@ -2,9 +2,16 @@ import tailwindcss from "@tailwindcss/vite";
 import { svelteTesting } from "@testing-library/svelte/vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
+  server: {
+    fs: {
+      // Allow serving files from shared/ directory (used by renderer and main process)
+      allow: [resolve(__dirname, "shared"), "."],
+    },
+  },
   test: {
     workspace: [
       {
@@ -24,7 +31,7 @@ export default defineConfig({
         test: {
           name: "server",
           environment: "node",
-          include: ["src/**/*.{test,spec}.{js,ts}"],
+          include: ["src/**/*.{test,spec}.{js,ts}", "electron/**/*.{test,spec}.{js,ts}", "shared/**/*.{test,spec}.{js,ts}"],
           exclude: ["src/**/*.svelte.{test,spec}.{js,ts}"],
         },
       },
