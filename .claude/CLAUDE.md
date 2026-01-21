@@ -68,9 +68,11 @@ def edit_file(file_path: str, code_snippet: str, line_number: int = None) -> str
 
 # Test Guidelines
 
-## Use Wallaby.js inside TestSprite MCP Server testing workflow 
+## Always use Wallaby mcp server to manage tests when available   
 
-- Use Wallaby.js for test results, errors, and debugging
+- Proactively check if Wallaby.js is running before executing tests
+- Proactively use/launch Wallaby mcp server official skill (.claude/skills/wallaby-mcp-official-skill/SKILL.md) when working with Wallaby.js and Wallaby mcp server tools for every test related task (testing, debugging, etc.)
+- Use Wallaby.js for test results, errors, and debugging for all the changes on the current branch, before pushing every commit.
 - Leverage runtime values and coverage data when debugging tests
 - Fall back to terminal only if Wallaby isn't available
 
