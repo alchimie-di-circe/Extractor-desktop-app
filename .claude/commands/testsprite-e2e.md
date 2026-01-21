@@ -1,10 +1,10 @@
 # TestSprite E2E Tests
 
-Generate and run comprehensive E2E tests using TestSprite MCP.
+Generate and run comprehensive E2E tests using TestSprite MCP server tools.
 
 ## Prerequisites:
 - Dev server running: `pnpm run dev` (port 5173)
-- TestSprite MCP connected (global installation)
+- TestSprite MCP server connected 
 
 ## Workflow:
 
@@ -39,3 +39,9 @@ If tests fail:
 - Test execution summary
 - Critical failures with screenshots
 - Recommendations for fixes
+
+
+
+## Notes:
+- Find more detailed info on Testsprite MCP server tools usage in .claude/CLAUDE.md 
+- More online (ONLY if you need faulting infos): [Testsprite Documentation](https://docs.testsprite.ai)
