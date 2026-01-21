@@ -1,7 +1,7 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
 	"files": {
-		"includes": ["src/**/*", "electron/**/*", "shared/**/*", "e2e/**/*"]
+		"include": ["src/**/*", "electron/**/*", "shared/**/*", "e2e/**/*"]
 	},
 	"formatter": {
 		"indentStyle": "tab",
@@ -34,7 +34,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["*.svelte"],
+			"include": ["*.svelte"],
 			"linter": {
 				"rules": {
 					"style": {
