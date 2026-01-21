@@ -3,7 +3,10 @@
     "task-master-ai": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": [
+        "-y",
+        "task-master-ai"
+      ],
       "env": {
         "TASK_MASTER_TOOLS": "all",
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
@@ -20,7 +23,10 @@
     "svelte": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@sveltejs/mcp"]
+      "args": [
+        "-y",
+        "@sveltejs/mcp"
+      ]
     },
     "devserver-mcp": {
       "type": "sse",
@@ -33,6 +39,16 @@
         "mcp-remote",
         "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp"
       ]
+    },
+    "wallaby": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "-c",
+        "node ~/.wallaby/mcp"
+      ],
+      "env": {}
     }
   }
 }
