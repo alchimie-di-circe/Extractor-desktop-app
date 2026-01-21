@@ -1,12 +1,15 @@
 #!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+set -e
+
 pnpm run check &
 CHECK_PID=$!
 pnpm run test:unit -- --run &
 TEST_PID=$!
 
-wait $CHECK_PID
+wait "$CHECK_PID"
 CHECK_STATUS=$?
-wait $TEST_PID
+wait "$TEST_PID"
 TEST_STATUS=$?
 
 if [ "$CHECK_STATUS" -ne 0 ] || [ "$TEST_STATUS" -ne 0 ]; then
