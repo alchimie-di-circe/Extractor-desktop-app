@@ -11,7 +11,7 @@
     "email": "35944715+Pandoks@users.noreply.github.com"
   },
   "scripts": {
-    "prepare": "svelte-kit sync || echo ''",
+    "prepare": "svelte-kit sync || echo '' && husky",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "biome check .",
@@ -55,7 +55,9 @@
     "clsx": "^2.1.1",
     "electron": "^36.8.3",
     "formsnap": "^2.0.1",
+    "husky": "^9.1.7",
     "jsdom": "^26.0.0",
+    "lint-staged": "^16.2.7",
     "svelte": "^5.11.0",
     "svelte-check": "^4.1.0",
     "svelte-sonner": "^1.0.7",
@@ -95,5 +97,10 @@
       "tmp@<=0.2.3": ">=0.2.4",
       "qs@<6.14.1": ">=6.14.1"
     }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,svelte}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   }
 }
