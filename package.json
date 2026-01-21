@@ -24,7 +24,8 @@
     "dev": "./scripts/dev.sh",
     "package": "vite build && electron-forge package",
     "make": "vite build && electron-forge make -- --arch=all",
-    "publish": "electron-forge publish"
+    "publish": "electron-forge publish",
+    "pre-pr": "./scripts/pre-pr-check.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
