@@ -1,0 +1,6 @@
+{
+	"projectName": "Trae_Extractor-app-v2",
+	"framework": "sveltekit",
+	"localPort": 5173,
+	"testDirectory": "testsprite_tests"
+}

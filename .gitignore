@@ -52,4 +52,7 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# TestSprite generated tests
+testsprite_tests/
