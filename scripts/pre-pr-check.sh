@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 echo "=========================================="
 echo "  Pre-PR Quality Check"
