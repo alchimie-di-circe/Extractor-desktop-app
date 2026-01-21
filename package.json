@@ -18,7 +18,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "test:unit": "vitest",
-    "test": "npm run test:unit -- --run && npm run test:e2e",
+    "test": "pnpm run test:unit -- --run && pnpm run test:e2e",
     "test:e2e": "playwright test",
     "start": "electron-forge start",
     "dev": "./scripts/dev.sh",
