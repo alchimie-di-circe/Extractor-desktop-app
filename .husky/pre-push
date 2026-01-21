@@ -1,18 +1,22 @@
 #!/bin/sh
 . "$(dirname -- "$0")/_/husky.sh"
-set -e
 
 pnpm run check &
 CHECK_PID=$!
 pnpm run test:unit -- --run &
 TEST_PID=$!
 
+# Disable errexit to capture both exit statuses
+set +e
 wait "$CHECK_PID"
 CHECK_STATUS=$?
 wait "$TEST_PID"
 TEST_STATUS=$?
+set -e
 
 if [ "$CHECK_STATUS" -ne 0 ] || [ "$TEST_STATUS" -ne 0 ]; then
   echo "Pre-push checks failed!"
+  [ "$CHECK_STATUS" -ne 0 ] && echo " - Type check failed"
+  [ "$TEST_STATUS" -ne 0 ] && echo " - Unit tests failed"
   exit 1
 fi
