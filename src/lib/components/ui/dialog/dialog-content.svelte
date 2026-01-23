@@ -1,12 +1,15 @@
 <script lang="ts">
 import XIcon from '@lucide/svelte/icons/x';
-import type { Dialog as DialogPrimitive } from 'bits-ui';
+// biome-ignore lint/style/useImportType: Component value used in template
+import { Dialog as DialogPrimitive } from 'bits-ui';
 import type { ComponentProps, Snippet } from 'svelte';
 import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
 import DialogOverlay from './dialog-overlay.svelte';
-import type DialogPortal from './dialog-portal.svelte';
+// biome-ignore lint/style/useImportType: Component value used in template
+import DialogPortal from './dialog-portal.svelte';
 
-const {
+// biome-ignore lint/style/useConst: bindable props require let
+let {
 	ref = $bindable(null),
 	class: className,
 	portalProps,
