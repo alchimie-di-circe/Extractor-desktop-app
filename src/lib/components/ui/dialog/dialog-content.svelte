@@ -1,28 +1,27 @@
 <script lang="ts">
-	import { Dialog as DialogPrimitive } from "bits-ui";
-	import DialogPortal from "./dialog-portal.svelte";
-	import XIcon from "@lucide/svelte/icons/x";
-	import type { Snippet } from "svelte";
-	import * as Dialog from "./index.js";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
-	import type { ComponentProps } from "svelte";
+import XIcon from '@lucide/svelte/icons/x';
+import type { Dialog as DialogPrimitive } from 'bits-ui';
+import type { ComponentProps, Snippet } from 'svelte';
+import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
+import DialogOverlay from './dialog-overlay.svelte';
+import type DialogPortal from './dialog-portal.svelte';
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		portalProps,
-		children,
-		showCloseButton = true,
-		...restProps
-	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
-		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
-		children: Snippet;
-		showCloseButton?: boolean;
-	} = $props();
+const {
+	ref = $bindable(null),
+	class: className,
+	portalProps,
+	children,
+	showCloseButton = true,
+	...restProps
+}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
+	portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
+	children: Snippet;
+	showCloseButton?: boolean;
+} = $props();
 </script>
 
 <DialogPortal {...portalProps}>
-	<Dialog.Overlay />
+	<DialogOverlay />
 	<DialogPrimitive.Content
 		bind:ref
 		data-slot="dialog-content"
