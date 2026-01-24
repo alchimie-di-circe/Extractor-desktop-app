@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
+	CagentChannels,
 	ConfigChannels,
 	KeychainChannels,
 	LLMChannels,
@@ -103,6 +104,24 @@ const llmApi = {
 };
 
 /**
+ * Cagent API exposed to renderer
+ */
+const cagentApi = {
+	generateYaml: (config: {
+		agents?: Record<string, unknown>;
+		enabledMcp?: string[];
+		ragSources?: string[];
+		autoCreateDirs?: boolean;
+	}): Promise<
+		| {
+				success: true;
+				data: { yaml: string; filePath: string; dirsCreated: string[]; backupPath: string | null };
+		  }
+		| { success: false; error: { code: string; message: string } }
+	> => ipcRenderer.invoke(CagentChannels.GENERATE_YAML, config),
+};
+
+/**
  * Sidecar API exposed to renderer
  */
 const sidecarApi = {
@@ -139,6 +158,7 @@ const desktopApi = {
 	keychain: keychainApi,
 	config: configApi,
 	llm: llmApi,
+	cagent: cagentApi,
 	sidecar: sidecarApi,
 	getPlatform: (): Promise<NodeJS.Platform> => ipcRenderer.invoke(SystemChannels.GET_PLATFORM),
 };

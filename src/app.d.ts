@@ -7,7 +7,7 @@ import type {
 	LLMProviderId,
 	LLMConnectionResult,
 	ModelRoleConfig,
-} from "../shared/types";
+} from '../shared/types';
 
 /**
  * IPC Result types
@@ -42,24 +42,43 @@ interface ElectronAPI {
 		testConnection: (
 			providerId: LLMProviderId,
 			apiKey: string,
-			model: string
+			model: string,
 		) => Promise<LLMConnectionResult>;
-		saveApiKey: (
-			providerId: LLMProviderId,
-			apiKey: string
-		) => Promise<IpcOkVoid | IpcErr>;
+		saveApiKey: (providerId: LLMProviderId, apiKey: string) => Promise<IpcOkVoid | IpcErr>;
 		getApiKey: (providerId: LLMProviderId) => Promise<IpcResult<string>>;
 		deleteApiKey: (providerId: LLMProviderId) => Promise<IpcResult<boolean>>;
 		hasApiKey: (providerId: LLMProviderId) => Promise<KeychainResult<boolean>>;
 		getProviderStatus: (
-			providerId: LLMProviderId
+			providerId: LLMProviderId,
 		) => Promise<IpcResult<{ providerId: LLMProviderId; hasApiKey: boolean }>>;
 		setModelRole: (
 			role: string,
 			providerId: LLMProviderId | null,
-			model: string | null
+			model: string | null,
 		) => Promise<IpcOkVoid | IpcErr>;
 		getModelRoles: () => Promise<IpcResult<ModelRoleConfig>>;
+	};
+	cagent: {
+		/**
+		 * Generate cagent team.yaml configuration
+		 *
+		 * @param config Configuration with agents, MCP tools, and RAG sources
+		 * @returns Generated YAML, file path, created directories, and backup info
+		 */
+		generateYaml: (config: {
+			agents?: Record<string, unknown>;
+			enabledMcp?: string[];
+			ragSources?: string[];
+			autoCreateDirs?: boolean;
+		}) => Promise<
+			| IpcOk<{
+					yaml: string;
+					filePath: string;
+					dirsCreated: string[];
+					backupPath: string | null;
+			  }>
+			| IpcErr
+		>;
 	};
 	/**
 	 * Get the current platform (async via IPC for sandbox compatibility)
@@ -80,5 +99,3 @@ declare global {
 		electronAPI: ElectronAPI;
 	}
 }
-
-export {};

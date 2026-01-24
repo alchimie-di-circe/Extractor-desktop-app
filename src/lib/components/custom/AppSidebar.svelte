@@ -1,27 +1,32 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { House, Image, Pencil, Send, Settings, Folder } from '@lucide/svelte';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import { ThemeToggle } from '$lib/components/custom/index.js';
+import { Bot, Folder, House, Image, Pencil, Send, Settings } from '@lucide/svelte';
+import { page } from '$app/stores';
+import { ThemeToggle } from '$lib/components/custom/index.js';
+import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
-	// Navigation routes
-	const routes = [
-		{ path: '/', label: 'Dashboard', icon: House },
-		{ path: '/brands', label: 'Brand', icon: Folder },
-		{ path: '/extract', label: 'Estrai', icon: Image },
-		{ path: '/edit', label: 'Modifica', icon: Pencil },
-		{ path: '/publish', label: 'Pubblica', icon: Send },
-		{ path: '/settings/llm-providers', label: 'Impostazioni', icon: Settings }
-	];
+// Navigation routes
+const routes = [
+	{ path: '/', label: 'Dashboard', icon: House },
+	{ path: '/brands', label: 'Brand', icon: Folder },
+	{ path: '/extract', label: 'Estrai', icon: Image },
+	{ path: '/edit', label: 'Modifica', icon: Pencil },
+	{ path: '/publish', label: 'Pubblica', icon: Send },
+];
 
-	// Check if route is active (pathname routing)
-	function isActive(path: string): boolean {
-		const currentPath = $page.url.pathname;
-		if (path === '/') {
-			return currentPath === '/' || currentPath === '' || !currentPath;
-		}
-		return currentPath.startsWith(path);
+// Settings routes
+const settingsRoutes = [
+	{ path: '/settings/agents', label: 'Agent Configuration', icon: Bot },
+	{ path: '/settings/llm-providers', label: 'LLM Providers', icon: Settings },
+];
+
+// Check if route is active (pathname routing)
+function isActive(path: string): boolean {
+	const currentPath = $page.url.pathname;
+	if (path === '/') {
+		return currentPath === '/' || currentPath === '' || !currentPath;
 	}
+	return currentPath.startsWith(path);
+}
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -49,6 +54,26 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each routes as route (route.path)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton isActive={isActive(route.path)} tooltipContent={route.label}>
+								{#snippet child({ props })}
+									<a href={route.path} {...props}>
+										<route.icon class="size-4" />
+										<span>{route.label}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>Configurazione</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each settingsRoutes as route (route.path)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={isActive(route.path)} tooltipContent={route.label}>
 								{#snippet child({ props })}
