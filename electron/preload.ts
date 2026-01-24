@@ -4,6 +4,7 @@ import {
 	ConfigChannels,
 	KeychainChannels,
 	LLMChannels,
+	SidecarReloadChannels,
 	SystemChannels,
 } from '../shared/ipc-channels';
 import type {
@@ -145,9 +146,41 @@ const sidecarApi = {
 
 	isRunning: (): Promise<boolean> => ipcRenderer.invoke('sidecar:is-running'),
 
-	onStatusChange: (callback: (event: any, status: string) => void) => {
+	getReloadStatus: (): Promise<{
+		isWatching: boolean;
+		lastReload: number | null;
+		lastYamlMtime: number | null;
+		reloadCount: number;
+		isReloading: boolean;
+		sidecarPid: number | null;
+	}> => ipcRenderer.invoke(SidecarReloadChannels.STATUS),
+
+	forceReload: (): Promise<{ success: boolean; error?: string }> =>
+		ipcRenderer.invoke(SidecarReloadChannels.FORCE_RELOAD),
+
+	onStatusChange: (callback: (event: Electron.IpcRendererEvent, status: string) => void) => {
 		ipcRenderer.on('sidecar:event', callback);
 		return () => ipcRenderer.off('sidecar:event', callback);
+	},
+
+	onSidecarReloadEvent: (
+		callback: (event: {
+			type: 'reload-started' | 'reload-completed' | 'reload-failed' | 'watch-error';
+			timestamp: number;
+			message: string;
+			yamlMtime?: number;
+			error?: string;
+		}) => void,
+	) => {
+		ipcRenderer.on(SidecarReloadChannels.RELOAD_EVENT, (_event: Electron.IpcRendererEvent, data) =>
+			callback(data),
+		);
+		return () => {
+			ipcRenderer.off(
+				SidecarReloadChannels.RELOAD_EVENT,
+				(_event: Electron.IpcRendererEvent, data) => callback(data),
+			);
+		};
 	},
 };
 

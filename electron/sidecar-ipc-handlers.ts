@@ -5,7 +5,9 @@
  */
 
 import { ipcMain } from 'electron';
+import { SidecarReloadChannels } from '../shared/ipc-channels';
 import { sidecarManager } from './sidecar-manager';
+import { sidecarReloadManager } from './sidecar-reload';
 
 export function registerSidecarIpcHandlers(): void {
 	/**
@@ -66,5 +68,25 @@ export function registerSidecarIpcHandlers(): void {
 	 */
 	ipcMain.handle('sidecar:is-running', () => {
 		return sidecarManager.isRunning();
+	});
+
+	/**
+	 * Get sidecar reload status
+	 */
+	ipcMain.handle(SidecarReloadChannels.STATUS, () => {
+		return sidecarReloadManager.getStatus();
+	});
+
+	/**
+	 * Force reload sidecar (manual trigger from UI)
+	 */
+	ipcMain.handle(SidecarReloadChannels.FORCE_RELOAD, async () => {
+		try {
+			const success = await sidecarReloadManager.forceReload();
+			return { success };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return { success: false, error: message };
+		}
 	});
 }

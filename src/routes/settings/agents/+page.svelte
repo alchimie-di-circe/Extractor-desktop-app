@@ -6,6 +6,7 @@ import {
 	ChevronUp,
 	Copy,
 	Database,
+	RotateCw,
 	Save,
 	Settings,
 	Zap,
@@ -45,6 +46,15 @@ let expandedAgents = $state<Set<string>>(new Set());
 let generationResult = $state<{ yaml: string; filePath: string; dirsCreated: string[] } | null>(
 	null,
 );
+let sidecarReloadStatus = $state<{
+	isWatching: boolean;
+	lastReload: number | null;
+	reloadCount: number;
+	isReloading: boolean;
+	sidecarPid: number | null;
+} | null>(null);
+let reloadMessage = $state<string>('');
+let isReloadingManually = $state(false);
 
 // ========== Derived State ==========
 const isDirty = $derived(
@@ -301,9 +311,83 @@ function copyToClipboard(text: string, label: string): void {
 	toast.success(`${label} copied to clipboard`);
 }
 
+async function fetchSidecarReloadStatus(): Promise<void> {
+	try {
+		const status = await window.electronAPI.sidecar.getReloadStatus();
+		sidecarReloadStatus = status;
+	} catch (error) {
+		console.error('Failed to fetch sidecar reload status:', error);
+	}
+}
+
+async function handleForceReload(): Promise<void> {
+	isReloadingManually = true;
+	reloadMessage = 'Reloading sidecar...';
+	try {
+		const result = await window.electronAPI.sidecar.forceReload();
+		if (result.success) {
+			reloadMessage = 'Sidecar reloaded successfully!';
+			await fetchSidecarReloadStatus();
+			toast.success('Sidecar Reloaded', {
+				description: 'The sidecar process has been reloaded with the latest team.yaml',
+			});
+		} else {
+			reloadMessage = `Reload failed: ${result.error}`;
+			toast.error('Reload Failed', {
+				description: result.error || 'Unknown error occurred',
+			});
+		}
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+		reloadMessage = `Error: ${errorMessage}`;
+		toast.error('Reload Error', {
+			description: errorMessage,
+		});
+	} finally {
+		isReloadingManually = false;
+		// Clear message after 3 seconds
+		setTimeout(() => {
+			reloadMessage = '';
+		}, 3000);
+	}
+}
+
 onMount(() => {
 	// Initialize expanded state
 	expandedAgents = new Set(['orchestrator']);
+
+	// Fetch initial sidecar reload status
+	fetchSidecarReloadStatus();
+
+	// Listen for reload events
+	const unsubscribe = window.electronAPI?.sidecar?.onSidecarReloadEvent((event) => {
+		console.log('[Sidecar Reload Event]', event);
+		reloadMessage = event.message;
+
+		// Refresh status after reload completes
+		if (event.type === 'reload-completed' || event.type === 'reload-failed') {
+			setTimeout(fetchSidecarReloadStatus, 500);
+
+			if (event.type === 'reload-completed') {
+				toast.success('Sidecar Reloaded', {
+					description: 'The sidecar process has been reloaded successfully',
+				});
+			} else if (event.type === 'reload-failed') {
+				toast.error('Reload Failed', {
+					description: event.error || event.message,
+				});
+			}
+		}
+
+		// Clear message after 4 seconds
+		setTimeout(() => {
+			reloadMessage = '';
+		}, 4000);
+	});
+
+	return () => {
+		unsubscribe?.();
+	};
 });
 </script>
 
@@ -426,7 +510,7 @@ onMount(() => {
 										placeholder="Enter custom system prompt to override defaults..."
 										class="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 										disabled={!agentConfigs[agent.id].enabled}
-									/>
+									></textarea>
 									<p class="text-xs text-muted-foreground">
 										Leave empty to use default prompts from config
 									</p>
@@ -551,6 +635,59 @@ onMount(() => {
 				Generate and save the team.yaml configuration file
 			</p>
 
+			<!-- Sidecar Reload Status -->
+			{#if sidecarReloadStatus}
+				<div class="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<div
+								class={`h-2.5 w-2.5 rounded-full ${
+									sidecarReloadStatus.isReloading
+										? 'animate-pulse bg-yellow-500'
+										: sidecarReloadStatus.isWatching
+											? 'bg-green-500'
+											: 'bg-gray-500'
+								}`}
+							></div>
+							<p class="text-sm font-medium">
+								{#if sidecarReloadStatus.isReloading}
+									Sidecar Reloading...
+								{:else if sidecarReloadStatus.isWatching}
+									Hot-Reload Active
+								{:else}
+									Hot-Reload Inactive
+								{/if}
+							</p>
+						</div>
+						<Badge variant={sidecarReloadStatus.isWatching ? 'default' : 'outline'} class="text-xs">
+							{#if sidecarReloadStatus.lastReload}
+								Reloaded {new Date(sidecarReloadStatus.lastReload).toLocaleTimeString()}
+							{:else}
+								Never reloaded
+							{/if}
+						</Badge>
+					</div>
+
+					{#if sidecarReloadStatus.sidecarPid}
+						<p class="text-xs text-muted-foreground">
+							Sidecar PID: <code class="bg-background rounded px-1">{sidecarReloadStatus.sidecarPid}</code>
+							• Reloads: <code class="bg-background rounded px-1">{sidecarReloadStatus.reloadCount}</code>
+						</p>
+					{/if}
+
+					{#if reloadMessage}
+						<div class="flex items-start gap-2 rounded bg-background p-2.5">
+							<div class="mt-0.5 h-4 w-4 flex-shrink-0">
+								{#if isReloadingManually || sidecarReloadStatus.isReloading}
+									<div class="animate-spin text-blue-500">↻</div>
+								{/if}
+							</div>
+							<p class="text-xs text-muted-foreground flex-1">{reloadMessage}</p>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
 			<!-- Actions -->
 			<div class="flex gap-2">
 				<Button
@@ -565,6 +702,23 @@ onMount(() => {
 					{:else}
 						<Save class="h-4 w-4" />
 						<span>Generate & Save team.yaml</span>
+					{/if}
+				</Button>
+
+				<Button
+					onclick={handleForceReload}
+					disabled={isReloadingManually || !sidecarReloadStatus?.isWatching}
+					variant="outline"
+					size="lg"
+					class="gap-2"
+					title="Manually trigger a sidecar reload"
+				>
+					{#if isReloadingManually}
+						<div class="animate-spin">⚙️</div>
+						<span>Reloading...</span>
+					{:else}
+						<RotateCw class="h-4 w-4" />
+						<span>Force Reload Sidecar</span>
 					{/if}
 				</Button>
 

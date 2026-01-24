@@ -428,7 +428,7 @@ export function registerCagentHandlers(): void {
 					success: true,
 					metadata: {
 						dirsCreated: dirsCreated.length,
-						backupCreated: backupPath ? true : false,
+						backupCreated: !!backupPath,
 						mcpServers: (config.enabledMcp || []).length,
 						ragSources: (config.ragSources || []).length,
 					},

@@ -80,6 +80,41 @@ interface ElectronAPI {
 			| IpcErr
 		>;
 	};
+	sidecar: {
+		start: () => Promise<{ success: boolean; baseUrl?: string; error?: string }>;
+		stop: () => Promise<{ success: boolean; error?: string }>;
+		ensureRunning: () => Promise<{ success: boolean; baseUrl?: string; error?: string }>;
+		status: () => Promise<{
+			running: boolean;
+			port: number;
+			restartCount: number;
+			failureCount: number;
+			circuitBreakerOpen: boolean;
+		}>;
+		getBaseUrl: () => Promise<string>;
+		isRunning: () => Promise<boolean>;
+		getReloadStatus: () => Promise<{
+			isWatching: boolean;
+			lastReload: number | null;
+			lastYamlMtime: number | null;
+			reloadCount: number;
+			isReloading: boolean;
+			sidecarPid: number | null;
+		}>;
+		forceReload: () => Promise<{ success: boolean; error?: string }>;
+		onStatusChange: (
+			callback: (event: Electron.IpcRendererEvent, status: string) => void,
+		) => () => void;
+		onSidecarReloadEvent: (
+			callback: (event: {
+				type: 'reload-started' | 'reload-completed' | 'reload-failed' | 'watch-error';
+				timestamp: number;
+				message: string;
+				yamlMtime?: number;
+				error?: string;
+			}) => void,
+		) => () => void;
+	};
 	/**
 	 * Get the current platform (async via IPC for sandbox compatibility)
 	 */

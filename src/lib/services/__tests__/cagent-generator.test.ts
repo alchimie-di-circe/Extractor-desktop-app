@@ -263,7 +263,7 @@ describe('generateCagentYaml', () => {
 			if (inMultilineString) continue;
 
 			// Check indentation is multiple of 2 spaces
-			const leadingSpaces = line.match(/^ */)[0].length;
+			const leadingSpaces = (line.match(/^ */)?.[0] || '').length;
 			expect(leadingSpaces % 2).toBe(0);
 		}
 	});

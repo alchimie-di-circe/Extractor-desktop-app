@@ -50,3 +50,12 @@ export const LLMChannels = {
 export const CagentChannels = {
 	GENERATE_YAML: 'cagent:generate-yaml',
 } as const;
+
+/**
+ * IPC Channel names for sidecar hot-reload operations
+ */
+export const SidecarReloadChannels = {
+	STATUS: 'sidecar:reload-status',
+	FORCE_RELOAD: 'sidecar:force-reload',
+	RELOAD_EVENT: 'sidecar:reload-event', // Renderer listening for this
+} as const;
