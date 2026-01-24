@@ -18,12 +18,22 @@ Per details: `.taskmaster/docs/cagent-team.md`, `.taskmaster/docs/task-5-upgrade
 
 ## File e knowledge base
 
-Gli agenti devono considerare i seguenti file di riferimento, quando presenti:
+**Cagent Official Documentation** (source of truth):
+@.taskmaster/docs/CAGENT-reference/cagent-configuration-reference.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-toolsets-reference.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-RAG-reference.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-examples.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-best-practices.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-cli-reference.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-model-providers.md.txt
+@.taskmaster/docs/CAGENT-reference/cagent-local-models-suppor.md.txt
 
-- `agents.cagent.rule.md` – regola generale sull’uso di cagent nei workflow AI‑assisted.  
-- `@cagent-schema.json` – schema ufficiale cagent (chiavi, tipi, campi supportati). [web:2]
-- `@cagent-examples.md` – esempi di configurazione (single‑agent, multi‑agent, RAG). [web:2]
-- `@cagent-notes.md` – note e best practice locali (provider, DMR, MCP, pattern specifici per questa org). [web:2]
+**Project-specific cagent config**:
+@.taskmaster/docs/cagent-team.md
+@.taskmaster/docs/task-5-upgrade-spec.md
+
+**Agent rules**:
+@.factory/rules/cagent-framework.rule.md
 
 Ogni modifica sostanziale alla struttura degli agent YAML va riflessa in almeno uno di questi file.
 

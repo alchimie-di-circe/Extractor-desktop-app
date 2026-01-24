@@ -73,6 +73,54 @@ Le seguenti sono coordinate ufficiali per MCP server affidabili e verificati:
 
 Per details: https://docs.docker.com/ai/cagent/best-practices/ e `.taskmaster/docs/task-5-upgrade-spec.md`
 
+## Quick Reference YAML (verificato da doc ufficiale)
+
+### Agent Definition
+```yaml
+agents:
+  agent_name:
+    model: provider/model-name
+    description: "Brief description"
+    instruction: |
+      Detailed instructions...
+    add_prompt_files: ["./prompts/file.md"]  # NOT instruction_file
+    sub_agents: [agent1, agent2]
+    toolsets: [...]
+    rag: [source_name]
+```
+
+### Toolsets MCP
+```yaml
+toolsets:
+  - type: mcp
+    command: npx
+    args: ["-y", "package-name"]
+    env:
+      API_KEY: ${API_KEY}
+  
+  - type: mcp
+    ref: docker:toolname  # Docker MCP Gateway
+  
+  - type: mcp
+    remote:
+      url: https://mcp.example.com
+      transport_type: sse
+```
+
+### RAG Configuration
+```yaml
+rag:
+  source_name:
+    docs: ["./path/to/docs"]
+    strategies:
+      - type: chunked-embeddings
+        embedding_model: openai/text-embedding-3-small
+        vector_dimensions: 1536
+        database: ./embeddings.db
+```
+
+**NOTA**: Reindicizzazione RAG è AUTOMATICA. NON esiste `cagent rag reindex`.
+
 ## Uso di cagent come framework
 
 ### 1. Scelta dei provider e dei modelli
