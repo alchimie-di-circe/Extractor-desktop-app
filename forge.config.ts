@@ -14,6 +14,13 @@ const config: ForgeConfig = {
     arch: process.platform === 'darwin' 
       ? ['x64', 'arm64'] 
       : process.arch,
+    extraResources: [
+      {
+        from: './resources/sidecar',
+        to: 'sidecar',
+        filter: ['!*.map'],
+      },
+    ],
   },
   rebuildConfig: {},
   makers: [

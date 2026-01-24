@@ -1,0 +1,383 @@
+Cagent è proprio pensato per essere uno dei modi più veloci per costruire sistemi multiagent utili, con un rapporto “righe di YAML / potenza” molto alto.  Se vuoi, nel prossimo messaggio posso proporti uno schemino concreto tipo:[github](https://github.com/docker/cagent?tab=readme-ov-file)
+        
+        - `my_team.yaml` (multi-agent + MCP)
+        - un job Inngest/trigger.dev che chiama `cagent exec`
+        - un endpoint Next che trigghera il job.
+        1. [https://github.com/docker/cagent?tab=readme-ov-file](https://github.com/docker/cagent?tab=readme-ov-file)
+- [**`INITIAL.md](http://INITIAL.md)`**
+    
+    Perfetto, ti spiego entrambi i punti con un esempio concreto che poi sfruttiamo per il tuo progetto.
+    
+    ## 1. "Azioni typed dagli handler" in trigger.dev vs Inngest
+    
+    **trigger.dev** = Framework che ti dà types-first per job e variables:
+    
+    `typescript*// trigger.dev - tutto è tipizzato end-to-end*
+    import { client } from "@trigger.dev/sdk/v3";
+    
+    export const extractAndResizePhotos = client.defineJob({
+      id: "extract-resize-photos",
+      name: "Extract & Resize Photos",
+      trigger: client.http({ path: "/photos/process" }),
+      run: async (payload: { albumName: string; format: "jpg" | "png" }, io, ctx) => {
+        *// payload è tipizzato, IDE ti autocompleta*
+        const result = await io.runTask("call-cagent", async () => {
+          return fetch("http://localhost:8080/chat", {
+            method: "POST",
+            body: JSON.stringify({
+              message: `Extract photos from album "${payload.albumName}" in ${payload.format}`,
+            }),
+          }).then(r => r.json());
+        });
+        
+        return result;
+      },
+    });
+    
+    *// Nel tuo frontend Next puoi invocare così:*
+    const response = await fetch("https://api.trigger.dev/v1/runs/extractAndResizePhotos", {
+      method: "POST",
+      body: JSON.stringify({ albumName: "Vacation", format: "jpg" }),
+    });`
+    
+    **Inngest** = Più flessibile, meno "typed by default", ma altrettanto potente:
+    
+    `typescript*// Inngest - schema con inngest.z*
+    import { Inngest } from "inngest";
+    
+    const inngest = new Inngest({ id: "my-app" });
+    
+    export const processPhotos = inngest.createFunction(
+      { id: "process-photos" },
+      { event: "photos/process" },
+      async ({ event, step }) => {
+        *// event.data non è auto-tipizzato, devi definire il schema manualmente*
+        const result = await step.run("extract-photos", async () => {
+          return fetch("http://localhost:8080/chat", {
+            method: "POST",
+            body: JSON.stringify({ message: event.data.query }),
+          }).then(r => r.json());
+        });
+        
+        return result;
+      }
+    );
+    
+    *// Nel frontend:*
+    await inngest.send({
+      name: "photos/process",
+      data: { albumName: "Vacation", format: "jpg" }, *// meno type-safety qui*
+    });`
+    
+    **Differenza pratica:**
+    
+    - **trigger.dev** = Typescript-first, il job è una "funzione serverless tipizzata" con auto-completion su `payload`
+    - **Inngest** = Più event-driven, schema dei dati meno rigido, buono se vuoi flessibilità
+    
+    **Per il tuo caso:** trigger.dev è leggermente più "Next.js native", ma entrambi funzionano benissimo con Cagent.
+    
+    ---
+    
+    ## 2. Il tuo app concreto: `photo-processor.yaml`
+    
+    Ecco la configurazione Cagent che estrae/ridimensiona foto:
+    
+    `textmodels:
+      local_smollm:
+        provider: dmr
+        model: ai/smollm-2:latest  # o granite, gemma, etc.
+        max_tokens: 4096
+        provider_opts:
+          runtime_flags: "--ngl=33"  # GPU acceleration (M2 Mac)
+    
+    agents:
+      photo_extractor:
+        model: local_smollm
+        description: "Estrae foto da Apple Photos e le processa per social/Shopify"
+        instruction: |
+          You are a photo extraction and processing agent.
+          
+          Your job:
+          1. Extract photos from a user-specified Apple Photos album OR from a specific date
+          2. When extracting by date (format: DD/MM/YYYY), group photos into subfolders based on "moments" 
+             (if more than 15 minutes pass between consecutive photos, start a new moment folder)
+          3. Resize/compress photos to match social media and Shopify standards:
+             - Instagram: 1080x1080 (square), 1.91:1 (landscape), 4:5 (portrait)
+             - Shopify: max 2560px, maintain aspect ratio
+             - Twitter: 1200x675 (landscape)
+          4. Save output in the requested format (JPG or PNG)
+          5. Rename files based on subject/content detected
+          
+          Always ask the user for:
+          - Album name OR date (DD/MM/YYYY)
+          - Output format (jpg/png)
+          - Target platform (instagram/shopify/twitter/all)
+          
+          Use the filesystem tool to create output folders.
+          Use the code execution tool to run osxphotos CLI and image processing.
+        
+        toolsets:
+          # Apple Photos extraction
+          - type: mcp
+            command: osxphotos  # if available as MCP, otherwise fallback to shell
+            args: []
+          
+          # Code execution for Python image processing + osxphotos CLI
+          - type: mcp
+            ref: docker:python-sandbox  # e2b or similar Python sandbox from Docker MCP Catalog
+          
+          # Cloudinary for advanced image resizing (optional, if you want cloud processing)
+          - type: mcp
+            ref: docker:cloudinary
+          
+          # Filesystem access
+          - type: filesystem
+          
+          # Shell for ffmpeg/imagemagick if needed
+          - type: mcp
+            command: bash
+            args: []
+          
+          # Thinking tool for complex logic
+          - type: think
+          
+          # Memory to remember user preferences across sessions
+          - type: memory
+            path: ./photo_processor_memory.db
+    
+    # Optional: Define named commands for quick access
+    agents:
+      photo_extractor:
+        commands:
+          album: "Extract photos from an album I specify"
+          bydate: "Extract photos from a specific date, grouped by moments"
+          shrink: "Resize existing photos to social media standards"`
+    
+    ## 3. Implementazione dettagliata del workflow
+    
+    **Step A: TUI interattivo (for humans)**
+    
+    `bash*# Installa osxphotos localmente (non MCP, per semplicità iniziale)*
+    brew install osxphotos
+    
+    *# Lancia Cagent con TUI*
+    cagent run photo-processor.yaml`
+    
+    User scrive nella TUI:
+    
+    `textExtract photos from the "Vacation" album in JPG format for Instagram`
+    
+    L'agente:
+    
+    1. Usa `osxphotos` (via shell tool) per listare le foto dell'album
+    2. Usa il Python sandbox MCP per scrivere uno script che:
+        - Estrae le foto con `osxphotos export`
+        - Resizes con Pillow/OpenCV alle dimensioni Instagram (1080x1080, etc.)
+        - Rinomina i file basandosi su EXIF metadata o AI description
+    3. Salva output in `./output/vacation_instagram_jpg/`
+    
+    **Step B: Headless / Trigger.dev integration**
+    
+    `typescript*// pages/api/extract-photos.ts (Next.js API route)*
+    import type { NextApiRequest, NextApiResponse } from "next";
+    import { exec } from "child_process";
+    import { promisify } from "util";
+    
+    const execAsync = promisify(exec);
+    
+    export default async function handler(
+      req: NextApiRequest,
+      res: NextApiResponse
+    ) {
+      const { albumName, format, platform, dateString } = req.body;
+    
+      try {
+        *// Esegui Cagent in modalità headless*
+        const prompt = dateString
+          ? `Extract photos from ${dateString} (DD/MM/YYYY), group by moments (15-min intervals), format: ${format}, platform: ${platform}`
+          : `Extract photos from album "${albumName}", format: ${format}, platform: ${platform}`;
+    
+        const { stdout, stderr } = await execAsync(
+          `cagent exec ./photo-processor.yaml "${prompt}"`
+        );
+    
+        if (stderr) {
+          throw new Error(stderr);
+        }
+    
+        *// Parse output, return zip o lista di file*
+        res.status(200).json({ success: true, output: stdout });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    }`
+    
+    Oppure con `cagent api` running:
+    
+    `typescript*// trigger.dev job*
+    export const processPhotosJob = client.defineJob({
+      id: "process-photos",
+      name: "Process Photos from Apple Photos",
+      trigger: client.http({ path: "/process-photos" }),
+      run: async (payload: {
+        albumName?: string;
+        dateString?: string;  *// DD/MM/YYYY*
+        format: "jpg" | "png";
+        platform: "instagram" | "shopify" | "twitter" | "all";
+      }, io, ctx) => {
+        const cagentUrl = process.env.CAGENT_API_URL || "http://localhost:8080";
+    
+        const result = await io.runTask("call-cagent-api", async () => {
+          const prompt = payload.dateString
+            ? `Extract photos from ${payload.dateString}, group by moments, format: ${payload.format}, platform: ${payload.platform}`
+            : `Extract photos from album "${payload.albumName}", format: ${payload.format}, platform: ${payload.platform}`;
+    
+          const response = await fetch(`${cagentUrl}/sessions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent: "photo_extractor",
+              message: prompt,
+            }),
+          });
+    
+          return response.json();
+        });
+    
+        return { status: "completed", result };
+      },
+    });`
+    
+    ## 4. Logica di "raggruppamento per momento" (15-min rule)
+    
+    Questo va nel Python sandbox MCP:
+    
+    `python*# extract_and_group_photos.py*
+    import json
+    from pathlib import Path
+    from datetime import datetime, timedelta
+    from PIL import Image
+    import shutil
+    
+    def group_photos_by_moment(photo_files, interval_minutes=15):
+        """
+        Group photos by 'moment' based on time interval.
+        
+        Args:
+            photo_files: list of (filepath, datetime) tuples
+            interval_minutes: threshold for new moment group (default 15)
+        
+        Returns:
+            dict: {moment_name: [list of files]}
+        """
+        if not photo_files:
+            return {}
+        
+        *# Sort by datetime*
+        sorted_photos = sorted(photo_files, key=lambda x: x[1])
+        
+        moments = {}
+        current_moment = None
+        moment_counter = 0
+        
+        for filepath, photo_time in sorted_photos:
+            if current_moment is None:
+                *# First photo*
+                moment_counter += 1
+                current_moment = f"moment_{moment_counter:02d}_{photo_time.strftime('%H%M')}"
+                moments[current_moment] = []
+            else:
+                *# Check time gap*
+                last_photo_time = sorted_photos[sorted_photos.index((filepath, photo_time)) - 1][1]
+                time_gap = (photo_time - last_photo_time).total_seconds() / 60
+                
+                if time_gap > interval_minutes:
+                    *# New moment*
+                    moment_counter += 1
+                    current_moment = f"moment_{moment_counter:02d}_{photo_time.strftime('%H%M')}"
+                    moments[current_moment] = []
+            
+            moments[current_moment].append(filepath)
+        
+        return moments
+    
+    def resize_for_platform(image_path, platform, output_dir):
+        """
+        Resize image based on platform requirements.
+        
+        Args:
+            image_path: path to image
+            platform: 'instagram', 'shopify', 'twitter', or 'all'
+            output_dir: where to save resized images
+        
+        Returns:
+            list of output file paths
+        """
+        img = Image.open(image_path)
+        output_files = []
+        
+        specs = {
+            'instagram': [(1080, 1080), (1920, 1080), (1080, 1350)],  *# square, landscape, portrait*
+            'shopify': [(2560, 2560)],  *# max 2560px*
+            'twitter': [(1200, 675)],
+        }
+        
+        platforms = ['instagram', 'shopify', 'twitter'] if platform == 'all' else [platform]
+        
+        for plat in platforms:
+            for width, height in specs.get(plat, []):
+                *# Resize maintaining aspect ratio*
+                img_resized = img.copy()
+                img_resized.thumbnail((width, height), Image.Resampling.LANCZOS)
+                
+                *# Pad to exact size if needed*
+                if img_resized.size != (width, height):
+                    background = Image.new('RGB', (width, height), (255, 255, 255))
+                    offset = (
+                        (width - img_resized.width) // 2,
+                        (height - img_resized.height) // 2
+                    )
+                    background.paste(img_resized, offset)
+                    img_resized = background
+                
+                output_path = output_dir / f"{plat}_{width}x{height}_{Path(image_path).stem}.jpg"
+                img_resized.save(output_path, quality=85, optimize=True)
+                output_files.append(str(output_path))
+        
+        return output_files
+    
+    *# Usage in Cagent*
+    if __name__ == "__main__":
+        *# Example: group photos from a date*
+        photo_data = [
+            ("/Volumes/Photos/2025-01-15_09-23-45.jpg", datetime(2025, 1, 15, 9, 23, 45)),
+            ("/Volumes/Photos/2025-01-15_09-28-12.jpg", datetime(2025, 1, 15, 9, 28, 12)),
+            ("/Volumes/Photos/2025-01-15_10-05-30.jpg", datetime(2025, 1, 15, 10, 5, 30)),  *# gap > 15min*
+        ]
+        
+        moments = group_photos_by_moment(photo_data, interval_minutes=15)
+        print(json.dumps(moments, indent=2, default=str))`
+    
+    ## 5. Workflow completo
+    
+    `textUser → Next.js UI (album/date input)
+      ↓
+    trigger.dev job / cagent api call
+      ↓
+    Cagent agent riceve prompt
+      ↓
+      ├─ osxphotos CLI (extract from album/date)
+      ├─ Python sandbox MCP (group by moments + detect subjects)
+      ├─ Image resize MCP o locale (PIL/ffmpeg)
+      ├─ Cloudinary MCP (optional: cloud processing)
+      └─ Filesystem (save output folder structure)
+      ↓
+    Output: /output/album_name_or_date_HHMMSS/
+      ├─ moment_01_0923/
+      │  ├─ instagram_1080x1080_photo1.jpg
+      │  ├─ shopify_2560x2560_photo1.jpg
+      │  └─ ...
+      └─ moment_02_1005/
+         └─ ...
+      ↓
+    Frontend riceve path, download zip o preview`
