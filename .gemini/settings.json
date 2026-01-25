@@ -1,4 +1,44 @@
 {
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace|edit_file",
+        "hooks": [
+          {
+            "name": "auto-lint",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/auto-lint.js",
+            "timeout": 10000,
+            "sequential": true
+          },
+          {
+            "name": "test-guardian",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/test-guardian.js",
+            "timeout": 2000,
+            "sequential": false
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace|edit_file",
+        "hooks": [
+          {
+            "name": "sensitive-guard",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/sensitive-guard.js",
+            "timeout": 1000,
+            "sequential": true
+          },
+          {
+            "name": "research-guard",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/research-guard.js",
+            "timeout": 1000,
+            "sequential": true
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "task-master-ai": {
       "command": "npx",
