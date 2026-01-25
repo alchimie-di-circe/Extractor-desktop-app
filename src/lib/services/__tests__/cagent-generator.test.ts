@@ -272,7 +272,7 @@ describe('generateCagentYaml', () => {
 		}
 	});
 
-	it('should include Firecrawl for extraction and creative_planner only', () => {
+	it('should include Firecrawl for extraction, creative_planner, and idea_validator only', () => {
 		const yaml = generateCagentYaml({
 			agents: {},
 			enabledMcp: ['firecrawl'],
@@ -280,10 +280,13 @@ describe('generateCagentYaml', () => {
 		});
 
 		// Get agent section boundaries (7 agents in new architecture)
-		const extractionStart = yaml.indexOf('extraction:');
-		const creativePlannerStart = yaml.indexOf('creative_planner:');
-		const creativeWorkerStart = yaml.indexOf('creative_worker:');
-		const captioningStart = yaml.indexOf('captioning:');
+		const agentsStart = yaml.indexOf('agents:');
+		const extractionStart = yaml.indexOf('  extraction:', agentsStart);
+		const creativePlannerStart = yaml.indexOf('  creative_planner:', agentsStart);
+		const creativeWorkerStart = yaml.indexOf('  creative_worker:', agentsStart);
+		const captioningStart = yaml.indexOf('  captioning:', agentsStart);
+		const schedulingStart = yaml.indexOf('  scheduling:', agentsStart);
+		const ideaValidatorStart = yaml.indexOf('  idea_validator:', agentsStart);
 
 		// Get section boundaries
 		const extractionEnd = creativePlannerStart;
@@ -300,8 +303,21 @@ describe('generateCagentYaml', () => {
 		const creativeWorkerSection = yaml.substring(creativeWorkerStart, creativeWorkerEnd);
 		expect(creativeWorkerSection).not.toContain('firecrawl-mcp');
 
+		// Verify it's NOT in captioning or scheduling
+		const captioningEnd = schedulingStart;
+		const captioningSection = yaml.substring(captioningStart, captioningEnd);
+		expect(captioningSection).not.toContain('firecrawl-mcp');
+
+		const schedulingEnd = ideaValidatorStart;
+		const schedulingSection = yaml.substring(schedulingStart, schedulingEnd);
+		expect(schedulingSection).not.toContain('firecrawl-mcp');
+
+		// Verify it's in idea_validator
+		const ideaValidatorSection = yaml.substring(ideaValidatorStart);
+		expect(ideaValidatorSection).toContain('firecrawl-mcp');
+
 		// Verify it's NOT in orchestrator
-		const orchestratorStart = yaml.indexOf('orchestrator:');
+		const orchestratorStart = yaml.indexOf('  orchestrator:', agentsStart);
 		const orchestratorEnd = extractionStart;
 		const orchestratorSection = yaml.substring(orchestratorStart, orchestratorEnd);
 		expect(orchestratorSection).not.toContain('firecrawl-mcp');

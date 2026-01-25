@@ -103,13 +103,6 @@ export function generateCagentYaml(config: GenerateCagentYamlInput): string {
 	// ========== SECTION 6: Metadata ==========
 	yaml += generateMetadataSection();
 
-	if (toolset.instruction) {
-		yaml += `${nextIndent}instruction: |\n`;
-		for (const line of toolset.instruction.split('\n')) {
-			yaml += `${nextNextIndent}${line}\n`;
-		}
-	}
-
 	return yaml;
 }
 
@@ -334,6 +327,13 @@ function generateToolsetYaml(toolset: MCPToolset, indentLevel: number): string {
 		yaml += `${nextIndent}tools:\n`;
 		for (const tool of toolset.tools) {
 			yaml += `${nextNextIndent}- ${tool}\n`;
+		}
+	}
+
+	if (toolset.instruction) {
+		yaml += `${nextIndent}instruction: |\n`;
+		for (const line of toolset.instruction.split('\n')) {
+			yaml += `${nextNextIndent}${line}\n`;
 		}
 	}
 
