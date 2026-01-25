@@ -48,12 +48,6 @@ jobs:
     # For comments: only if user types @gemini-cli and is OWNER/MEMBER/COLLABORATOR
     if: |-
       (
-        github.event_name == 'pull_request' &&
-        github.event.pull_request.head.repo.fork == false
-      ) || (
-        github.event_name == 'issues' &&
-        contains(fromJSON('["opened", "reopened"]'), github.event.action)
-      ) || (
         github.event.sender.type == 'User' &&
         startsWith(github.event.comment.body || github.event.review.body || github.event.issue.body, '@gemini-cli') &&
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association)
@@ -93,11 +87,7 @@ jobs:
             const request = process.env.REQUEST;
             core.setOutput('request', request);
 
-            if (eventType === 'pull_request.opened') {
-              core.setOutput('command', 'review');
-            } else if (['issues.opened', 'issues.reopened'].includes(eventType)) {
-              core.setOutput('command', 'triage');
-            } else if (request.startsWith("@gemini-cli /review")) {
+            if (request.startsWith("@gemini-cli /review")) {
               core.setOutput('command', 'review');
               const additionalContext = request.replace(/^@gemini-cli \/review/, '').trim();
               core.setOutput('additional_context', additionalContext);
