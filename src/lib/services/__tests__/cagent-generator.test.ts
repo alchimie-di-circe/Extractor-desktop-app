@@ -16,10 +16,11 @@ describe('generateCagentYaml', () => {
 		expect(yaml).toContain('toolsets:');
 		expect(yaml).toContain('metadata:');
 
-		// Check agent roles are present
+		// Check agent roles are present (7 agents in new architecture)
 		expect(yaml).toContain('orchestrator:');
 		expect(yaml).toContain('extraction:');
-		expect(yaml).toContain('editing:');
+		expect(yaml).toContain('creative_planner:');
+		expect(yaml).toContain('creative_worker:');
 		expect(yaml).toContain('captioning:');
 		expect(yaml).toContain('scheduling:');
 		expect(yaml).toContain('idea_validator:');
@@ -28,7 +29,7 @@ describe('generateCagentYaml', () => {
 	it('should include MCP toolsets when enabled', () => {
 		const yaml = generateCagentYaml({
 			agents: {},
-			enabledMcp: ['perplexity', 'firecrawl', 'jina', 'cloudinary'],
+			enabledMcp: ['perplexity', 'firecrawl', 'jina', 'cloudinary', 'shotstack'],
 			ragSources: ['brand_guidelines'],
 		});
 
@@ -37,6 +38,7 @@ describe('generateCagentYaml', () => {
 		expect(yaml).toContain('firecrawl-mcp');
 		expect(yaml).toContain('mcp.jina.ai');
 		expect(yaml).toContain('@cloudinary/asset-management-mcp');
+		expect(yaml).toContain('mcp.pipedream.net'); // Shotstack via Pipedream
 	});
 
 	it('should include add_prompt_files for idea_validator', () => {
@@ -104,7 +106,8 @@ describe('generateCagentYaml', () => {
 		);
 		expect(orchestratorSection).toContain('sub_agents:');
 		expect(orchestratorSection).toContain('extraction');
-		expect(orchestratorSection).toContain('editing');
+		expect(orchestratorSection).toContain('creative_planner');
+		expect(orchestratorSection).toContain('creative_worker');
 		expect(orchestratorSection).toContain('idea_validator');
 	});
 
@@ -209,11 +212,12 @@ describe('generateCagentYaml', () => {
 		// Check that agents section exists
 		expect(yaml).toContain('agents:');
 
-		// Check for required fields in each agent
+		// Check for required fields in each agent (7 agents in new architecture)
 		const roles = [
 			'orchestrator',
 			'extraction',
-			'editing',
+			'creative_planner',
+			'creative_worker',
 			'captioning',
 			'scheduling',
 			'idea_validator',
@@ -268,37 +272,66 @@ describe('generateCagentYaml', () => {
 		}
 	});
 
-	it('should include Firecrawl for extraction and editing only', () => {
+	it('should include Firecrawl for extraction and creative_planner only', () => {
 		const yaml = generateCagentYaml({
 			agents: {},
 			enabledMcp: ['firecrawl'],
 			ragSources: [],
 		});
 
-		// Count occurrences of firecrawl-mcp per agent
+		// Get agent section boundaries (7 agents in new architecture)
 		const extractionStart = yaml.indexOf('extraction:');
-		const editingStart = yaml.indexOf('editing:');
+		const creativePlannerStart = yaml.indexOf('creative_planner:');
+		const creativeWorkerStart = yaml.indexOf('creative_worker:');
 		const captioningStart = yaml.indexOf('captioning:');
 
 		// Get section boundaries
-		const extractionEnd = editingStart;
-		const editingEnd = captioningStart;
+		const extractionEnd = creativePlannerStart;
+		const creativePlannerEnd = creativeWorkerStart;
 
 		const extractionSection = yaml.substring(extractionStart, extractionEnd);
-		const editingSection = yaml.substring(editingStart, editingEnd);
+		const creativePlannerSection = yaml.substring(creativePlannerStart, creativePlannerEnd);
 
 		expect(extractionSection).toContain('firecrawl-mcp');
-		expect(editingSection).toContain('firecrawl-mcp');
+		expect(creativePlannerSection).toContain('firecrawl-mcp');
 
-		// Verify it's NOT in other agents
+		// Verify it's NOT in creative_worker (which uses Cloudinary/Shotstack instead)
+		const creativeWorkerEnd = captioningStart;
+		const creativeWorkerSection = yaml.substring(creativeWorkerStart, creativeWorkerEnd);
+		expect(creativeWorkerSection).not.toContain('firecrawl-mcp');
+
+		// Verify it's NOT in orchestrator
 		const orchestratorStart = yaml.indexOf('orchestrator:');
 		const orchestratorEnd = extractionStart;
 		const orchestratorSection = yaml.substring(orchestratorStart, orchestratorEnd);
+		expect(orchestratorSection).not.toContain('firecrawl-mcp');
+	});
 
-		// Orchestrator toolsets section should not have firecrawl
-		const orchestratorToolsets = orchestratorSection.match(/toolsets:[\s\S]*/);
-		if (orchestratorToolsets) {
-			expect(orchestratorToolsets[0]).not.toContain('firecrawl-mcp');
-		}
+	it('should include Cloudinary and Shotstack for creative_worker only', () => {
+		const yaml = generateCagentYaml({
+			agents: {},
+			enabledMcp: ['cloudinary', 'shotstack'],
+			ragSources: [],
+		});
+
+		// Get creative_worker section boundaries
+		const creativeWorkerStart = yaml.indexOf('creative_worker:');
+		const captioningStart = yaml.indexOf('captioning:');
+		const creativeWorkerEnd = captioningStart;
+
+		const creativeWorkerSection = yaml.substring(creativeWorkerStart, creativeWorkerEnd);
+
+		// Verify Cloudinary and Shotstack are in creative_worker
+		expect(creativeWorkerSection).toContain('@cloudinary/asset-management-mcp');
+		expect(creativeWorkerSection).toContain('mcp.pipedream.net');
+
+		// Verify they're NOT in creative_planner
+		const creativePlannerStart = yaml.indexOf('creative_planner:');
+		const creativeWorkerStartIdx = yaml.indexOf('creative_worker:');
+		const creativePlannerEnd = creativeWorkerStartIdx;
+		const creativePlannerSection = yaml.substring(creativePlannerStart, creativePlannerEnd);
+
+		expect(creativePlannerSection).not.toContain('@cloudinary/asset-management-mcp');
+		expect(creativePlannerSection).not.toContain('mcp.pipedream.net');
 	});
 });

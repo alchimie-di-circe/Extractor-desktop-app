@@ -168,7 +168,8 @@ function generateAgentsSection(
 	const roles = [
 		'orchestrator',
 		'extraction',
-		'editing',
+		'creative_planner',
+		'creative_worker',
 		'captioning',
 		'scheduling',
 		'idea_validator',
@@ -244,7 +245,14 @@ function generateAgentYaml(
 	// Sub-agents (only for orchestrator)
 	if (role === 'orchestrator') {
 		agentYaml += `${indent2}sub_agents:\n`;
-		const subAgents = ['extraction', 'editing', 'captioning', 'scheduling', 'idea_validator'];
+		const subAgents = [
+			'extraction',
+			'creative_planner',
+			'creative_worker',
+			'captioning',
+			'scheduling',
+			'idea_validator',
+		];
 		for (const subAgent of subAgents) {
 			agentYaml += `${indent3}- ${subAgent}\n`;
 		}
@@ -414,10 +422,11 @@ function generateMetadataSection(): string {
     
     Multi-agent system for content extraction, editing, captioning, and validation.
     
-    ## Agents
+    ## Agents (7)
     - **Orchestrator**: Coordinates workflow and delegates tasks
     - **Extraction**: Extracts content from media files
-    - **Editing**: Performs video/image editing operations
+    - **Creative Planner**: Plans detailed editing workflows
+    - **Creative Worker**: Executes editing plans via Cloudinary and Shotstack
     - **Captioning**: Generates captions and descriptions
     - **Scheduling**: Plans and schedules content publication
     - **IDEA-VALIDATOR**: Validates ideas and analyzes trends
@@ -461,7 +470,8 @@ function getAgentInstruction(role: AgentRole): string {
 Your responsibilities:
 - Understand user requests and break them into workflow steps
 - Delegate extraction tasks to the Extraction specialist
-- Delegate editing tasks to the Editing specialist
+- Delegate editing planning to Creative Planner
+- Delegate editing execution to Creative Worker
 - Coordinate captioning with the Captioning specialist
 - Consult IDEA-VALIDATOR for content strategy and validation
 - Use RAG sources (brand guidelines, platform specs) to ensure consistency
@@ -489,7 +499,7 @@ Use these tools:
 - Jina: URL reading and semantic search
 - Filesystem: Work with uploaded media
 
-Provide clear, structured extraction results for editing and captioning.`,
+Provide clear, structured extraction results for creative operations and captioning.`,
 
 		creative_planner: `You are the Creative Planner, designing detailed editing workflows.
 
