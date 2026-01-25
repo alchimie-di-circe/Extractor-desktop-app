@@ -2,7 +2,7 @@
 
 **Title:** Python Sidecar con FastAPI e Lifecycle Management
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 2
 
@@ -59,7 +59,7 @@ Test unitari per FastAPI endpoints. Test di integrazione per verificare spawn/sh
 
 ### 4.1. Creazione struttura directory python/ con requirements.txt
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Creare la struttura completa della directory python/ con tutti i file e sottocartelle necessarie per il sidecar FastAPI, incluso requirements.txt con tutte le dipendenze.
@@ -78,7 +78,7 @@ Aggiungere commenti placeholder che indicano dove verranno implementate le funzi
 
 ### 4.2. Implementazione FastAPI server con endpoint health e execute
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.1  
 
 Implementare il server FastAPI base in main.py con gli endpoint /health per monitoring e /agent/execute per esecuzione sincrona degli agenti.
@@ -117,7 +117,7 @@ Aggiungere middleware per logging request/response e CORS per comunicazione con 
 
 ### 4.3. Implementazione SSE streaming per eventi agenti
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.2  
 
 Aggiungere endpoint SSE (Server-Sent Events) per streaming real-time degli eventi durante l'esecuzione degli agenti verso il frontend Electron.
@@ -155,7 +155,7 @@ Gestire disconnessione client e cleanup risorse.
 
 ### 4.4. Creazione sidecar-manager.ts in Electron per spawn/kill processo Python
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.1  
 
 Implementare il modulo TypeScript in Electron che gestisce lo spawn del processo Python uvicorn e la terminazione controllata del sidecar.
@@ -200,7 +200,7 @@ Gestire stdout/stderr logging e rilevamento errori startup.
 
 ### 4.5. Implementazione health check polling con auto-restart e backoff esponenziale
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.4  
 
 Aggiungere sistema di health check polling al SidecarManager con logica di auto-restart in caso di crash e backoff esponenziale per evitare restart loop.
@@ -251,7 +251,7 @@ Emettere eventi per UI feedback sullo stato del sidecar.
 
 ### 4.6. Gestione graceful shutdown su app quit con timeout e SIGTERM/SIGKILL
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.5  
 
 Implementare la logica di shutdown graceful del sidecar Python quando l'app Electron viene chiusa, con escalation da SIGTERM a SIGKILL dopo timeout.
@@ -303,7 +303,7 @@ Aggiungere endpoint /shutdown in FastAPI per cleanup risorse Python.
 
 ### 4.7. Bundling strategy con PyInstaller per distribuzione cross-platform
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 4.6  
 
 Configurare PyInstaller per creare un eseguibile standalone del sidecar Python che può essere distribuito insieme all'app Electron su Windows, macOS e Linux.

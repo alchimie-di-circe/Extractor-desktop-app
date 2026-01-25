@@ -2,7 +2,7 @@
 
 **Title:** Generazione Dinamica cagent.yaml e Configurazione Agenti
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 3, 4
 
@@ -50,7 +50,7 @@ Test unitari per generazione YAML corretta. Test di validazione configurazione. 
 
 ### 5.1. Definizione TypeScript Interfaces per CagentConfig e AgentRole
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Creare le interfacce TypeScript complete per la configurazione del sistema cagent, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig con tutti i tipi necessari per la validazione statica e l'esportazione del modulo.
@@ -61,7 +61,7 @@ Creare il file `src/lib/types/cagent.ts` con le seguenti interfacce: 1) `AgentRo
 
 ### 5.2. Creazione cagent-config.ts con Funzione generateCagentYaml e Serializzazione
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1  
 
 Implementare il servizio principale in src/lib/services/cagent-config.ts per la generazione del file YAML cagent, includendo serializzazione YAML con libreria js-yaml, template di default e gestione errori completa.
@@ -72,7 +72,7 @@ Installare dipendenza `js-yaml` e relativi types `@types/js-yaml`. Creare `src/l
 
 ### 5.3. Implementazione UI Settings/Agents per Configurazione Ruoli e System Prompts
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.1, 5.2  
 
 Creare l'interfaccia utente Svelte in src/routes/settings/agents/+page.svelte per la configurazione degli agenti, permettendo di assegnare modelli LLM a ruoli, modificare system prompts e gestire tools abilitati per ogni agente.
@@ -83,7 +83,7 @@ Creare la struttura directory `src/routes/settings/agents/` con +page.svelte e +
 
 ### 5.4. IPC Handler per Scrittura File YAML e Validazione Schema
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.2  
 
 Implementare gli handler IPC Electron per scrivere il file cagent.yaml nel filesystem del sistema operativo, con validazione schema JSON/YAML completa e gestione errori filesystem con backup automatico.
@@ -94,7 +94,7 @@ Nel processo main Electron creare handler IPC in `src-electron/ipc/cagent-handle
 
 ### 5.5. Implementazione Hot-Reload Notifica al Sidecar Python
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 5.4  
 
 Implementare il meccanismo di notifica al sidecar Python quando la configurazione cagent viene modificata dall'UI, permettendo il reload dinamico della configurazione senza necessità di riavviare il processo Python.
