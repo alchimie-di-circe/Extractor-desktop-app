@@ -360,7 +360,10 @@ async function handleForceReload(): Promise<void> {
 				description: 'The sidecar process has been reloaded with the latest team.yaml',
 			});
 		} else {
-			const errorMessage = result.error?.message || result.error || 'Unknown error occurred';
+			const errorMessage =
+				typeof result.error === 'string' && result.error.length > 0
+					? result.error
+					: 'Unknown error occurred';
 			reloadMessage = `Reload failed: ${errorMessage}`;
 			toast.error('Reload Failed', {
 				description: errorMessage,
