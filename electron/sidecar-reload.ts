@@ -245,23 +245,11 @@ export class SidecarReloadManager extends EventEmitter {
 			return;
 		}
 
-		const startTime = Date.now();
-
-		// Wait for graceful shutdown with timeout
-		await new Promise<void>((resolve) => {
-			const checkInterval = setInterval(() => {
-				if (!sidecarManager.isRunning() || Date.now() - startTime > this.gracefulShutdownTimeout) {
-					clearInterval(checkInterval);
-					resolve();
-				}
-			}, 100);
-		});
-
-		// Force stop if still running
 		try {
+			// sidecarManager.stop() already handles graceful shutdown with timeouts and escalation.
 			await sidecarManager.stop();
 		} catch (error) {
-			console.warn('[SidecarReloadManager] Error forcing stop:', error);
+			console.warn('[SidecarReloadManager] Error during sidecar stop:', error);
 		}
 	}
 

@@ -48,7 +48,7 @@ export class SidecarManager extends EventEmitter {
 	private lastHealthyTime: number = 0;
 	private isShuttingDown: boolean = false;
 
-	private readonly config: HealthCheckConfig = {
+	private config: HealthCheckConfig = {
 		interval: 5000,
 		timeout: 2000,
 		maxRetries: 3,
@@ -372,6 +372,12 @@ export class SidecarManager extends EventEmitter {
 					console.error('[SidecarManager] Failed to restart after crash:', error);
 				});
 			}, this.currentBackoff);
+
+			// Apply exponential backoff for the next potential crash
+			this.currentBackoff = Math.min(
+				this.currentBackoff * this.config.backoffMultiplier,
+				this.config.maxBackoff,
+			);
 		}
 	}
 

@@ -103,6 +103,13 @@ export function generateCagentYaml(config: GenerateCagentYamlInput): string {
 	// ========== SECTION 6: Metadata ==========
 	yaml += generateMetadataSection();
 
+	if (toolset.instruction) {
+		yaml += `${nextIndent}instruction: |\n`;
+		for (const line of toolset.instruction.split('\n')) {
+			yaml += `${nextNextIndent}${line}\n`;
+		}
+	}
+
 	return yaml;
 }
 
@@ -628,7 +635,7 @@ function getAgentRagSources(role: AgentRole): string[] {
  * - memory: Persistent memory across sessions
  *
  * Role-specific MCP toolsets:
- * - Extraction/Editing: Firecrawl + Jina (web scraping)
+ * - Extraction/Creative Planner/Idea Validator: Firecrawl + Jina (web scraping)
  * - Captioning/IDEA-VALIDATOR: Perplexity (research)
  * - Conditional: Cloudinary (if enabled)
  */
@@ -649,7 +656,7 @@ function getAgentToolsets(role: AgentRole, mcpEnabled: string[]): MCPToolset[] {
 	}
 
 	// Role-specific MCP toolsets
-	if (role === 'extraction' || role === 'creative_planner') {
+	if (role === 'extraction' || role === 'creative_planner' || role === 'idea_validator') {
 		// Firecrawl: Web scraping and content extraction
 		if (mcpEnabled.includes('firecrawl')) {
 			toolsets.push({

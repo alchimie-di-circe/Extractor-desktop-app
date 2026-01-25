@@ -247,13 +247,19 @@ function resetForm(): void {
 	agentConfigs = {
 		orchestrator: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 		extraction: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
-		editing: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
+		creative_planner: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
+		creative_worker: { enabled: true, model: 'anthropic/claude-haiku-4-5', systemPrompt: '' },
 		captioning: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 		scheduling: { enabled: true, model: 'anthropic/claude-haiku-4-5', systemPrompt: '' },
 		idea_validator: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 	};
-	enabledMcp = new Set(['perplexity', 'firecrawl', 'jina']);
-	enabledRag = new Set(['brand_guidelines', 'platform_specs', 'competitors']);
+	enabledMcp = new Set(['perplexity', 'firecrawl', 'jina', 'cloudinary', 'shotstack']);
+	enabledRag = new Set([
+		'brand_guidelines',
+		'platform_specs',
+		'competitors',
+		'mcp_tools_knowledge',
+	]);
 	expandedAgents = new Set();
 	generationResult = null;
 }
@@ -354,9 +360,10 @@ async function handleForceReload(): Promise<void> {
 				description: 'The sidecar process has been reloaded with the latest team.yaml',
 			});
 		} else {
-			reloadMessage = `Reload failed: ${result.error}`;
+			const errorMessage = result.error?.message || result.error || 'Unknown error occurred';
+			reloadMessage = `Reload failed: ${errorMessage}`;
 			toast.error('Reload Failed', {
-				description: result.error || 'Unknown error occurred',
+				description: errorMessage,
 			});
 		}
 	} catch (error) {

@@ -18,6 +18,7 @@ export function registerSidecarIpcHandlers(): void {
 			await sidecarManager.start();
 			return { success: true, baseUrl: sidecarManager.getBaseUrl() };
 		} catch (error) {
+			console.error('sidecar:start error:', error);
 			const message = error instanceof Error ? error.message : String(error);
 			return { success: false, error: message };
 		}
@@ -31,6 +32,7 @@ export function registerSidecarIpcHandlers(): void {
 			await sidecarManager.stop();
 			return { success: true };
 		} catch (error) {
+			console.error('sidecar:stop error:', error);
 			const message = error instanceof Error ? error.message : String(error);
 			return { success: false, error: message };
 		}
@@ -44,6 +46,7 @@ export function registerSidecarIpcHandlers(): void {
 			await sidecarManager.ensureRunning();
 			return { success: true, baseUrl: sidecarManager.getBaseUrl() };
 		} catch (error) {
+			console.error('sidecar:ensure-running error:', error);
 			const message = error instanceof Error ? error.message : String(error);
 			return { success: false, error: message };
 		}
@@ -85,6 +88,7 @@ export function registerSidecarIpcHandlers(): void {
 			const success = await sidecarReloadManager.forceReload();
 			return { success };
 		} catch (error) {
+			console.error('sidecar:force-reload error:', error);
 			const message = error instanceof Error ? error.message : String(error);
 			return { success: false, error: message };
 		}

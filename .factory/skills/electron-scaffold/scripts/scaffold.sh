@@ -84,11 +84,13 @@ init_project() {
     print_info "Initializing project..."
 
     if [ "$BUILD_TOOL" = "forge" ]; then
-        if [ "$FRAMEWORK" = "react" ]; then
-            npm init electron-app@latest "$APP_NAME" -- --template=webpack-typescript
-        else
-            npm init electron-app@latest "$APP_NAME" -- --template=webpack-typescript
+        local template="webpack-typescript" # Default for react/vanilla
+        if [ "$FRAMEWORK" = "vue" ]; then
+            template="vue-typescript"
+        elif [ "$FRAMEWORK" = "svelte" ]; then
+            template="svelte-typescript"
         fi
+        npm init electron-app@latest "$APP_NAME" -- --template="$template"
     elif [ "$BUILD_TOOL" = "vite" ]; then
         if [ "$FRAMEWORK" = "react" ]; then
             npm create @quick-start/electron "$APP_NAME" -- --template react-ts
@@ -178,18 +180,33 @@ import fs from 'fs/promises';
 import path from 'path';
 
 export function setupIpcHandlers() {
+  const allowedDir = app.getPath('userData');
+
+  const isPathSafe = (filePath: string) => {
+    const resolvedPath = path.resolve(filePath);
+    const resolvedAllowedDir = path.resolve(allowedDir);
+    return (
+      resolvedPath === resolvedAllowedDir ||
+      resolvedPath.startsWith(`${resolvedAllowedDir}${path.sep}`)
+    );
+  };
+
   // App version
   ipcMain.handle('app:get-version', () => app.getVersion());
 
   // File operations (example - add security validation)
   ipcMain.handle('file:read', async (_event, filePath: string) => {
-    // TODO: Add path validation and security checks
+    if (!isPathSafe(filePath)) {
+      throw new Error('EPERM: Operation not permitted');
+    }
     const content = await fs.readFile(filePath, 'utf-8');
     return content;
   });
 
   ipcMain.handle('file:save', async (_event, filePath: string, content: string) => {
-    // TODO: Add path validation and security checks
+    if (!isPathSafe(filePath)) {
+      throw new Error('EPERM: Operation not permitted');
+    }
     await fs.writeFile(filePath, content, 'utf-8');
   });
 

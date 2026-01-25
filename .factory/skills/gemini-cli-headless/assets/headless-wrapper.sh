@@ -38,15 +38,12 @@ if [[ -z "$PROMPT" ]]; then
 fi
 
 # Build command
-CMD="gemini"
-CMD+=" --prompt \"$PROMPT\""
-CMD+=" --approval-mode $APPROVAL_MODE"
-CMD+=" --output-format $OUTPUT_FORMAT"
+CMD=(gemini --prompt "$PROMPT" --approval-mode "$APPROVAL_MODE" --output-format "$OUTPUT_FORMAT")
 
 # Add include directories
 for dir in $INCLUDE_DIRS; do
     if [[ -d "$dir" ]]; then
-        CMD+=" --include-directories $dir"
+        CMD+=(--include-directories "$dir")
     else
         echo "Warning: Directory '$dir' not found, skipping"
     fi
@@ -54,18 +51,18 @@ done
 
 # Add allowed tools if specified
 if [[ -n "$ALLOWED_TOOLS" ]]; then
-    CMD+=" --allowed-tools \"$ALLOWED_TOOLS\""
+    CMD+=(--allowed-tools "$ALLOWED_TOOLS")
 fi
 
 # Add resume if specified
 if [[ -n "$RESUME_SESSION" ]]; then
-    CMD+=" --resume $RESUME_SESSION"
+    CMD+=(--resume "$RESUME_SESSION")
 fi
 
 # Execute
-echo "Executing: $CMD"
+echo "Executing: ${CMD[*]}"
 echo "---"
-eval "$CMD"
+"${CMD[@]}"
 EXIT_CODE=$?
 
 echo "---"
