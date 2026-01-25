@@ -166,13 +166,13 @@ function generateAgentsSection(
 `;
 
 	const roles: AgentRole[] = [
-		'orchestrator',
-		'extraction',
-		'creative_planner',
-		'creative_worker',
-		'captioning',
-		'scheduling',
-		'idea_validator',
+		AgentRole.ORCHESTRATOR,
+		AgentRole.EXTRACTION,
+		AgentRole.CREATIVE_PLANNER,
+		AgentRole.CREATIVE_WORKER,
+		AgentRole.CAPTIONING,
+		AgentRole.SCHEDULING,
+		AgentRole.IDEA_VALIDATOR,
 	];
 
 	const configuredRoles = new Set<AgentRole>();
@@ -254,7 +254,9 @@ function generateAgentYaml(
 
 	// Sub-agents (only for orchestrator)
 	if (role === 'orchestrator') {
-		const subAgents = (selectedRoles || []).filter((agentRole) => agentRole !== 'orchestrator');
+		const subAgents = (selectedRoles || []).filter(
+			(agentRole) => agentRole !== AgentRole.ORCHESTRATOR,
+		);
 		if (subAgents.length > 0) {
 			agentYaml += `${indent2}sub_agents:\n`;
 			for (const subAgent of subAgents) {
