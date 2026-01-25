@@ -165,7 +165,7 @@ function generateAgentsSection(
 	let yaml = `agents:
 `;
 
-	const roles = [
+	const roles: AgentRole[] = [
 		'orchestrator',
 		'extraction',
 		'creative_planner',
@@ -175,7 +175,12 @@ function generateAgentsSection(
 		'idea_validator',
 	];
 
-	const configuredRoles = new Set(Object.keys(agentConfigs || {}));
+	const configuredRoles = new Set<AgentRole>();
+	for (const role of Object.keys(agentConfigs || {})) {
+		if (roles.includes(role as AgentRole)) {
+			configuredRoles.add(role as AgentRole);
+		}
+	}
 	const selectedRoles =
 		configuredRoles.size === 0 ? roles : roles.filter((role) => configuredRoles.has(role));
 
