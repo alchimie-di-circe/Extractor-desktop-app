@@ -58,6 +58,20 @@ Keep the dev server running and monitor it.
 
 ---
 
+## 🚫 NON-INTERACTIVE PROTOCOL (CRITICAL)
+
+The agent runs in a non-interactive shell. **NEVER** execute commands that wait for user input.
+
+1.  **Testing**: ALWAYS use `pnpm run test:unit -- --run` or `vitest --run`. NEVER run `vitest` without flags.
+2.  **Git Operations**:
+    *   **Commit**: ALWAYS provide a message: `git commit -m "msg"`.
+    *   **Rebase**: If a rebase stops for conflicts, resolve them, then run `GIT_EDITOR=true git rebase --continue`.
+    *   **Push**: If `git push` fails, do NOT try to force push without explicit user permission.
+3.  **Package Managers**: ALWAYS use `-y` or `--yes` (e.g., `pnpm init -y`, `npx shadcn-svelte@latest init -y`).
+4.  **Editors**: Never run `vim`, `nano`, or `code` via shell. Use `edit_file` or `write_file` tools.
+
+---
+
 ## 🛡️ The "Quality Gate" Workflow (MANDATORY)
 
 You must follow this cycle for every significant change.
