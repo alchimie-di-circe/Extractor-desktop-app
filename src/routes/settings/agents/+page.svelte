@@ -30,15 +30,18 @@ let agentConfigs = $state<
 >({
 	orchestrator: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 	extraction: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
-	editing: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
+	creative_planner: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
+	creative_worker: { enabled: true, model: 'anthropic/claude-haiku-4-5', systemPrompt: '' },
 	captioning: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 	scheduling: { enabled: true, model: 'anthropic/claude-haiku-4-5', systemPrompt: '' },
 	idea_validator: { enabled: true, model: 'anthropic/claude-sonnet-4-5', systemPrompt: '' },
 });
 
-let enabledMcp = $state<Set<string>>(new Set(['perplexity', 'firecrawl', 'jina']));
+let enabledMcp = $state<Set<string>>(
+	new Set(['perplexity', 'firecrawl', 'jina', 'cloudinary', 'shotstack']),
+);
 let enabledRag = $state<Set<string>>(
-	new Set(['brand_guidelines', 'platform_specs', 'competitors']),
+	new Set(['brand_guidelines', 'platform_specs', 'competitors', 'mcp_tools_knowledge']),
 );
 
 let isLoading = $state(false);
@@ -94,11 +97,18 @@ const agents: Array<{
 		defaultModel: 'anthropic/claude-sonnet-4-5',
 	},
 	{
-		id: 'editing',
-		role: AgentRole.EDITING,
-		label: 'Editing',
-		description: 'Elabora media: background removal, upscale, crop',
+		id: 'creative_planner',
+		role: AgentRole.CREATIVE_PLANNER,
+		label: 'Creative Planner',
+		description: 'Pianifica workflow di editing per immagini e video',
 		defaultModel: 'anthropic/claude-sonnet-4-5',
+	},
+	{
+		id: 'creative_worker',
+		role: AgentRole.CREATIVE_WORKER,
+		label: 'Creative Worker',
+		description: 'Esegue piani di editing via Cloudinary e Shotstack',
+		defaultModel: 'anthropic/claude-haiku-4-5',
 	},
 	{
 		id: 'captioning',
@@ -148,6 +158,12 @@ const mcpTools = [
 		description: 'Image and asset management',
 		enabled: false,
 	},
+	{
+		id: 'shotstack',
+		label: 'Shotstack',
+		description: 'Video production and timeline rendering',
+		enabled: false,
+	},
 ];
 
 const ragSources = [
@@ -168,6 +184,12 @@ const ragSources = [
 		label: 'Competitors',
 		description: 'Competitor analysis and benchmarking',
 		enabled: true,
+	},
+	{
+		id: 'mcp_tools_knowledge',
+		label: 'MCP Tools Knowledge',
+		description: 'MCP tools specifications and usage patterns',
+		enabled: false,
 	},
 ];
 

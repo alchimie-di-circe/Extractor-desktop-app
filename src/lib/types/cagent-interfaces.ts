@@ -19,7 +19,8 @@
  *
  * - ORCHESTRATOR: Coordinates workflow and delegates tasks
  * - EXTRACTION: Extracts content from media files
- * - EDITING: Performs editing and formatting operations
+ * - CREATIVE_PLANNER: Plans detailed editing workflows (NEW)
+ * - CREATIVE_WORKER: Executes editing plans via MCP tools (NEW)
  * - CAPTIONING: Generates captions and descriptions
  * - SCHEDULING: Plans and schedules content publication
  * - IDEA_VALIDATOR: Validates ideas, analyzes trends, proposes alternatives
@@ -27,7 +28,8 @@
 export enum AgentRole {
 	ORCHESTRATOR = 'orchestrator',
 	EXTRACTION = 'extraction',
-	EDITING = 'editing',
+	CREATIVE_PLANNER = 'creative_planner',
+	CREATIVE_WORKER = 'creative_worker',
 	CAPTIONING = 'captioning',
 	SCHEDULING = 'scheduling',
 	IDEA_VALIDATOR = 'idea_validator',

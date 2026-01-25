@@ -2,7 +2,7 @@
  * Cagent YAML Generator Service
  *
  * Generates complete, validated cagent team configuration YAML with:
- * - 6 specialized agents (Orchestrator, Extraction, Editing, Captioning, Scheduling, IDEA-VALIDATOR)
+ * - 7 specialized agents (Orchestrator, Extraction, Creative Planner, Creative Worker, Captioning, Scheduling, IDEA-VALIDATOR)
  * - MCP (Model Context Protocol) toolset integration
  * - RAG (Retrieval-Augmented Generation) knowledge base configuration
  * - System prompts via add_prompt_files
@@ -149,10 +149,11 @@ function generateModelsSection(): string {
 /**
  * Generate the agents section of the YAML configuration
  *
- * Creates 6 specialized agents:
+ * Creates 7 specialized agents:
  * - ORCHESTRATOR: Coordinates workflow
  * - EXTRACTION: Extracts content from media
- * - EDITING: Performs editing operations
+ * - CREATIVE_PLANNER: Plans detailed editing workflows
+ * - CREATIVE_WORKER: Executes editing plans
  * - CAPTIONING: Generates captions
  * - SCHEDULING: Plans publication
  * - IDEA_VALIDATOR: Validates ideas and analyzes trends
@@ -441,7 +442,8 @@ function getAgentDescription(role: AgentRole): string {
 	const descriptions: Record<AgentRole, string> = {
 		orchestrator: 'Coordinates workflow and delegates tasks to specialists',
 		extraction: 'Extracts content from media files',
-		editing: 'Performs editing and formatting operations',
+		creative_planner: 'Plans detailed editing workflows for images and videos',
+		creative_worker: 'Executes editing plans via Cloudinary and Shotstack',
 		captioning: 'Generates captions and descriptions',
 		scheduling: 'Plans and schedules content publication',
 		idea_validator: 'Validates ideas and analyzes content trends',
@@ -489,21 +491,29 @@ Use these tools:
 
 Provide clear, structured extraction results for editing and captioning.`,
 
-		editing: `You are the Editing specialist in the TRAE workflow.
+		creative_planner: `You are the Creative Planner, designing detailed editing workflows.
 
 Your responsibilities:
-- Perform video/image editing based on specifications
-- Apply brand visual guidelines
-- Optimize for platform requirements
-- Create multiple format variations
-- Maintain consistent quality across outputs
+- Plan step-by-step editing operations with precision
+- Design execution plans for Cloudinary (images) and Shotstack (video)
+- Optimize for parallelization where possible
+- Apply brand visual guidelines to every decision
+- Generate JSON execution plans for Creative Worker
 
-Use RAG sources for:
-- Brand visual guidelines
-- Platform-specific formatting requirements
-- Editing best practices
+Use RAG (mcp_tools_knowledge) for MCP tool specifications.
+Output: Structured JSON with clear steps, parameters, and fallback strategies.`,
 
-Document all editing decisions and provide ready-to-publish assets.`,
+		creative_worker: `You are the Creative Worker, executing editing plans.
+
+Your responsibilities:
+- Follow execution plans from Creative Planner EXACTLY
+- Invoke Cloudinary for image operations
+- Invoke Shotstack for video production
+- Handle errors via fallback strategies
+- Report results and asset URLs
+
+You do NOT reason or suggest alternatives.
+You execute, report, and handle failures gracefully.`,
 
 		captioning: `You are the Captioning specialist in the TRAE workflow.
 
@@ -568,7 +578,11 @@ function getAgentPromptFiles(role: AgentRole): string[] {
 	const promptFiles: Record<AgentRole, string[]> = {
 		orchestrator: [],
 		extraction: [],
-		editing: [],
+		creative_planner: [
+			'./python/prompts/creative-planner/instruction.md',
+			'./python/prompts/creative-planner/mcp-tools-guide.md',
+		],
+		creative_worker: ['./python/prompts/creative-worker/instruction.md'],
 		captioning: [],
 		scheduling: [],
 		idea_validator: [
@@ -587,7 +601,8 @@ function getAgentRagSources(role: AgentRole): string[] {
 	const ragSources: Record<AgentRole, string[]> = {
 		orchestrator: ['brand_guidelines', 'platform_specs'],
 		extraction: [],
-		editing: ['brand_guidelines', 'platform_specs'],
+		creative_planner: ['mcp_tools_knowledge', 'brand_guidelines', 'platform_specs'],
+		creative_worker: [],
 		captioning: ['brand_guidelines', 'platform_specs'],
 		scheduling: ['brand_guidelines', 'platform_specs'],
 		idea_validator: ['brand_guidelines', 'platform_specs', 'competitors'],
@@ -618,13 +633,13 @@ function getAgentToolsets(role: AgentRole, mcpEnabled: string[]): MCPToolset[] {
 	// Filesystem access for all agents
 	toolsets.push({ type: 'filesystem' });
 
-	// Shell access for editing and scheduling
-	if (role === 'editing' || role === 'scheduling') {
+	// Shell access for creative operations and scheduling
+	if (role === 'creative_planner' || role === 'creative_worker' || role === 'scheduling') {
 		toolsets.push({ type: 'shell' });
 	}
 
 	// Role-specific MCP toolsets
-	if (role === 'extraction' || role === 'editing') {
+	if (role === 'extraction' || role === 'creative_planner') {
 		// Firecrawl: Web scraping and content extraction
 		if (mcpEnabled.includes('firecrawl')) {
 			toolsets.push({
@@ -642,13 +657,13 @@ function getAgentToolsets(role: AgentRole, mcpEnabled: string[]): MCPToolset[] {
 		if (mcpEnabled.includes('jina')) {
 			toolsets.push({
 				type: 'mcp',
-				command: 'npx',
-				args: [
-					'mcp-remote',
-					'https://mcp.jina.ai/v1',
-					'--header',
-					'Authorization: Bearer ${JINA_API_KEY}',
-				],
+				remote: {
+					url: 'https://mcp.jina.ai/v1',
+					transport_type: 'http',
+					headers: {
+						Authorization: 'Bearer ${JINA_API_KEY}',
+					},
+				},
 				instruction: 'Use Jina for web search, URL reading, and semantic search.',
 			});
 		}
@@ -669,16 +684,32 @@ function getAgentToolsets(role: AgentRole, mcpEnabled: string[]): MCPToolset[] {
 		}
 	}
 
-	// Cloudinary: Asset management (conditional, only if enabled)
-	if (mcpEnabled.includes('cloudinary') && (role === 'editing' || role === 'extraction')) {
+	// Cloudinary: Image asset management (only for creative_worker)
+	if (mcpEnabled.includes('cloudinary') && role === 'creative_worker') {
 		toolsets.push({
 			type: 'mcp',
 			command: 'npx',
-			args: ['-y', '--package', '@cloudinary/asset-management-mcp', '--', 'mcp', 'start'],
+			args: ['-y', '@cloudinary/asset-management-mcp'],
 			env: {
 				CLOUDINARY_URL: '${CLOUDINARY_URL}',
 			},
-			instruction: 'Use Cloudinary for asset management, transformation, and storage.',
+			instruction: 'Use Cloudinary for image upload, transformation, and optimization.',
+		});
+	}
+
+	// Shotstack: Video production (only for creative_worker)
+	if (mcpEnabled.includes('shotstack') && role === 'creative_worker') {
+		toolsets.push({
+			type: 'mcp',
+			remote: {
+				url: 'https://mcp.pipedream.net/v2',
+				transport_type: 'http',
+				headers: {
+					Authorization: 'Bearer ${SHOTSTACK_API_KEY}',
+				},
+			},
+			instruction:
+				'Use Shotstack (via Pipedream) for video timeline creation, rendering, and production.',
 		});
 	}
 
