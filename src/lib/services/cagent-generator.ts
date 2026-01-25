@@ -175,9 +175,13 @@ function generateAgentsSection(
 		'idea_validator',
 	];
 
-	for (const roleName of roles) {
+	const configuredRoles = new Set(Object.keys(agentConfigs || {}));
+	const selectedRoles =
+		configuredRoles.size === 0 ? roles : roles.filter((role) => configuredRoles.has(role));
+
+	for (const roleName of selectedRoles) {
 		const userConfig = agentConfigs[roleName as AgentRole];
-		yaml += generateAgentYaml(roleName as AgentRole, userConfig, mcpEnabled);
+		yaml += generateAgentYaml(roleName as AgentRole, userConfig, mcpEnabled, selectedRoles);
 	}
 
 	return yaml;
@@ -190,6 +194,7 @@ function generateAgentYaml(
 	role: AgentRole,
 	userConfig?: Partial<AgentConfig>,
 	mcpEnabled?: string[],
+	selectedRoles?: AgentRole[],
 ): string {
 	const indent1 = '  ';
 	const indent2 = '    ';
@@ -244,17 +249,12 @@ function generateAgentYaml(
 
 	// Sub-agents (only for orchestrator)
 	if (role === 'orchestrator') {
-		agentYaml += `${indent2}sub_agents:\n`;
-		const subAgents = [
-			'extraction',
-			'creative_planner',
-			'creative_worker',
-			'captioning',
-			'scheduling',
-			'idea_validator',
-		];
-		for (const subAgent of subAgents) {
-			agentYaml += `${indent3}- ${subAgent}\n`;
+		const subAgents = (selectedRoles || []).filter((agentRole) => agentRole !== 'orchestrator');
+		if (subAgents.length > 0) {
+			agentYaml += `${indent2}sub_agents:\n`;
+			for (const subAgent of subAgents) {
+				agentYaml += `${indent3}- ${subAgent}\n`;
+			}
 		}
 	}
 

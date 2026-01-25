@@ -111,6 +111,39 @@ describe('generateCagentYaml', () => {
 		expect(orchestratorSection).toContain('idea_validator');
 	});
 
+	it('should include only enabled agents in the YAML output', () => {
+		const yaml = generateCagentYaml({
+			agents: {
+				orchestrator: {},
+				extraction: {},
+				idea_validator: {},
+			},
+			enabledMcp: [],
+			ragSources: [],
+		});
+
+		const lines = yaml.split('\n');
+		const agentsStart = lines.findIndex((line) => line.startsWith('agents:'));
+		const toolsetsStart = lines.findIndex((line) => line.startsWith('toolsets:'));
+		const agentsSection = lines.slice(agentsStart, toolsetsStart).join('\n');
+
+		expect(agentsSection).toContain('  orchestrator:');
+		expect(agentsSection).toContain('  extraction:');
+		expect(agentsSection).toContain('  idea_validator:');
+		expect(agentsSection).not.toContain('  creative_planner:');
+		expect(agentsSection).not.toContain('  creative_worker:');
+		expect(agentsSection).not.toContain('  captioning:');
+		expect(agentsSection).not.toContain('  scheduling:');
+
+		const orchestratorStart = agentsSection.indexOf('  orchestrator:');
+		const extractionStart = agentsSection.indexOf('  extraction:');
+		const orchestratorSection = agentsSection.substring(orchestratorStart, extractionStart);
+		expect(orchestratorSection).toContain('sub_agents:');
+		expect(orchestratorSection).toContain('extraction');
+		expect(orchestratorSection).toContain('idea_validator');
+		expect(orchestratorSection).not.toContain('creative_planner');
+	});
+
 	it('should generate valid YAML header with shebang', () => {
 		const yaml = generateCagentYaml({
 			agents: {},
