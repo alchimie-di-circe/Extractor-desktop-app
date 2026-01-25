@@ -15,12 +15,12 @@
 
 import type {
 	AgentConfig,
-	AgentRole,
 	CagentTeamYAML,
 	MCPToolset,
 	RAGConfig,
 	RAGStrategy,
 } from '../types/cagent-interfaces';
+import { AgentRole } from '../types/cagent-interfaces';
 
 /**
  * Generate configuration input for cagent YAML generation
