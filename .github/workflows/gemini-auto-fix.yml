@@ -30,22 +30,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref || github.event.issue.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: 'Mint identity token'
-        id: 'mint_identity_token'
-        if: |- 
-          ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
-        with:
-          app-id: '${{ vars.APP_ID }}'
-          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
-          permission-contents: 'write'
-          permission-issues: 'write'
-          permission-pull-requests: 'write'
-
       - name: '🧠 Aggregate & Prioritize Bot Context'
         id: context-aggregator
         env:
-          GH_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          GH_TOKEN: '${{ github.token }}'
           PR_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           REPO: '${{ github.repository }}'
         run: |
@@ -141,7 +129,7 @@ jobs:
       - name: '📝 Post Report'
         if: always()
         env:
-          GH_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          GH_TOKEN: '${{ github.token }}'
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           REPO: '${{ github.repository }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'

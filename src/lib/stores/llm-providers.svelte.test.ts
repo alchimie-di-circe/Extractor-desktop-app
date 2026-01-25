@@ -7,6 +7,7 @@ describe("llmProviders.setModelRole", () => {
 
   beforeEach(() => {
     llmProviders.reset();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     setModelRoleMock = vi.fn().mockResolvedValue({
       success: false,
       error: { code: "CONFIG_ERROR", message: "Failed to save model role" },
