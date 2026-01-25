@@ -2,7 +2,7 @@
 
 **Title:** Configurazione shadcn-svelte e Sistema UI Base
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 

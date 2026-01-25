@@ -57,6 +57,25 @@ task-master update-task --id=<id> --prompt="changes"
   task-master set-status --id=<id> --status=done  # ← Do this immediately!
   ```
 
+**CRITICAL: Update Both Files**
+Task Master maintains **two sources** that must stay in sync:
+1. **`/.taskmaster/tasks/tasks.json`** - Updated by `task-master set-status` command
+2. **`/.taskmaster/tasks/task_XXX.md`** - Individual task files (NOT auto-updated)
+
+When marking a task as done:
+```bash
+# Step 1: Update tasks.json via CLI
+task-master set-status --id=<id> --status=done
+
+# Step 2: Manually edit .taskmaster/tasks/task_<id>.md
+# Change: **Status:** pending  →  **Status:** done
+# Also update all subtask statuses (5.1, 5.2, etc.) to "done"
+
+# Step 3: Commit both changes
+git add .taskmaster/tasks/
+git commit -m "chore: Mark Task <id> and subtasks as done"
+```
+
 **Note:** Task Master CLI has 40+ commands saved in `.factory/commands/tm/` for reference.
 
 ## Dev commands

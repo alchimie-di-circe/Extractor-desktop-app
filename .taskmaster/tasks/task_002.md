@@ -2,7 +2,7 @@
 
 **Title:** Sistema IPC Bridge e Gestione Sicura delle Credenziali
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** None
 
