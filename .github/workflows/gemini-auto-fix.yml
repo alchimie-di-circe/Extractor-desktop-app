@@ -1,0 +1,145 @@
+name: '🤖 Gemini Agentic Auto-Fix'
+
+on:
+  workflow_call:
+    inputs:
+      additional_context:
+        type: 'string'
+        description: 'Extra instructions from the user'
+        required: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  agentic-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+      issues: 'write'
+      pull-requests: 'write'
+      checks: 'read'
+      statuses: 'read'
+    
+    steps:
+      - name: 'Checkout PR Code'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.event.issue.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: '🧠 Aggregate & Prioritize Bot Context'
+        id: context-aggregator
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          PR_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          REPO: '${{ github.repository }}'
+        run: |
+          echo "Fetching PR comments..."
+          # Fetch PR review comments (on files) and Issue comments (general)
+          gh api "repos/$REPO/pulls/$PR_NUMBER/comments" > review_comments.json
+          gh api "repos/$REPO/issues/$PR_NUMBER/comments" > issue_comments.json
+          
+          # Node script to process and prioritize
+          node -e '
+            const fs = require("fs");
+            
+            // Safe load JSON
+            const load = (f) => fs.existsSync(f) ? JSON.parse(fs.readFileSync(f)) : [];
+            const reviews = load("review_comments.json");
+            const issues = load("issue_comments.json");
+            const allComments = [...reviews, ...issues];
+            
+            // Priority Order
+            const priorityMap = {
+              "qodo": 1,
+              "coderabbit-ai": 2,
+              "greptile": 3,
+              "gemini-code-assist": 4,
+              "codex": 5,
+              "sentry": 6,
+              "codacy": 7,
+              "snyk": 8
+            };
+            
+            const getPriority = (login) => {
+              for (const [key, val] of Object.entries(priorityMap)) {
+                if (login.toLowerCase().includes(key)) return val;
+              }
+              return 99; // Low priority for unknown bots/humans
+            };
+
+            // Filter & Sort
+            const taskList = allComments
+              .filter(c => {
+                 // Keep bots in the list OR humans if explicitly useful (optional)
+                 // Here we strictly follow the requested bot list + generic bots
+                 return Object.keys(priorityMap).some(k => c.user.login.toLowerCase().includes(k)) || c.user.type === "Bot";
+              })
+              .map(c => ({
+                source: c.user.login,
+                file: c.path || "General",
+                line: c.line || c.original_line || "N/A",
+                body: c.body,
+                created_at: c.created_at,
+                priority: getPriority(c.user.login)
+              }))
+              .sort((a, b) => {
+                // Primary sort: Priority
+                if (a.priority !== b.priority) return a.priority - b.priority;
+                // Secondary sort: Time (Newest first? Or Oldest first? Let"s do Newest to catch regressions)
+                return new Date(b.created_at) - new Date(a.created_at);
+              });
+
+            console.log(`Found ${taskList.length} actionable bot comments.`);
+            
+            if (taskList.length === 0) {
+              console.log("No bot comments found. Creating generic task.");
+              fs.writeFileSync("jules_prompt.txt", "OBJECTIVE: Review the code for general improvements. No specific bot comments found.");
+            } else {
+              const prompt = `
+            OBJECTIVE: Systematically fix code issues reported by CI bots.
+            
+            INSTRUCTIONS:
+            1.  **Analyze** the "PRIORITIZED FEEDBACK LIST" below.
+            2.  **Execute Fixes**: Group fixes by file. Apply changes carefully.
+            3.  **Test Loop**: After applying a group of fixes, if a test command is available (e.g., "npm test"), run it to ensure no regressions.
+            4.  **Verification**: If a fix contradicts a previous fix, prioritize the higher-ranked bot (Qodo > CodeRabbit).
+            5.  **Report**: Generate a commit message that references the fixed issues.
+
+            PRIORITIZED FEEDBACK LIST:
+            ${JSON.stringify(taskList, null, 2)}
+            
+            USER EXTRA CONTEXT: ${{ inputs.additional_context }}
+              `;
+              fs.writeFileSync("jules_prompt.txt", prompt);
+            }
+          '
+
+      - name: '🚀 Execute Gemini Agent'
+        uses: 'google-labs-code/jules-action@v1'
+        with:
+          jules_api_key: '${{ secrets.JULES_API_KEY }}'
+          model: 'gemini-2.5-pro'
+          prompt_file: 'jules_prompt.txt'
+          base_branch: '${{ github.event.pull_request.base.ref }}'
+          
+      - name: '📝 Post Report'
+        if: always()
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          REPO: '${{ github.repository }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "✅ **Auto-Fix Cycle Complete**
+          
+          I have analyzed the bot feedback and applied fixes.
+          
+          **Next Steps:**
+          1. Wait for CodeRabbit/Qodo to review these new changes.
+          2. If issues persist, run `@gemini-cli /auto-fix` again to trigger a new fix cycle.
+          
+          [View Logs]($RUN_URL)"

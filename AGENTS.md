@@ -31,18 +31,52 @@ Keep it short, actionable, and aligned with the PRD + Task Master graph.
 Do not edit `tasks.json` by hand. Use Task Master commands instead.
 
 ## Task Master workflow (daily)
-```
-task-master list
-task-master next
-task-master show <id>
-task-master set-status --id=<id> --status=done
-task-master update-subtask --id=<id> --prompt="notes..."
-```
 
-If a task needs changes, prefer:
-```
+### Essential Commands
+```bash
+task-master list                                    # See all tasks and status
+task-master next                                    # Find next task to work on
+task-master show <id>                              # Show task details
+task-master set-status --id=<id> --status=done     # Mark task as complete
+task-master update-subtask --id=<id> --prompt="notes..."
 task-master update-task --id=<id> --prompt="changes"
 ```
+
+**IMPORTANT: Status Sync Rule**
+- Whenever you commit work for a task, **immediately** update its status in Task Master
+- Do NOT rely on PRs or reviews to update status (Task Master is the source of truth)
+- Use `.factory/commands/tm/` reference commands: `to-done.md`, `to-in-progress.md`, `to-review.md`
+- Example workflow:
+  ```bash
+  # Start work
+  git checkout -b task/<id>-short-desc
+  task-master set-status --id=<id> --status=in-progress
+  
+  # After finishing and committing
+  git commit -m "feat(task-<id>): ..."
+  task-master set-status --id=<id> --status=done  # ← Do this immediately!
+  ```
+
+**CRITICAL: Update Both Files**
+Task Master maintains **two sources** that must stay in sync:
+1. **`/.taskmaster/tasks/tasks.json`** - Updated by `task-master set-status` command
+2. **`/.taskmaster/tasks/task_XXX.md`** - Individual task files (NOT auto-updated)
+
+When marking a task as done:
+```bash
+# Step 1: Update tasks.json via CLI
+task-master set-status --id=<id> --status=done
+
+# Step 2: Manually edit .taskmaster/tasks/task_<id>.md
+# Change: **Status:** pending  →  **Status:** done
+# Also update all subtask statuses (5.1, 5.2, etc.) to "done"
+
+# Step 3: Commit both changes
+git add .taskmaster/tasks/
+git commit -m "chore: Mark Task <id> and subtasks as done"
+```
+
+**Note:** Task Master CLI has 40+ commands saved in `.factory/commands/tm/` for reference.
 
 ## Dev commands
 - Install: `pnpm install`

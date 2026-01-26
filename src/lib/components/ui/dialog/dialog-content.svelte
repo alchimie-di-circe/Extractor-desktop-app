@@ -1,28 +1,30 @@
 <script lang="ts">
-	import { Dialog as DialogPrimitive } from "bits-ui";
-	import DialogPortal from "./dialog-portal.svelte";
-	import XIcon from "@lucide/svelte/icons/x";
-	import type { Snippet } from "svelte";
-	import * as Dialog from "./index.js";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
-	import type { ComponentProps } from "svelte";
+import XIcon from '@lucide/svelte/icons/x';
+// biome-ignore lint/style/useImportType: Component value used in template
+import { Dialog as DialogPrimitive } from 'bits-ui';
+import type { ComponentProps, Snippet } from 'svelte';
+import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
+import DialogOverlay from './dialog-overlay.svelte';
+// biome-ignore lint/style/useImportType: Component value used in template
+import DialogPortal from './dialog-portal.svelte';
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		portalProps,
-		children,
-		showCloseButton = true,
-		...restProps
-	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
-		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
-		children: Snippet;
-		showCloseButton?: boolean;
-	} = $props();
+// biome-ignore lint/style/useConst: bindable props require let
+let {
+	ref = $bindable(null),
+	class: className,
+	portalProps,
+	children,
+	showCloseButton = true,
+	...restProps
+}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
+	portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
+	children: Snippet;
+	showCloseButton?: boolean;
+} = $props();
 </script>
 
 <DialogPortal {...portalProps}>
-	<Dialog.Overlay />
+	<DialogOverlay />
 	<DialogPrimitive.Content
 		bind:ref
 		data-slot="dialog-content"

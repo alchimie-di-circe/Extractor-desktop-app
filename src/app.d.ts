@@ -7,7 +7,7 @@ import type {
 	LLMProviderId,
 	LLMConnectionResult,
 	ModelRoleConfig,
-} from "../shared/types";
+} from '../shared/types';
 
 /**
  * IPC Result types
@@ -42,24 +42,78 @@ interface ElectronAPI {
 		testConnection: (
 			providerId: LLMProviderId,
 			apiKey: string,
-			model: string
+			model: string,
 		) => Promise<LLMConnectionResult>;
-		saveApiKey: (
-			providerId: LLMProviderId,
-			apiKey: string
-		) => Promise<IpcOkVoid | IpcErr>;
+		saveApiKey: (providerId: LLMProviderId, apiKey: string) => Promise<IpcOkVoid | IpcErr>;
 		getApiKey: (providerId: LLMProviderId) => Promise<IpcResult<string>>;
 		deleteApiKey: (providerId: LLMProviderId) => Promise<IpcResult<boolean>>;
 		hasApiKey: (providerId: LLMProviderId) => Promise<KeychainResult<boolean>>;
 		getProviderStatus: (
-			providerId: LLMProviderId
+			providerId: LLMProviderId,
 		) => Promise<IpcResult<{ providerId: LLMProviderId; hasApiKey: boolean }>>;
 		setModelRole: (
 			role: string,
 			providerId: LLMProviderId | null,
-			model: string | null
+			model: string | null,
 		) => Promise<IpcOkVoid | IpcErr>;
 		getModelRoles: () => Promise<IpcResult<ModelRoleConfig>>;
+	};
+	cagent: {
+		/**
+		 * Generate cagent team.yaml configuration
+		 *
+		 * @param config Configuration with agents, MCP tools, and RAG sources
+		 * @returns Generated YAML, file path, created directories, and backup info
+		 */
+		generateYaml: (config: {
+			agents?: Record<string, unknown>;
+			enabledMcp?: string[];
+			ragSources?: string[];
+			autoCreateDirs?: boolean;
+		}) => Promise<
+			| IpcOk<{
+					yaml: string;
+					filePath: string;
+					dirsCreated: string[];
+					backupPath: string | null;
+			  }>
+			| IpcErr
+		>;
+	};
+	sidecar: {
+		start: () => Promise<{ success: boolean; baseUrl?: string; error?: string }>;
+		stop: () => Promise<{ success: boolean; error?: string }>;
+		ensureRunning: () => Promise<{ success: boolean; baseUrl?: string; error?: string }>;
+		status: () => Promise<{
+			running: boolean;
+			port: number;
+			restartCount: number;
+			failureCount: number;
+			circuitBreakerOpen: boolean;
+		}>;
+		getBaseUrl: () => Promise<string>;
+		isRunning: () => Promise<boolean>;
+		getReloadStatus: () => Promise<{
+			isWatching: boolean;
+			lastReload: number | null;
+			lastYamlMtime: number | null;
+			reloadCount: number;
+			isReloading: boolean;
+			sidecarPid: number | null;
+		}>;
+		forceReload: () => Promise<{ success: boolean; error?: string }>;
+		onStatusChange: (
+			callback: (event: Electron.IpcRendererEvent, status: string) => void,
+		) => () => void;
+		onSidecarReloadEvent: (
+			callback: (event: {
+				type: 'reload-started' | 'reload-completed' | 'reload-failed' | 'watch-error';
+				timestamp: number;
+				message: string;
+				yamlMtime?: number;
+				error?: string;
+			}) => void,
+		) => () => void;
 	};
 	/**
 	 * Get the current platform (async via IPC for sandbox compatibility)
@@ -80,5 +134,3 @@ declare global {
 		electronAPI: ElectronAPI;
 	}
 }
-
-export {};

@@ -4,7 +4,7 @@ Questo documento definisce il team di AI agents che compongono il cuore dell'app
 
 ## Overview
 
-L'architettura utilizza **5 agent specializzati** che collaborano tramite il protocollo A2A (Agent-to-Agent). Ogni agent ha un ruolo specifico nel workflow di gestione media per content creators.
+L'architettura utilizza **6 agent specializzati** che collaborano tramite il protocollo A2A (Agent-to-Agent). Ogni agent ha un ruolo specifico nel workflow di gestione media per content creators. IDEA-VALIDATOR è stato aggiunto in Task 5 per validazione strategica e analisi di trend.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -17,15 +17,17 @@ L'architettura utilizza **5 agent specializzati** che collaborano tramite il pro
 │         Coordina workflow, gestisce handoff                  │
 │         Model consigliato: Claude Opus 4.5 / GPT-5.2        │
 └─────────────────────────────────────────────────────────────┘
-          │              │              │              │
-          ▼              ▼              ▼              ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  EXTRACTION  │ │   EDITING    │ │  CAPTIONING  │ │  SCHEDULING  │
-│    AGENT     │ │    AGENT     │ │    AGENT     │ │    AGENT     │
-│              │ │              │ │              │ │              │
-│  osxphotos   │ │  Cloudinary  │ │  Native RAG  │ │  Postiz API  │
-│  (sandboxed) │ │     MCP      │ │  Brand KB    │ │  Calendar    │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+          │         │              │         │         │          │
+          ▼         ▼              ▼         ▼         ▼          ▼
+    ┌────────┐ ┌────────┐ ┌────────────┐ ┌────────┐ ┌────────┐ ┌──────────────┐
+    │EXTRACT │ │EDITING │ │ CAPTIONING │ │SCHEDUL │ │ IDEA-  │ │ Shared RAG / │
+    │AGENT   │ │ AGENT  │ │   AGENT    │ │ AGENT  │ │VALIDAT │ │ Brand KB     │
+    │        │ │        │ │            │ │        │ │ AGENT  │ │              │
+    │osxph   │ │Cloudry │ │Native RAG  │ │Postiz  │ │Perplex │ │- PDFs        │
+    │sandboxd│ │ MCP    │ │Brand KB    │ │ API    │ │+ Jina  │ │- Guidelines  │
+    │        │ │        │ │            │ │        │ │+ Firecr│ │- Tone voice  │
+    │        │ │        │ │            │ │        │ │ + CNN  │ │- Assets      │
+    └────────┘ └────────┘ └────────────┘ └────────┘ └──────────┘ └──────────────┘
 ```
 
 ---
@@ -194,6 +196,85 @@ toolsets:
 
 ---
 
+### 6. IDEA-VALIDATOR Agent (NEW in Task 5)
+
+**Ruolo**: Valida strategia contenuto contro trend di mercato e best practice. Usa ricerca web avanzata per analizzare competitor e aggiornare linee guida editoriali.
+
+| Proprietà | Valore |
+|-----------|--------|
+| ID | `idea-validator` |
+| Processo | FastAPI Sidecar |
+| Tools | Perplexity MCP, Firecrawl MCP, Jina AI MCP |
+| Input | Content strategy, brand KB, competitor URLs |
+| Output | Validation report, recommendations, insights |
+
+**Caratteristiche richieste dal modello**:
+- Eccellente reasoning e analisi critica
+- Capacità di integrare ricerca web real-time
+- Buon utilizzo di strumenti MCP paralleli
+- Attenzione ai trend e ai pattern di mercato
+
+**Modelli consigliati**:
+| Provider | Modello | Note |
+|----------|---------|------|
+| Anthropic | Claude Opus 4.5 | Best reasoning e research |
+| Perplexity | sonar-reasoning-pro | Built-in research, ottimo |
+| OpenAI | GPT-5.2 | Creativo, buon tool use |
+| OpenRouter | anthropic/claude-opus-4.5 | Best for analysis |
+
+**MCP Integration**:
+```yaml
+toolsets:
+  - type: mcp
+    ref: mcp/perplexity
+    env:
+      PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY}
+  - type: mcp
+    ref: mcp/firecrawl
+    env:
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+  - type: mcp-remote
+    ref: https://mcp.jina.ai/v1
+    name: jina
+```
+
+**Analisi fornite**:
+- Competitor benchmarking (Firecrawl web scrape)
+- Trend analysis (Perplexity research)
+- Content gap identification (semantic search via Jina)
+- Recommendation engine per piattaforma (CNN parallel search)
+
+---
+
+## Shared Knowledge Base (RAG)
+
+Tutti gli agent di contenuto (Captioning, IDEA-VALIDATOR) condividono una base di conoscenza unificata:
+
+| Tipo | Fonte | Indicizzazione |
+|------|-------|-----------------|
+| Brand Guidelines | `./brand_assets/*.pdf` | Automatic on change |
+| Tone Voice | `./brand_assets/tone-*.md` | Semantic search |
+| Platform Best Practices | `./docs/platforms/*.md` | Cached |
+| Asset Library Metadata | `./assets/*.json` | Real-time sync |
+
+**RAG Configuration**:
+```yaml
+rag:
+  enabled: true
+  batch_size: 50
+  max_embedding_concurrency: 10
+  chunk_size: 2000
+  knowledge_paths:
+    - type: directory
+      path: ./brand_assets
+      include: ["*.pdf", "*.md"]
+    - type: directory
+      path: ./docs/platforms
+      include: ["*.md"]
+```
+
+---
+
 ## Model Role Configuration
 
 ### Default Assignments (per provider)
@@ -208,6 +289,7 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | claude-sonnet-4-20250514 |
 | Captioning | claude-sonnet-4-20250514 |
 | Scheduling | claude-3-5-haiku-20241022 |
+| IDEA-VALIDATOR | claude-opus-4-20250514 |
 
 #### OpenAI (Direct API)
 | Agent | Default Model |
@@ -217,6 +299,7 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | gpt-4o |
 | Captioning | gpt-5.2 |
 | Scheduling | gpt-4o-mini |
+| IDEA-VALIDATOR | gpt-5.2 |
 
 #### Google (Direct API)
 | Agent | Default Model |
@@ -226,6 +309,7 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | gemini-3-pro |
 | Captioning | gemini-3-pro |
 | Scheduling | gemini-3-flash |
+| IDEA-VALIDATOR | gemini-3-pro |
 
 #### Perplexity (Direct API)
 | Agent | Default Model |
@@ -235,6 +319,7 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | sonar-pro |
 | Captioning | sonar-reasoning-pro |
 | Scheduling | sonar |
+| IDEA-VALIDATOR | sonar-reasoning-pro |
 
 #### OpenRouter (Unified API)
 | Agent | Default Model |
@@ -244,6 +329,7 @@ Quando l'utente seleziona un provider, questi sono i modelli default consigliati
 | Editing | anthropic/claude-sonnet-4.5 |
 | Captioning | anthropic/claude-sonnet-4.5 |
 | Scheduling | openai/gpt-4o-mini |
+| IDEA-VALIDATOR | anthropic/claude-opus-4.5 |
 
 ---
 
@@ -293,6 +379,7 @@ interface ModelRoleConfig {
   editing: { providerId: LLMProviderId | null; model: string | null };
   captioning: { providerId: LLMProviderId | null; model: string | null };
   scheduling: { providerId: LLMProviderId | null; model: string | null };
+  ideaValidator: { providerId: LLMProviderId | null; model: string | null };
 }
 ```
 

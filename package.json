@@ -22,9 +22,10 @@
     "test:e2e": "playwright test",
     "start": "electron-forge start",
     "dev": "./scripts/dev.sh",
-    "package": "vite build && electron-forge package",
-    "make": "vite build && electron-forge make -- --arch=all",
-    "publish": "electron-forge publish",
+    "build:sidecar": "bash ./scripts/build-sidecar.sh",
+    "package": "pnpm run build:sidecar && vite build && electron-forge package",
+    "make": "pnpm run build:sidecar && vite build && electron-forge make -- --arch=all",
+    "publish": "pnpm run build:sidecar && electron-forge publish",
     "pre-pr": "./scripts/pre-pr-check.sh"
   },
   "devDependencies": {
@@ -53,6 +54,7 @@
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^22",
     "bits-ui": "^2.15.4",
+    "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "electron": "^36.8.3",
     "formsnap": "^2.0.1",

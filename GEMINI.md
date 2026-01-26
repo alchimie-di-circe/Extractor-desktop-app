@@ -1,12 +1,31 @@
 # Gemini CLI Agent Instructions for Extractor Desktop App
 
-This file is your primary directive when working on this repository. It integrates the project's specific workflows (TaskMaster, Svelte MCP, DevServer MCP) with the new Quality Assurance standards (CodeRabbit CLI, GitHub CLI).
+This file is your primary directive when working on this repository. It integrates the project's specific workflows (TaskMaster, Svelte MCP, DevServer MCP, Jules) with the new Quality Assurance standards.
 
 ## 🧠 Core Philosophy
 You are an expert full-stack engineer building a **local-first, privacy-focused Electron application**.
 - **Architecture:** `AGENTS.md` is your bible. Strict separation between Renderer (UI only) and Main (Logic/IO).
 - **Orchestration:** You DO NOT improvise tasks. You follow `.taskmaster/tasks/tasks.json`.
 - **Quality:** You DO NOT push code without passing the **Quality Gate** (CodeRabbit + Checks).
+- **SPA Mode (CRITICAL):** This app is an Electron app using SvelteKit. **SSR (Server-Side Rendering) is DISABLED**.
+    - Never write code that assumes `window` or `document` are globally available during initialization without a check.
+    - Use `if (typeof window !== 'undefined')` or `if (browser)` blocks in `.ts` files.
+    - Avoid barrel files (`index.ts`) inside component directories if they cause circular dependencies.
+
+---
+
+## 📚 Documentation Hub
+
+Before asking or searching blindly, check these specialized docs in `.taskmaster/docs/`:
+
+| Topic | File | Description |
+|-------|------|-------------|
+| **Agents & AI** | `.taskmaster/docs/cagent-team.md` | Roles (Orchestrator, Extraction, etc.), Models, A2A Protocol. |
+| **Architecture** | `AGENTS.md` | IPC rules, State management, File structure, Security. |
+| **Workflow** | `CLAUDE.md` | TaskMaster commands, TDD cycles, Branching rules. |
+| **UI Components** | `.taskmaster/docs/shadcn-svelte.md` | List of available components and how to add them. |
+| **Building/Packaging** | `.taskmaster/docs/electron-forge.md` | Packaging for macOS/Windows, Signing, Publishing. |
+| **GitHub Workflow** | `.taskmaster/docs/github-cli.md` | Using `gh` CLI for PRs and reviews. |
 
 ---
 
@@ -18,39 +37,38 @@ Always check the current status before acting.
 - **Update Status:** `task-master set-status --id=<ID> --status=<STATUS>` (pending, in-progress, done)
 - **Log Progress:** `task-master update-subtask --id=<ID> --prompt="<NOTES>"`
 
-### 2. Svelte & UI (Svelte MCP)
+### 2. Heavy Lifting (Jules)
+For complex, multi-file refactors, large test suites, or dependency upgrades, delegate to Jules.
+- **Command:** `ask_jules` (or `/jules` in chat)
+- **Use Case:** "Add unit tests for all UI components", "Refactor the IPC handler structure".
+- **Workflow:** Jules runs in the cloud and opens a PR. You review it.
+
+### 3. Svelte & UI (Svelte MCP)
 **MANDATORY** before writing any Svelte component.
-- **Reference:** `/.taskmaster/docs/shadcn-svelte.md` (List of available components).
 - **Consult Docs:** `list-sections` -> `get-documentation`
 - **Validate Code:** `svelte-autofixer` (Run this on your generated code *before* saving it).
 - **Rule:** Use Svelte 5 Runes (`$state`, `$derived`, `$effect`). No legacy syntax.
-
-### 3. shadcn-svelte CLI
-- **Reference:** `/.taskmaster/docs/shadcn-svelte.md`
-- **Add Component:** `npx shadcn-svelte@latest add <component-name>`
-- **Location:** Components live in `src/lib/components/ui/`
+- **Rule:** **NO SSR**. `export const ssr = false;` in `+layout.ts`.
 
 ### 4. Monitoring (DevServer MCP)
-Keep the dev server running (`pnpm run dev` preferred; see `/docs/ELECTRON_FORGE_SETUP_FIX.md`) and monitor it.
+Keep the dev server running and monitor it.
+- **Start Monitor:** `tsx ~/MCP-SERVERS/devserver/devserver-mcp/src/server.ts --port 9338 --monitor "pnpm run dev"`
 - **Check Health:** `get_dev_server_status`
 - **Debug Errors:** `get_file_errors` (If you break the build, fix it immediately).
 
 ---
 
-## 📦 Electron Forge CLI
-**Reference:** `/.taskmaster/docs/electron-forge.md` (CLI) and `/docs/ELECTRON_FORGE_SETUP_FIX.md` (macOS dev workaround)
-- **Dev:** `pnpm run dev` (recommended on macOS) or `pnpm run start`
-- **Package:** `pnpm run package` (Create executable)
-- **Make:** `pnpm run make` (Create installer/DMG)
-- **Publish:** `pnpm run publish` (Upload to GitHub Releases)
+## 🚫 NON-INTERACTIVE PROTOCOL (CRITICAL)
 
----
+The agent runs in a non-interactive shell. **NEVER** execute commands that wait for user input.
 
-## 🔧 GitHub CLI (gh)
-**Reference:** `/.taskmaster/docs/github-cli.md`
-- **Auth:** `gh auth status`
-- **Create PR:** `gh pr create --title "<title>" --body "<body>"`
-- **Review PR:** `gh pr view <PR_URL_OR_NUMBER>`
+1.  **Testing**: ALWAYS use `pnpm run test:unit -- --run` or `vitest --run`. NEVER run `vitest` without flags.
+2.  **Git Operations**:
+    *   **Commit**: ALWAYS provide a message: `git commit -m "msg"`.
+    *   **Rebase**: If a rebase stops for conflicts, resolve them, then run `GIT_EDITOR=true git rebase --continue`.
+    *   **Push**: If `git push` fails, do NOT try to force push without explicit user permission.
+3.  **Package Managers**: ALWAYS use `-y` or `--yes` (e.g., `pnpm init -y`, `npx shadcn-svelte@latest init -y`).
+4.  **Editors**: Never run `vim`, `nano`, or `code` via shell. Use `edit_file` or `write_file` tools.
 
 ---
 
@@ -66,35 +84,15 @@ You must follow this cycle for every significant change.
     *   `pnpm run test:unit` (if applicable).
 
 ### Phase 2: Pre-Commit Review (CodeRabbit CLI)
-**Before** asking the user to push or merge, audit your own work using the CodeRabbit CLI. This replaces the need to wait for the bot on GitHub.
+**Before** asking the user to push or merge, audit your own work using the CodeRabbit CLI.
 
-1.  **Run Review:**
-    ```bash
-    coderabbit review --plain
-    ```
-    *(Or `--base <branch>` if targeting a specific feature branch)*
-
-2.  **Analyze & Fix:**
-    *   Read the output.
-    *   If CodeRabbit finds bugs, security issues (e.g., path traversal), or smells: **FIX THEM**.
-    *   Repeat until the review is clean.
+1.  **Run Review:** `coderabbit review --plain`
+2.  **Analyze & Fix:** If CodeRabbit finds bugs or smells, **FIX THEM**.
 
 ### Phase 3: PR & Post-Push (GitHub CLI)
-Reference: `/.taskmaster/docs/github-cli.md`
 If you are handling a PR or checking feedback after a push:
-
-1.  **Retrieve Bot Comments:**
-    Use this command to fetch *only* actionable feedback from AI bots, filtering out noise.
-    ```bash
-    gh pr view <PR_URL_OR_NUMBER> --json comments --jq '{
-      comments: .comments | map(select(.author.login == "coderabbitai" or .author.login == "qodo-code-review" or .author.login == "greptile-apps") | {bot: .author.login, body: .body, created: .createdAt})
-    }'
-    ```
-
-2.  **Address Feedback:**
-    *   Implement the requested fixes.
-    *   Push changes.
-    *   Repeat the check to ensure no new issues were flagged.
+1.  **Retrieve Bot Comments:** Use `gh pr view ...` (see `CLAUDE.md` or `.taskmaster/docs/github-cli.md` for the exact command).
+2.  **Address Feedback:** Implement fixes, push, and repeat.
 
 ---
 
@@ -116,7 +114,7 @@ If you are handling a PR or checking feedback after a push:
 ---
 
 ## 📂 Project Structure Map
-- `/.taskmaster/` - PRD, Tasks, Reports.
+- `/.taskmaster/` - PRD, Tasks, Reports, **Docs**.
 - `/electron/` - Main Process (Logic, IPC, Keychain).
 - `/src/` - Renderer Process (Svelte, UI, Stores).
 - `/python/` - AI Sidecar (Agents, RAG, FastAPI).
@@ -124,4 +122,4 @@ If you are handling a PR or checking feedback after a push:
 
 ---
 
-*Verified by Gemini. Last Updated: 2026-01-07.*
+*Verified by Gemini. Last Updated: 2026-01-23.*

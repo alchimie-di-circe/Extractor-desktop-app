@@ -1,8 +1,51 @@
 {
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace|edit_file",
+        "hooks": [
+          {
+            "name": "auto-lint",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/auto-lint.js",
+            "timeout": 10000,
+            "sequential": true
+          },
+          {
+            "name": "test-guardian",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/test-guardian.js",
+            "timeout": 2000,
+            "sequential": false
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace|edit_file",
+        "hooks": [
+          {
+            "name": "sensitive-guard",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/sensitive-guard.js",
+            "timeout": 1000,
+            "sequential": true
+          },
+          {
+            "name": "research-guard",
+            "command": "node $GEMINI_PROJECT_DIR/.gemini/hooks/research-guard.js",
+            "timeout": 1000,
+            "sequential": true
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "task-master-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": [
+        "-y",
+        "task-master-ai"
+      ],
       "env": {
         "TASK_MASTER_TOOLS": "all",
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
@@ -15,6 +58,33 @@
         "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
         "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
       }
+    },
+    "svelte": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sveltejs/mcp"
+      ]
+    },
+    "devserver-mcp": {
+      "type": "sse",
+      "url": "http://127.0.0.1:9338/sse"
+    },
+    "shadcn-svelte": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp"
+      ]
+    },
+    "wallaby": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "-c",
+        "node /Users/alexandthemusic/.wallaby/mcp"
+      ]
     }
   }
 }

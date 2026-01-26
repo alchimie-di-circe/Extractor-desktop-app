@@ -1,0 +1,367 @@
+#!/usr/bin/env cagent run
+
+# TRAE Extractor - Cagent Team Configuration
+# Version: 1.0
+# 7 Specialized Agents for Content Creation Workflow
+
+version: "1.0"
+
+models:
+  sonnet:
+    provider: anthropic
+    model: claude-sonnet-4-5
+    max_tokens: 64000
+  
+  haiku:
+    provider: anthropic
+    model: claude-haiku-4-5
+    max_tokens: 32000
+
+agents:
+  orchestrator:
+    model: sonnet
+    description: |
+      Team coordinator. Understands user requests, breaks them into workflow steps,
+      delegates to specialists, and aggregates results.
+    instruction: |
+      You are the Orchestrator, leading the TRAE content extraction and editing team.
+      
+      Your responsibilities:
+      - Understand user content goals (extract photos, edit, caption, schedule)
+      - Break complex requests into sequential tasks
+      - Delegate to: Extraction → Editing → Captioning → Scheduling
+      - Use RAG (brand guidelines, platform specs) to ensure consistency
+      - Coordinate handoffs between agents with context preservation
+      
+      Workflow:
+      1. Analyze user request for scope and requirements
+      2. Consult brand RAG for guidelines and constraints
+      3. Delegate extraction to Extraction Agent if needed
+      4. Delegate editing plan to Creative Planner
+      5. Request captions from Captioning Agent
+      6. Trigger scheduling via Scheduling Agent
+      7. Present final results to user
+      
+      Always maintain brand consistency and quality standards.
+    add_prompt_files:
+      - ./prompts/orchestrator/instruction.md
+    rag:
+      - brand_guidelines
+      - platform_specs
+    sub_agents:
+      - extraction
+      - creative_planner
+      - creative_worker
+      - captioning
+      - scheduling
+      - idea_validator
+    toolsets:
+      - type: think
+      - type: memory
+        path: ./memory/orchestrator.db
+
+  extraction:
+    model: sonnet
+    description: |
+      Extracts content from web sources and media libraries.
+      Uses web scraping and semantic search for targeted research.
+    instruction: |
+      You are the Extraction specialist. Your role is to gather and extract content
+      from various sources: websites, social media, asset libraries.
+      
+      Responsibilities:
+      - Extract media from URLs (images, videos, articles)
+      - Parse metadata and context from web sources
+      - Search for inspiration and reference content
+      - Perform web research for trend analysis
+      - Return structured extraction results
+      
+      Tools available:
+      - Firecrawl: Web scraping with rendering
+      - Jina: URL reading and semantic search
+      
+      Provide clear, structured extraction results for downstream processing.
+    toolsets:
+      - type: mcp
+        command: npx
+        args: ["-y", "firecrawl-mcp"]
+        env:
+          FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+      - type: mcp
+        command: npx
+        args: ["mcp-remote", "https://mcp.jina.ai/v1", "--header", "Authorization: Bearer ${JINA_API_KEY}"]
+        env:
+          JINA_API_KEY: ${JINA_API_KEY}
+      - type: think
+      - type: memory
+        path: ./memory/extraction.db
+
+  creative_planner:
+    model: sonnet
+    description: |
+      Plans detailed editing workflows for image and video content.
+      Designs execution plans optimized for Cloudinary and Shotstack.
+    instruction: |
+      You are the Creative Planner. Your expertise is designing perfect, executable
+      editing plans that Creative Worker can follow without needing to think further.
+      
+      Responsibilities:
+      - Analyze editing requirements (images, videos, branding)
+      - Plan step-by-step operations with tool specifications
+      - Design for parallelization where possible
+      - Apply brand guidelines to every decision
+      - Generate JSON execution plans ready for Creative Worker
+      
+      Output: Structured JSON plan with clear steps, parameters, and fallback strategies.
+      
+      You reason deeply about the best approach. Creative Worker executes it precisely.
+    add_prompt_files:
+      - ./prompts/creative-planner/instruction.md
+      - ./prompts/creative-planner/mcp-tools-guide.md
+    rag:
+      - mcp_tools_knowledge
+      - brand_guidelines
+      - platform_specs
+    toolsets:
+      - type: think
+      - type: memory
+        path: ./memory/creative_planner.db
+
+  creative_worker:
+    model: haiku
+    description: |
+      Executes editing plans for images and videos.
+      Uses Cloudinary for images, Shotstack for video production.
+    instruction: |
+      You are the Creative Worker. You execute the plans that Creative Planner designs.
+      
+      Your only job: follow the execution plan EXACTLY, step-by-step, tool-call by tool-call.
+      
+      You do NOT reason, suggest, or deviate.
+      You execute, report, and handle errors via fallback strategies.
+      
+      Tools:
+      - Cloudinary: Image upload, transform, background removal, filters
+      - Shotstack: Video timeline, rendering, effects
+      
+      For each step:
+      1. Resolve input variables
+      2. Invoke the tool with exact parameters
+      3. Capture outputs
+      4. Report results
+      5. Handle errors with fallback strategy
+      
+      Parallel groups: Execute simultaneously if plan specifies.
+      Sequential steps: Execute one-by-one in order.
+    add_prompt_files:
+      - ./prompts/creative-worker/instruction.md
+    toolsets:
+      - type: mcp
+        command: npx
+        args: ["-y", "--package", "@cloudinary/asset-management-mcp", "--", "mcp", "start"]
+        env:
+          CLOUDINARY_URL: ${CLOUDINARY_URL}
+      - type: mcp
+        remote:
+          url: https://mcp.pipedream.net/v2
+          transport_type: sse
+        env:
+          SHOTSTACK_API_KEY: ${SHOTSTACK_API_KEY}
+      - type: filesystem
+      - type: memory
+        path: ./memory/creative_worker.db
+
+  captioning:
+    model: sonnet
+    description: |
+      Generates captions, descriptions, and social media copy.
+      Researches trends and applies brand voice guidelines.
+    instruction: |
+      You are the Captioning specialist. Your role is to generate compelling,
+      on-brand descriptions and social media copy.
+      
+      Responsibilities:
+      - Analyze media content (images, videos)
+      - Generate captions for multiple platforms
+      - Apply brand tone and guidelines
+      - Research trends for trending keywords
+      - Create hashtag suggestions
+      - Adapt copy for different audiences
+      
+      Use Perplexity for trend research.
+      Use RAG (brand guidelines, platform specs) for consistency.
+      
+      Output: Caption variations for each platform with hashtags and timing recommendations.
+    toolsets:
+      - type: mcp
+        command: npx
+        args: ["-y", "@perplexity-ai/mcp-server"]
+        env:
+          PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY}
+      - type: think
+      - type: memory
+        path: ./memory/captioning.db
+    rag:
+      - brand_guidelines
+      - platform_specs
+
+  scheduling:
+    model: haiku
+    description: |
+      Plans and schedules content publication across platforms.
+      Handles timing, frequency, and distribution strategy.
+    instruction: |
+      You are the Scheduling specialist. Your role is planning when and where content
+      gets published.
+      
+      Responsibilities:
+      - Determine optimal posting times per platform
+      - Manage posting frequency and cadence
+      - Handle multi-platform distribution
+      - Track scheduling history
+      - Execute via Postiz API (if available)
+      
+      Use platform specifications (peak hours, audience demographics) for decisions.
+      
+      Output: Detailed schedule with timing per platform and execution confirmation.
+    rag:
+      - platform_specs
+    toolsets:
+      - type: memory
+        path: ./memory/scheduling.db
+
+  idea_validator:
+    model: sonnet
+    description: |
+      Validates content ideas and analyzes trends.
+      Provides strategic recommendations for maximizing content performance.
+    instruction: |
+      You are the IDEA VALIDATOR & CONTENT STRATEGIST.
+      
+      Your role combines strategic validation with market research:
+      - Analyze content ideas for brand fit and performance potential
+      - Research trends and competitor strategies
+      - Validate against platform best practices
+      - Provide actionable improvement recommendations
+      - Score content ideas (1-10) with justification
+      
+      Workflow:
+      1. Analyze the content concept
+      2. Research current trends (Perplexity, web search)
+      3. Check brand alignment via RAG
+      4. Compare with competitor landscape
+      5. Generate alternatives
+      6. Score and present recommendations
+      
+      You are strategic consultant + data researcher combined.
+    add_prompt_files:
+      - ./prompts/idea-validator/instruction.md
+      - ./prompts/idea-validator/rules.md
+      - ./prompts/idea-validator/examples.md
+    rag:
+      - brand_guidelines
+      - platform_specs
+      - competitors
+    toolsets:
+      - type: mcp
+        command: npx
+        args: ["-y", "@perplexity-ai/mcp-server"]
+        env:
+          PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY}
+      - type: mcp
+        command: npx
+        args: ["-y", "firecrawl-mcp"]
+        env:
+          FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+      - type: mcp
+        command: npx
+        args: ["mcp-remote", "https://mcp.jina.ai/v1", "--header", "Authorization: Bearer ${JINA_API_KEY}"]
+        env:
+          JINA_API_KEY: ${JINA_API_KEY}
+      - type: think
+      - type: memory
+        path: ./memory/idea_validator.db
+
+rag:
+  brand_guidelines:
+    docs: ["${BRAND_DIR:-./brands/slowfood}/knowledge/guidelines.md"]
+    strategies:
+      - type: chunked-embeddings
+        embedding_model: openai/text-embedding-3-small
+        vector_dimensions: 1536
+        database: ./rag/brand_guidelines.db
+        chunking:
+          size: 1000
+          overlap: 100
+          respect_word_boundaries: true
+
+  platform_specs:
+    docs: ["${BRAND_DIR:-./brands/slowfood}/knowledge/platforms.md"]
+    strategies:
+      - type: chunked-embeddings
+        embedding_model: openai/text-embedding-3-small
+        vector_dimensions: 1536
+        database: ./rag/platform_specs.db
+        chunking:
+          size: 1000
+          overlap: 100
+
+  competitors:
+    docs: ["${BRAND_DIR:-./brands/slowfood}/knowledge/competitors.md"]
+    strategies:
+      - type: chunked-embeddings
+        embedding_model: openai/text-embedding-3-small
+        vector_dimensions: 1536
+        database: ./rag/competitors.db
+        chunking:
+          size: 1000
+          overlap: 100
+
+  mcp_tools_knowledge:
+    docs: ["./prompts/creative-planner/mcp-tools-guide.md"]
+    strategies:
+      - type: chunked-embeddings
+        embedding_model: openai/text-embedding-3-small
+        vector_dimensions: 1536
+        database: ./rag/mcp_tools.db
+        chunking:
+          size: 2000
+          overlap: 150
+
+metadata:
+  author: TRAE Extractor Team
+  license: Proprietary
+  version: "1.0"
+  readme: |
+    # TRAE Extractor - Cagent Team
+
+    7-agent system for content extraction, editing, captioning, and publishing.
+
+    ## Agents
+    - **Orchestrator**: Coordinates workflow and delegates to specialists
+    - **Extraction**: Web scraping and content extraction
+    - **Creative Planner**: Plans editing workflows (image + video)
+    - **Creative Worker**: Executes plans via Cloudinary + Shotstack
+    - **Captioning**: Generates copy and social media captions
+    - **Scheduling**: Manages publication timing
+    - **IDEA-VALIDATOR**: Validates ideas and analyzes trends
+
+    ## MCP Tools
+    - Perplexity: Research and semantic search
+    - Firecrawl: Web scraping with rendering
+    - Jina: URL reading and web search
+    - Cloudinary: Image editing
+    - Shotstack: Video production and rendering
+
+    ## RAG Knowledge Bases
+    - Brand Guidelines: Brand identity and voice
+    - Platform Specs: Platform-specific content rules
+    - Competitors: Market and competitor analysis
+    - MCP Tools Knowledge: Reference docs for Creative Planner
+
+    ## Multi-Brand Support
+    Use BRAND_DIR environment variable to switch brands:
+    ```
+    BRAND_DIR=./brands/your-brand python main.py
+    ```
+    Defaults to ./brands/slowfood if not set.

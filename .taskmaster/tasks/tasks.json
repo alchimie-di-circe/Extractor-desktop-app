@@ -277,7 +277,7 @@
         "dependencies": [
           "2"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -371,7 +371,8 @@
         ],
         "complexity": 8,
         "recommendedSubtasks": 7,
-        "expansionPrompt": "Espandi in subtask: 1) Creazione struttura directory python/ con requirements.txt, 2) Implementazione FastAPI server con endpoint health e execute, 3) Implementazione SSE streaming per eventi agenti, 4) Creazione sidecar-manager.ts in Electron per spawn/kill processo Python, 5) Implementazione health check polling con auto-restart e backoff esponenziale, 6) Gestione graceful shutdown su app quit con timeout e SIGTERM/SIGKILL, 7) Bundling strategy con PyInstaller per distribuzione cross-platform"
+        "expansionPrompt": "Espandi in subtask: 1) Creazione struttura directory python/ con requirements.txt, 2) Implementazione FastAPI server con endpoint health e execute, 3) Implementazione SSE streaming per eventi agenti, 4) Creazione sidecar-manager.ts in Electron per spawn/kill processo Python, 5) Implementazione health check polling con auto-restart e backoff esponenziale, 6) Gestione graceful shutdown su app quit con timeout e SIGTERM/SIGKILL, 7) Bundling strategy con PyInstaller per distribuzione cross-platform",
+        "updatedAt": "2026-01-25T00:41:39.569Z"
       },
       {
         "id": "5",
@@ -384,7 +385,7 @@
           "3",
           "4"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -455,7 +456,8 @@
         ],
         "complexity": 6,
         "recommendedSubtasks": 5,
-        "expansionPrompt": "Espandi in subtask: 1) Definizione TypeScript interfaces per CagentConfig e AgentRole, 2) Creazione cagent-config.ts con funzione generateCagentYaml e serializzazione YAML, 3) Implementazione UI Settings/Agents per configurazione ruoli e system prompts, 4) IPC handler per scrittura file YAML con validazione schema, 5) Implementazione hot-reload notifica al sidecar Python quando config cambia"
+        "expansionPrompt": "Espandi in subtask: 1) Definizione TypeScript interfaces per CagentConfig e AgentRole, 2) Creazione cagent-config.ts con funzione generateCagentYaml e serializzazione YAML, 3) Implementazione UI Settings/Agents per configurazione ruoli e system prompts, 4) IPC handler per scrittura file YAML con validazione schema, 5) Implementazione hot-reload notifica al sidecar Python quando config cambia",
+        "updatedAt": "2026-01-25T00:16:54.514Z"
       },
       {
         "id": "6",
@@ -1658,9 +1660,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-10T10:10:25.326Z",
+      "lastModified": "2026-01-25T00:41:39.570Z",
       "taskCount": 19,
-      "completedCount": 3,
+      "completedCount": 5,
       "tags": [
         "master"
       ]
