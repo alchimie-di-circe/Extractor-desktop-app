@@ -3,6 +3,9 @@
  * Run with: npx vitest run src/lib/services/__tests__/cagent-generator.verification.ts
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { generateCagentYaml } from '../cagent-generator';
 
 const yaml = generateCagentYaml({
@@ -15,11 +18,10 @@ const yaml = generateCagentYaml({
 });
 
 // Write to file for easy inspection
-import * as fs from 'fs';
+const filePath = path.join(os.tmpdir(), 'generated-team.yaml');
+fs.writeFileSync(filePath, yaml);
 
-fs.writeFileSync('/tmp/generated-team.yaml', yaml);
-
-console.log('Generated YAML saved to: /tmp/generated-team.yaml');
+console.log(`Generated YAML saved to: ${filePath}`);
 console.log(`Total length: ${yaml.length} characters`);
 console.log(`Total lines: ${yaml.split('\n').length}`);
 console.log('\nFirst 100 lines:');

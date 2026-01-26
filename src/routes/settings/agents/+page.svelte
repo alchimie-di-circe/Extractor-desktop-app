@@ -428,7 +428,7 @@ onMount(() => {
 	<div class="space-y-2">
 		<h1 class="text-3xl font-bold tracking-tight">Agent Configuration</h1>
 		<p class="text-base text-muted-foreground">
-			Configure your 6 specialized agents, MCP tools, and RAG sources
+			Configure your {agents.length} specialized agents, MCP tools, and RAG sources
 		</p>
 	</div>
 
@@ -559,7 +559,8 @@ onMount(() => {
 					<CheckCircle2 class="h-4 w-4 mt-0.5 flex-shrink-0 text-green-600" />
 					<div>
 						<p class="font-medium">
-							{Object.values(agentConfigs).filter((a) => a.enabled).length} of 6 agents enabled
+							{Object.values(agentConfigs).filter((a) => a.enabled).length} of {agents.length} agents
+							enabled
 						</p>
 						<p class="text-xs text-muted-foreground">
 							All enabled agents have valid model assignments
