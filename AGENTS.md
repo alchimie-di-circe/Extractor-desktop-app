@@ -14,6 +14,7 @@ Keep it short, actionable, and aligned with the PRD + Task Master graph.
 - [Svelte MCP (Documentation & Validation)](#svelte-mcp-documentation--validation)
 - [DevServer MCP (Development Monitoring)](#devserver-mcp-development-monitoring)
 - [Integrated Development Workflow](#integrated-development-workflow)
+- [Testing & Monitoring Tools](#testing--monitoring-tools)
 - [Cagent (Docker) usage](#cagent-docker-usage)
 - [Desktop UI rules](#desktop-ui-rules-electron--svelte--shadcn-svelte)
 - [Code structure conventions](#code-structure-conventions)
@@ -488,6 +489,59 @@ task-master set-status --id=<id> --status=done
 4. **Fix immediately** - Fix errors as soon as they are detected
 5. **Log progress** - Use `update-subtask` to document decisions
 6. **Zero issues pre-PR** - Absolute prerequisite for every PR
+
+---
+
+## Testing & Monitoring Tools
+
+Questa sezione definisce i ruoli dei 5 strumenti di testing/monitoring per sviluppo locale e CI.
+
+### Ruoli
+
+| Tool | Ruolo | Fase |
+|------|-------|------|
+| **DevServer MCP** | Monitor errori dev server | Sempre attivo durante `pnpm dev` |
+| **Wallaby MCP** | Unit/integration test watch | TDD, logica di dominio |
+| **Agent Browser CLI** | E2E vibe coding esplorativo | Scoprire flussi rapidamente |
+| **TestSprite MCP** | E2E stabile + AI validation | **Pre-PR (locale)** |
+| **Chrome DevTools MCP** | Debug runtime + performance | **CI (non bloccante)** |
+
+### Workflow Locale (Pre-PR)
+
+1. `pnpm dev` con DevServer MCP attivo (errori build/runtime)
+2. Wallaby MCP per unit test in watch mode
+3. Agent Browser CLI per esplorare flussi E2E nuovi
+4. **TestSprite MCP per validazione pre-PR:**
+   ```bash
+   # Via MCP tools o slash command /testsprite-e2e
+   testsprite_bootstrap → generate_test_plan → execute
+   ```
+
+### Workflow CI (GitHub Actions)
+
+1. Unit test: `pnpm test:unit`
+2. E2E Playwright: `pnpm test:e2e`
+3. Chrome DevTools MCP (opzionale, **non bloccante**):
+   - Screenshot scenari chiave
+   - Performance trace (LCP, layout shift)
+   - Console errors collection
+
+### Regola: Un solo browser E2E alla volta (locale)
+
+Per evitare overload su Mac M2:
+- ✅ Agent Browser CLI **oppure** TestSprite (non entrambi contemporaneamente)
+- ✅ Chrome DevTools MCP solo quando serve debug visivo/performance
+
+### Decision Matrix
+
+| Scenario | Tool Primario | Complementare |
+|----------|---------------|---------------|
+| Fix errori build/dev | DevServer MCP | Wallaby |
+| TDD logica/API | Wallaby MCP | - |
+| Debug layout/CSS | Chrome DevTools MCP | DevServer MCP |
+| Esplorare flussi E2E | Agent Browser CLI | TestSprite |
+| Validazione pre-PR | TestSprite MCP | Agent Browser |
+| CI performance check | Chrome DevTools MCP | Playwright |
 
 ---
 
