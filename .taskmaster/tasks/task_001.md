@@ -48,7 +48,7 @@ Test unitari per verificare il rendering dei componenti shadcn. Test di navigazi
 
 ### 1.1. Inizializzazione shadcn-svelte con Risoluzione Conflitti TailwindCSS v4
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Inizializzare shadcn-svelte nel progetto gestendo la compatibilità con TailwindCSS v4 e Svelte 5 runes. Configurare components.json con le preferenze di stile e risolvere eventuali conflitti di configurazione.
@@ -66,7 +66,7 @@ Inizializzare shadcn-svelte nel progetto gestendo la compatibilità con Tailwind
 
 ### 1.2. Installazione Componenti Base shadcn-svelte
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.1  
 
 Installare tutti i componenti UI fondamentali richiesti: button, card, dialog, input, form, toast, dropdown-menu, tabs usando il CLI di shadcn-svelte.
@@ -90,7 +90,7 @@ Installare tutti i componenti UI fondamentali richiesti: button, card, dialog, i
 
 ### 1.3. Configurazione Sistema Tema Dark/Light con CSS Variables e Toggle
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.1  
 
 Implementare un sistema completo di theming dark/light mode usando CSS variables, persistenza locale, e un componente toggle accessibile.
@@ -122,7 +122,7 @@ Implementare un sistema completo di theming dark/light mode usando CSS variables
 
 ### 1.4. Creazione Layout Sidebar con Navigazione Responsive
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.2, 1.3  
 
 Implementare il layout principale dell'applicazione con sidebar navigation responsive, supporto mobile con hamburger menu, e indicatore di route attiva.
@@ -156,7 +156,7 @@ Implementare il layout principale dell'applicazione con sidebar navigation respo
 
 ### 1.5. Implementazione Sistema Hash Routing per Tutte le Route
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 1.4  
 
 Creare le pagine per tutte le route dell'applicazione (dashboard, brands, extract, edit, publish, settings) sfruttando l'hash router già configurato in svelte.config.js.

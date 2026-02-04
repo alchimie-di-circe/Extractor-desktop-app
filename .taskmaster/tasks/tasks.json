@@ -395,8 +395,8 @@
       {
         "id": 5,
         "title": "Generazione Dinamica cagent.yaml e Configurazione Agenti",
-        "description": "Implementare il sistema che genera dinamicamente il file cagent.yaml basandosi sulle configurazioni utente dei provider LLM e ruoli agenti.",
-        "details": "1. Creare `src/lib/services/cagent-config.ts`:\n```typescript\ninterface AgentRole {\n  name: string;\n  model: string;\n  provider: string;\n  systemPrompt: string;\n  tools: string[];\n}\n\ninterface CagentConfig {\n  version: string;\n  agents: AgentRole[];\n  rag: { vectorStore: string; embeddingModel: string; };\n  mcp: { servers: string[]; };\n}\n\nexport async function generateCagentYaml(config: CagentConfig): Promise<string> {\n  // Genera YAML dalla configurazione\n}\n```\n2. Creare IPC handler per scrivere cagent.yaml nel path corretto\n3. Implementare UI in `src/routes/settings/agents/+page.svelte` per:\n   - Assegnare modelli a ruoli (Orchestrator, Extraction, Editing, Captioning, Scheduling)\n   - Configurare system prompts per agente\n   - Abilitare/disabilitare tools per agente\n4. Creare template YAML di default in `resources/cagent-template.yaml`\n5. Validazione configurazione prima di salvataggio\n6. Hot-reload: notificare sidecar Python di ricaricare config",
+        "description": "Implementare il sistema che genera dinamicamente python/team.yaml con 7 agenti specializzati (Orchestrator, Extraction, Creative Planner, Creative Worker, Captioning, Scheduling, IDEA-VALIDATOR), MCP tools ufficiali (Perplexity, Firecrawl, Jina, Cloudinary, Shotstack), e RAG condivisa.",
+        "details": "Vedere specifiche complete in: .taskmaster/docs/task-5-upgrade-spec.md\n\nImplementazione completata:\n- ✅ 7 agenti in python/team.yaml (non file .ts separati)\n- ✅ TypeScript generator (src/lib/services/cagent-generator.ts) genera team.yaml\n- ✅ UI settings (src/routes/settings/agents/+page.svelte) per configurare 7 agenti\n- ✅ MCP tools verificati: Perplexity, Firecrawl, Jina, Cloudinary, Shotstack\n- ✅ RAG: brand_guidelines, platform_specs, competitors, mcp_tools_knowledge\n- ✅ System prompts modulari con add_prompt_files (non instruction_file)\n- ✅ IPC handlers per scrittura YAML e hot-reload sidecar\n\nArchitettura:\n- Orchestrator coordina i 6 sub-agents\n- Creative Planner (Sonnet) pianifica → Creative Worker (Haiku) esegue\n- IDEA-VALIDATOR valida contenuti e ricerca trend\n- Tutti gli agenti condividono RAG knowledge bases\n",
         "testStrategy": "Test unitari per generazione YAML corretta. Test di validazione configurazione. Test che il sidecar riceva correttamente le notifiche di reload.",
         "priority": "high",
         "dependencies": [
@@ -407,8 +407,8 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "Definizione TypeScript Interfaces per CagentConfig e AgentRole",
-            "description": "Creare le interfacce TypeScript complete per la configurazione del sistema cagent, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig con tutti i tipi necessari per la validazione statica e l'esportazione del modulo.",
+            "title": "Definizione TypeScript Interfaces per CagentConfig e 7-Agent Team",
+            "description": "Creare le interfacce TypeScript complete per la configurazione team.yaml con 7 agenti specializzati, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig.",
             "dependencies": [],
             "details": "Creare il file `src/lib/types/cagent.ts` con le seguenti interfacce: 1) `AgentRole` con proprietà name, model, provider, systemPrompt e tools (array di stringhe), 2) `RAGConfig` con vectorStore e embeddingModel, 3) `MCPConfig` con array servers, 4) `CagentConfig` con version, array agents di tipo AgentRole[], rag di tipo RAGConfig e mcp di tipo MCPConfig. Aggiungere type guards per validazione runtime: `isAgentRole()`, `isCagentConfig()`. Definire costanti per i ruoli predefiniti: ORCHESTRATOR, EXTRACTION, EDITING, CAPTIONING, SCHEDULING. Creare tipi utility come `PartialAgentRole` per update parziali. Esportare tutto dal barrel file `src/lib/types/index.ts`.",
             "status": "done",
@@ -418,8 +418,8 @@
           },
           {
             "id": 2,
-            "title": "Creazione cagent-config.ts con Funzione generateCagentYaml e Serializzazione",
-            "description": "Implementare il servizio principale in src/lib/services/cagent-config.ts per la generazione del file YAML cagent, includendo serializzazione YAML con libreria js-yaml, template di default e gestione errori completa.",
+            "title": "Creazione cagent-generator.ts per Generazione team.yaml Dinamica",
+            "description": "Implementare il servizio principale in src/lib/services/cagent-generator.ts per la generazione del file YAML team.yaml con 7 agenti, serializzazione YAML, e template di default.",
             "dependencies": [
               1
             ],
@@ -431,8 +431,8 @@
           },
           {
             "id": 3,
-            "title": "Implementazione UI Settings/Agents per Configurazione Ruoli e System Prompts",
-            "description": "Creare l'interfaccia utente Svelte in src/routes/settings/agents/+page.svelte per la configurazione degli agenti, permettendo di assegnare modelli LLM a ruoli, modificare system prompts e gestire tools abilitati per ogni agente.",
+            "title": "Implementazione UI Settings/Agents per Configurazione 7 Agenti",
+            "description": "Creare l'interfaccia utente Svelte in src/routes/settings/agents/+page.svelte per la configurazione dei 7 agenti, permettendo di assegnare modelli LLM a ruoli e modificare system prompts.",
             "dependencies": [
               1,
               2
@@ -445,8 +445,8 @@
           },
           {
             "id": 4,
-            "title": "IPC Handler per Scrittura File YAML e Validazione Schema",
-            "description": "Implementare gli handler IPC Electron per scrivere il file cagent.yaml nel filesystem del sistema operativo, con validazione schema JSON/YAML completa e gestione errori filesystem con backup automatico.",
+            "title": "IPC Handler per Scrittura team.yaml e Validazione Schema",
+            "description": "Implementare gli handler IPC Electron per scrivere il file team.yaml nel filesystem con validazione schema JSON/YAML completa e gestione errori.",
             "dependencies": [
               2
             ],
@@ -459,7 +459,7 @@
           {
             "id": 5,
             "title": "Implementazione Hot-Reload Notifica al Sidecar Python",
-            "description": "Implementare il meccanismo di notifica al sidecar Python quando la configurazione cagent viene modificata dall'UI, permettendo il reload dinamico della configurazione senza necessità di riavviare il processo Python.",
+            "description": "Implementare il meccanismo di notifica al sidecar Python quando la configurazione team.yaml viene modificata dall'UI, permettendo il reload dinamico senza riavvio.",
             "dependencies": [
               4
             ],
@@ -484,44 +484,44 @@
       },
       {
         "id": "6",
-        "title": "Sviluppo Tool osxphotos per Agente Extraction",
-        "description": "Sviluppare il modulo Python per interagire con osxphotos ed esporlo come Tool personalizzato per l'agente 'extraction' definito in team.yaml, invece di creare una classe Agente separata.",
+        "title": "osxphotos Sandboxed Process + Agent Extraction Integration",
+        "description": "Implementare processo Python sandboxed che usa osxphotos CLI per accedere alla Apple Photos Library. Comunica con FastAPI sidecar via Unix socket (JSON-RPC 2.0). Include auto-grouping temporale: se gap > 6min tra asset → crea nuova folder \"momento\".",
         "status": "pending",
         "dependencies": [
           20
         ],
         "priority": "high",
-        "details": "## Struttura Directory\n\n```\npython/\n├── tools/\n│   ├── __init__.py              # Già esistente - aggiornare export\n│   ├── osxphotos_tool.py        # Nuovo - Tool wrapper per osxphotos\n│   └── requirements.txt         # Dipendenze isolate (osxphotos)\n├── team.yaml                    # Aggiornare sezione extraction agent\n```\n\n## 1. Implementazione Tool (`python/tools/osxphotos_tool.py`)\n\n```python\nimport osxphotos\nfrom typing import List, Dict, Optional\nfrom cagent.tools import tool  # Decorator per registrare come tool Cagent\n\n@tool(name=\"list_local_albums\", description=\"Elenca tutti gli album dalla Photos Library locale macOS\")\ndef list_albums(db_path: Optional[str] = None) -> List[str]:\n    \"\"\"Restituisce lista nomi album dalla libreria Apple Photos locale.\"\"\"\n    try:\n        photosdb = osxphotos.PhotosDB(dbfile=db_path)\n        return [album.title for album in photosdb.album_info]\n    except PermissionError:\n        raise PermissionError(\"Full Disk Access richiesto. Abilitare in Preferenze di Sistema > Privacy e Sicurezza\")\n\n@tool(name=\"extract_photos_from_album\", description=\"Estrae foto da un album con preservazione EXIF e metadati\")\ndef extract_photos(\n    album_name: str,\n    dest_path: str,\n    db_path: Optional[str] = None,\n    include_faces: bool = True,\n    include_labels: bool = True\n) -> List[Dict]:\n    \"\"\"Esporta foto da album specificato preservando metadati EXIF, faces, labels.\"\"\"\n    photosdb = osxphotos.PhotosDB(dbfile=db_path)\n    photos = photosdb.photos(albums=[album_name])\n    results = []\n    for photo in photos:\n        exported = photo.export(dest_path, exif=True)\n        result = {\n            'uuid': photo.uuid,\n            'filename': photo.original_filename,\n            'path': exported[0] if exported else None,\n            'date_taken': photo.date.isoformat() if photo.date else None,\n            'exif': photo.exif_info,\n        }\n        if include_labels:\n            result['labels'] = photo.labels\n        if include_faces:\n            result['faces'] = [f.name for f in photo.face_info if f.name]\n        results.append(result)\n    return results\n```\n\n## 2. Aggiornamento team.yaml\n\nAggiungere toolset Python custom all'agente `extraction` (linea ~84 del file esistente):\n\n```yaml\nextraction:\n  toolsets:\n    # Toolset esistenti MCP\n    - type: mcp\n      command: npx\n      args: [\"-y\", \"firecrawl-mcp\"]\n    # NUOVO: Tool osxphotos locale\n    - type: python\n      path: ./tools/osxphotos_tool.py\n```\n\n## 3. Gestione Permessi Full Disk Access\n\n- Rilevare errore permessi e restituire messaggio chiaro\n- Documentare procedura per abilitare in System Preferences > Privacy & Security > Full Disk Access\n\n## 4. Aggiornamento UI Svelte\n\nModificare `src/routes/extract/+page.svelte` per supportare:\n- Toggle tra \"Upload Screenshot\" (attuale) e \"Photos Library\" (nuovo)\n- Album browser che invoca l'agente extraction\n- Grid preview delle foto estratte\n\n## 5. Integrazione Metadati per Suggerimenti AI\n\n- Passare labels e faces estratti al RAG per suggerimenti tag",
+        "details": "Architettura (da PRD):\n┌─────────────────────────────────────────┐\n│  FastAPI Sidecar                        │\n│  └─ Proxy endpoint /agent/extract       │\n└─────────────────────────────────────────┘\n         ↓ Unix Socket (JSON-RPC 2.0)\n┌─────────────────────────────────────────┐\n│  Sandboxed osxphotos Process (isolato)  │\n│  ├─ ExtractionAgent SOLO                │\n│  ├─ osxphotos CLI invocation            │\n│  └─ Auto-grouping temporale script      │\n└─────────────────────────────────────────┘\n\n1. Creare processo osxphotos sandboxed:\n   python/tools/osxphotos_sandbox/\n   ├── server.py              # Unix socket JSON-RPC 2.0 server\n   ├── extraction_agent.py    # Logica extraction con osxphotos CLI\n   ├── temporal_grouping.py   # Script auto-grouping temporale (6min gap)\n   └── requirements.txt       # osxphotos>=0.68.0\n\n2. JSON-RPC Methods:\n   - list_albums() → lista album con count, date range\n   - extract_photos(params) → export con EXIF preservato\n   - extract_by_date(date, auto_group=True) → NEW: auto-grouping per momenti temporali\n   - get_metadata(uuid) → metadata dettagliato\n\n3. Auto-grouping temporale:\n   - Quando auto_group=True e selezione per giorno (NON album):\n     - Ordina asset per timestamp\n     - Se gap > 6 minuti tra asset consecutivi → crea nuova folder \"momento_N\"\n     - Export in: ~/Exports/YYYY-MM-DD/momento_1/, momento_2/, etc.\n   - Beneficio: organizzazione automatica + riduce attesa utente\n\n4. Sicurezza (da PRD):\n   - NO accesso network\n   - Read-only su Photos Library\n   - Write SOLO su whitelist: ~/Exports/, ~/Documents/TraeExports/\n   - Circuit breaker: max 3 restart in 5 min\n   - Path validation: reject `..`, symlinks non risolti\n\n5. FastAPI proxy endpoint:\n   python/api/routes/extract.py\n   - POST /agent/extract → forward a Unix socket\n   - SSE streaming per progress real-time\n   - Validazione input + path whitelist enforcement\n\n6. Extraction agent integration (team.yaml):\n   - agent 'extraction' già esiste in team.yaml\n   - NO toolset MCP per osxphotos (è processo separato)\n   - Invocazione via endpoint FastAPI /agent/extract\n\n7. UI (src/routes/extract/+page.svelte):\n   - Album browser tree view\n   - Date picker per estrazione giornaliera\n   - Toggle \"Auto-group per momenti temporali\" (default ON)\n   - Preview griglia foto\n   - Progress bar SSE durante estrazione\n",
         "testStrategy": "## Unit Tests\n\n1. Test `list_albums` con mock PhotosDB\n2. Test PermissionError handling per Full Disk Access\n3. Test `extract_photos` con mock photo objects\n4. Test validazione destination path (no path traversal)\n\n## Integration Tests\n\n1. Test che il tool sia registrato in Cagent\n2. Test invocazione via agente extraction\n\n## UI Tests\n\n1. Test toggle Upload/Photos Library\n2. Test rendering album browser",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implementazione Python Tool osxphotos",
-            "description": "Implementare il modulo python/tools/osxphotos_tool.py contenente le funzioni list_albums e extract_photos decorate con @tool per compatibilità Cagent.",
+            "title": "Setup osxphotos Sandboxed Process + Unix Socket Server",
+            "description": "Creare processo Python sandboxed in python/tools/osxphotos_sandbox/ con Unix socket JSON-RPC 2.0 server per comunicare con FastAPI sidecar.",
             "dependencies": [],
-            "details": "1. Creare python/tools/osxphotos_tool.py\n2. Implementare list_albums con decorator @tool\n3. Implementare extract_photos con decorator @tool\n4. Gestire eccezioni PermissionError con messaggio chiaro per Full Disk Access\n5. Aggiungere validazione path per prevenire path traversal\n6. Aggiornare python/tools/__init__.py per esportare le nuove funzioni\n7. Creare python/tools/requirements.txt con dipendenza osxphotos",
+            "details": "1. Creare directory python/tools/osxphotos_sandbox/\n2. Implementare server.py con Unix socket JSON-RPC 2.0\n3. Definire JSON-RPC methods: list_albums, extract_photos, extract_by_date, get_metadata\n4. Gestire permessi Full Disk Access con try/except appropriato\n5. Implementare connection handling e graceful shutdown\n6. Creare requirements.txt con dipendenza osxphotos>=0.68.0",
             "status": "pending",
             "testStrategy": "Unit test con mock osxphotos.PhotosDB. Test PermissionError handling. Test validazione path."
           },
           {
             "id": 2,
-            "title": "Configurazione Tool in team.yaml",
-            "description": "Modificare python/team.yaml per registrare il nuovo toolset Python personalizzato osxphotos_tool.py e assegnarlo all'agente extraction.",
+            "title": "Implementazione ExtractionAgent + Temporal Grouping Script",
+            "description": "Implementare logica extraction_agent.py con osxphotos CLI invocation e script temporal_grouping.py per auto-grouping (6min gap logic).",
             "dependencies": [
               1
             ],
-            "details": "1. Aprire python/team.yaml\n2. Nella sezione extraction.toolsets aggiungere type: python con path: ./tools/osxphotos_tool.py\n3. Aggiornare extraction.description per menzionare accesso a local Photos Library\n4. Aggiornare extraction.instruction con istruzioni sui nuovi tool disponibili\n5. Documentare requirement Full Disk Access nelle istruzioni agente",
+            "details": "1. Creare extraction_agent.py in python/tools/osxphotos_sandbox/\n2. Implementare invocazione osxphotos CLI per list_albums\n3. Implementare export_photos con EXIF preservation\n4. Creare temporal_grouping.py per logic 6min gap → nuova folder\n5. Integrazione metadata extraction (date, faces, labels)\n6. Test con foto reali da Photos Library locale",
             "status": "pending",
             "testStrategy": "Validare YAML syntax. Test caricamento team.yaml con Cagent runner. Verificare che tool sia visibile all'agente."
           },
           {
             "id": 3,
-            "title": "Integrazione UI Extract con Agente Photos Library",
-            "description": "Aggiornare la pagina src/routes/extract/+page.svelte per supportare sia upload screenshot che accesso alla Photos Library locale tramite agente extraction.",
+            "title": "FastAPI Proxy Endpoint + SSE Streaming",
+            "description": "Implementare endpoint FastAPI /agent/extract che fa forward a Unix socket con SSE streaming per progress real-time.",
             "dependencies": [
               2
             ],
-            "details": "1. Aggiungere toggle/tabs in src/routes/extract/+page.svelte con Tab Upload Screenshot e Tab Photos Library\n2. Per tab Photos Library implementare bottone Carica Album che invoca agente extraction\n3. Rendering tree view album dalla risposta agente\n4. Implementare grid preview foto estratte con selezione multipla\n5. Mostrare metadati faces labels date sotto ogni foto\n6. Progress indicator durante operazioni agente\n7. Gestire errore Full Disk Access con dialog istruzioni",
+            "details": "1. Creare python/api/routes/extract.py\n2. Implementare POST /agent/extract con validazione input\n3. Connect a Unix socket con JSON-RPC 2.0\n4. Implementare SSE streaming per progress updates\n5. Validazione path whitelist: ~/Exports/, ~/Documents/TraeExports/\n6. Error handling e timeout management",
             "status": "pending",
             "testStrategy": "Test rendering tabs Upload/Photos Library. Test chiamata IPC per invocare agente. Test rendering album tree da mock response. Test selezione multipla grid."
           }

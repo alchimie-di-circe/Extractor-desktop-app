@@ -4,7 +4,7 @@
 
 **Status:** done
 
-**Dependencies:** 2
+**Dependencies:** 2 ✓
 
 **Priority:** high
 

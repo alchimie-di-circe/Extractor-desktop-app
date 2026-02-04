@@ -44,7 +44,7 @@ Test di integrazione per verificare che le credenziali vengano salvate e recuper
 
 ### 2.1. Installazione dipendenze native keytar ed electron-store con configurazione build
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** None  
 
 Installare keytar per l'accesso al keychain nativo di macOS e electron-store per la persistenza delle configurazioni, includendo la configurazione necessaria per i moduli nativi Node.
@@ -59,7 +59,7 @@ Installare keytar per l'accesso al keychain nativo di macOS e electron-store per
 
 ### 2.2. Implementazione modulo keychain.ts con wrapper keytar cross-platform
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.1  
 
 Creare il modulo electron/keychain.ts che incapsula le operazioni di keytar per la gestione sicura delle credenziali tramite il keychain nativo del sistema operativo.
@@ -77,7 +77,7 @@ Creare il modulo electron/keychain.ts che incapsula le operazioni di keytar per 
 
 ### 2.3. Implementazione config-manager.ts con electron-store per configurazioni persistenti
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.1  
 
 Creare il modulo electron/config-manager.ts per gestire le configurazioni persistenti dell'applicazione utilizzando electron-store con schema tipizzato.
@@ -103,7 +103,7 @@ Creare il modulo electron/config-manager.ts per gestire le configurazioni persis
 
 ### 2.4. Creazione ipc-handlers.ts centralizzato per keychain e config
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.2, 2.3  
 
 Implementare il modulo electron/ipc-handlers.ts che registra tutti gli handler IPC per keychain e configurazioni, centralizzando la logica di comunicazione main-renderer.
@@ -124,7 +124,7 @@ Implementare il modulo electron/ipc-handlers.ts che registra tutti gli handler I
 
 ### 2.5. Estensione preload.ts con contextBridge API sicure
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.4  
 
 Implementare il preload script che espone API sicure al renderer tramite contextBridge, creando un'interfaccia tipizzata per keychain e configurazioni.
@@ -157,7 +157,7 @@ Implementare il preload script che espone API sicure al renderer tramite context
 
 ### 2.6. Aggiornamento main.ts con security settings e registrazione handlers
 
-**Status:** pending  
+**Status:** done  
 **Dependencies:** 2.4, 2.5  
 
 Configurare BrowserWindow con le impostazioni di sicurezza Electron (context isolation, sandbox, nodeIntegration:false) e integrare la registrazione degli handler IPC.

@@ -4,43 +4,30 @@
 
 **Status:** done
 
-**Dependencies:** 3, 4
+**Dependencies:** 3 ✓, 4 ✓
 
 **Priority:** high
 
-**Description:** Implementare il sistema che genera dinamicamente il file cagent.yaml basandosi sulle configurazioni utente dei provider LLM e ruoli agenti.
+**Description:** Implementare il sistema che genera dinamicamente python/team.yaml con 7 agenti specializzati (Orchestrator, Extraction, Creative Planner, Creative Worker, Captioning, Scheduling, IDEA-VALIDATOR), MCP tools ufficiali (Perplexity, Firecrawl, Jina, Cloudinary, Shotstack), e RAG condivisa.
 
 **Details:**
 
-1. Creare `src/lib/services/cagent-config.ts`:
-```typescript
-interface AgentRole {
-  name: string;
-  model: string;
-  provider: string;
-  systemPrompt: string;
-  tools: string[];
-}
+Vedere specifiche complete in: .taskmaster/docs/task-5-upgrade-spec.md
 
-interface CagentConfig {
-  version: string;
-  agents: AgentRole[];
-  rag: { vectorStore: string; embeddingModel: string; };
-  mcp: { servers: string[]; };
-}
+Implementazione completata:
+- ✅ 7 agenti in python/team.yaml (non file .ts separati)
+- ✅ TypeScript generator (src/lib/services/cagent-generator.ts) genera team.yaml
+- ✅ UI settings (src/routes/settings/agents/+page.svelte) per configurare 7 agenti
+- ✅ MCP tools verificati: Perplexity, Firecrawl, Jina, Cloudinary, Shotstack
+- ✅ RAG: brand_guidelines, platform_specs, competitors, mcp_tools_knowledge
+- ✅ System prompts modulari con add_prompt_files (non instruction_file)
+- ✅ IPC handlers per scrittura YAML e hot-reload sidecar
 
-export async function generateCagentYaml(config: CagentConfig): Promise<string> {
-  // Genera YAML dalla configurazione
-}
-```
-2. Creare IPC handler per scrivere cagent.yaml nel path corretto
-3. Implementare UI in `src/routes/settings/agents/+page.svelte` per:
-   - Assegnare modelli a ruoli (Orchestrator, Extraction, Editing, Captioning, Scheduling)
-   - Configurare system prompts per agente
-   - Abilitare/disabilitare tools per agente
-4. Creare template YAML di default in `resources/cagent-template.yaml`
-5. Validazione configurazione prima di salvataggio
-6. Hot-reload: notificare sidecar Python di ricaricare config
+Architettura:
+- Orchestrator coordina i 6 sub-agents
+- Creative Planner (Sonnet) pianifica → Creative Worker (Haiku) esegue
+- IDEA-VALIDATOR valida contenuti e ricerca trend
+- Tutti gli agenti condividono RAG knowledge bases
 
 **Test Strategy:**
 
@@ -48,45 +35,45 @@ Test unitari per generazione YAML corretta. Test di validazione configurazione. 
 
 ## Subtasks
 
-### 5.1. Definizione TypeScript Interfaces per CagentConfig e AgentRole
+### 5.1. Definizione TypeScript Interfaces per CagentConfig e 7-Agent Team
 
 **Status:** done  
 **Dependencies:** None  
 
-Creare le interfacce TypeScript complete per la configurazione del sistema cagent, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig con tutti i tipi necessari per la validazione statica e l'esportazione del modulo.
+Creare le interfacce TypeScript complete per la configurazione team.yaml con 7 agenti specializzati, includendo AgentRole, CagentConfig, RAGConfig e MCPConfig.
 
 **Details:**
 
 Creare il file `src/lib/types/cagent.ts` con le seguenti interfacce: 1) `AgentRole` con proprietà name, model, provider, systemPrompt e tools (array di stringhe), 2) `RAGConfig` con vectorStore e embeddingModel, 3) `MCPConfig` con array servers, 4) `CagentConfig` con version, array agents di tipo AgentRole[], rag di tipo RAGConfig e mcp di tipo MCPConfig. Aggiungere type guards per validazione runtime: `isAgentRole()`, `isCagentConfig()`. Definire costanti per i ruoli predefiniti: ORCHESTRATOR, EXTRACTION, EDITING, CAPTIONING, SCHEDULING. Creare tipi utility come `PartialAgentRole` per update parziali. Esportare tutto dal barrel file `src/lib/types/index.ts`.
 
-### 5.2. Creazione cagent-config.ts con Funzione generateCagentYaml e Serializzazione
+### 5.2. Creazione cagent-generator.ts per Generazione team.yaml Dinamica
 
 **Status:** done  
 **Dependencies:** 5.1  
 
-Implementare il servizio principale in src/lib/services/cagent-config.ts per la generazione del file YAML cagent, includendo serializzazione YAML con libreria js-yaml, template di default e gestione errori completa.
+Implementare il servizio principale in src/lib/services/cagent-generator.ts per la generazione del file YAML team.yaml con 7 agenti, serializzazione YAML, e template di default.
 
 **Details:**
 
 Installare dipendenza `js-yaml` e relativi types `@types/js-yaml`. Creare `src/lib/services/cagent-config.ts` con: 1) Funzione `generateCagentYaml(config: CagentConfig): string` che serializza la configurazione in formato YAML, 2) Funzione `parseCagentYaml(yaml: string): CagentConfig` per il parsing inverso, 3) Funzione `getDefaultConfig(): CagentConfig` che ritorna la configurazione di default con tutti e 5 i ruoli agente preconfigurati, 4) Funzione `mergeWithDefaults(partial: Partial<CagentConfig>): CagentConfig` per merge intelligente, 5) Funzione `validateConfig(config: unknown): ValidationResult` per validazione schema. Creare template YAML di default in `resources/cagent-template.yaml` come riferimento. Gestire edge cases: config vuota, valori mancanti, tipi incorretti.
 
-### 5.3. Implementazione UI Settings/Agents per Configurazione Ruoli e System Prompts
+### 5.3. Implementazione UI Settings/Agents per Configurazione 7 Agenti
 
 **Status:** done  
 **Dependencies:** 5.1, 5.2  
 
-Creare l'interfaccia utente Svelte in src/routes/settings/agents/+page.svelte per la configurazione degli agenti, permettendo di assegnare modelli LLM a ruoli, modificare system prompts e gestire tools abilitati per ogni agente.
+Creare l'interfaccia utente Svelte in src/routes/settings/agents/+page.svelte per la configurazione dei 7 agenti, permettendo di assegnare modelli LLM a ruoli e modificare system prompts.
 
 **Details:**
 
 Creare la struttura directory `src/routes/settings/agents/` con +page.svelte e +page.ts. Implementare UI con: 1) Lista dei 5 ruoli agente (Orchestrator, Extraction, Editing, Captioning, Scheduling) con card espandibili, 2) Select dropdown per assegnare provider e modello a ciascun ruolo (popolato da Task 3 - config providers), 3) Textarea per modificare system prompt di ogni agente con preview markdown, 4) Checkbox list per tools abilitati per ogni agente, 5) Pulsante 'Salva Configurazione' che chiama l'IPC handler, 6) Pulsante 'Ripristina Default' per reset. Utilizzare Svelte store per stato locale. Implementare validazione form con feedback visivo. Aggiungere skeleton loading mentre si caricano i dati. Integrare con il layout settings esistente aggiungendo link nella sidebar.
 
-### 5.4. IPC Handler per Scrittura File YAML e Validazione Schema
+### 5.4. IPC Handler per Scrittura team.yaml e Validazione Schema
 
 **Status:** done  
 **Dependencies:** 5.2  
 
-Implementare gli handler IPC Electron per scrivere il file cagent.yaml nel filesystem del sistema operativo, con validazione schema JSON/YAML completa e gestione errori filesystem con backup automatico.
+Implementare gli handler IPC Electron per scrivere il file team.yaml nel filesystem con validazione schema JSON/YAML completa e gestione errori.
 
 **Details:**
 
@@ -97,7 +84,7 @@ Nel processo main Electron creare handler IPC in `src-electron/ipc/cagent-handle
 **Status:** done  
 **Dependencies:** 5.4  
 
-Implementare il meccanismo di notifica al sidecar Python quando la configurazione cagent viene modificata dall'UI, permettendo il reload dinamico della configurazione senza necessità di riavviare il processo Python.
+Implementare il meccanismo di notifica al sidecar Python quando la configurazione team.yaml viene modificata dall'UI, permettendo il reload dinamico senza riavvio.
 
 **Details:**
 
