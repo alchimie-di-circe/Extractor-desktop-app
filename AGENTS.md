@@ -12,8 +12,10 @@ Keep it short, actionable, and aligned with the PRD + Task Master graph.
 - [GitHub CLI](#github-cli)
 - [Architecture boundaries](#architecture-boundaries)
 - [Svelte MCP (Documentation & Validation)](#svelte-mcp-documentation--validation)
+- [shadcn-svelte MCP Server & Bits UI](#shadcn-svelte-mcp-server--bits-ui)
 - [DevServer MCP (Development Monitoring)](#devserver-mcp-development-monitoring)
 - [Integrated Development Workflow](#integrated-development-workflow)
+- [Testing & Monitoring Tools](#testing--monitoring-tools)
 - [Cagent (Docker) usage](#cagent-docker-usage)
 - [Desktop UI rules](#desktop-ui-rules-electron--svelte--shadcn-svelte)
 - [Code structure conventions](#code-structure-conventions)
@@ -219,6 +221,132 @@ npx @sveltejs/mcp --version
   "svelte": {
     "type": "http",
     "url": "https://mcp.svelte.dev/mcp"
+  }
+}
+```
+
+---
+
+## shadcn-svelte MCP Server & Bits UI
+
+The shadcn-svelte MCP Server provides real-time access to shadcn-svelte and Bits UI documentation via **five specialized tools**.
+
+**Knowledge files:**
+- `@docs/BITS-UI-library-instructions-quick.txt` — Bits UI headless component library (child snippets, styling, date/time components)
+- `@docs/shadcn-svelte-MCP-SERVER-instructions.md` — MCP server setup and tools documentation
+
+### Why use it
+
+- **Real-time docs**: Always fetch latest shadcn-svelte + Bits UI documentation
+- **Component discovery**: Fuzzy search + icon search across ~1,600 Lucide icons
+- **API details**: Direct access to Bits UI underlying component library API via `bits-ui-get` tool
+- **Reduce iterations**: Get correct props, events, and styling patterns first time
+
+### Available MCP Tools
+
+| Tool | Description | When to use |
+|------|-------------|------------|
+| `shadcn-svelte-list` | List components, blocks, charts, and docs sections | Discover what's available |
+| `shadcn-svelte-get` | Retrieve component details with install command and code examples | Get installation + usage |
+| `shadcn-svelte-icons` | Search and browse ~1,600 Lucide Svelte icons by name/tag | Find icons, get import snippets |
+| `shadcn-svelte-search` | Fuzzy search components and docs (typo-tolerant) | Find something specific |
+| `bits-ui-get` | **Access Bits UI API documentation** from llms.txt endpoints | Get API reference: props, events, data attributes |
+
+### Workflow Integration with Svelte MCP
+
+When building UI components:
+
+1. **Find component**: `shadcn-svelte-search` → locate component
+2. **Get install**: `shadcn-svelte-get` → retrieve installation command + basic examples
+3. **Get API details**: `bits-ui-get` → fetch underlying Bits UI props, events, data attributes
+4. **Validate code**: Svelte MCP `svelte-autofixer` → ensure correct Svelte 5 patterns
+
+**Example:**
+```
+Task: Add a button with custom styling and tooltip
+
+1. shadcn-svelte-search("button") → find Button component
+2. shadcn-svelte-get("button") → get install: `npx shadcn-svelte@latest add button`
+3. shadcn-svelte-search("tooltip") → find Tooltip component
+4. bits-ui-get("button") → get Bits UI API (props, events, data attributes)
+5. bits-ui-get("tooltip") → get Tooltip API + wrapper pattern docs
+6. svelte-autofixer(code) → validate before showing
+```
+
+### Bits UI Key Patterns
+
+When building with Bits UI components (which power shadcn-svelte):
+
+**Child Snippet Pattern** (for custom elements):
+```svelte
+<Accordion.Trigger>
+  {#snippet child({ props })}
+    <button {...props} class="my-trigger">Custom button</button>
+  {/snippet}
+</Accordion.Trigger>
+```
+
+**Floating Component Wrapper Pattern** (for tooltips, popovers, etc.):
+```svelte
+<Tooltip.Content>
+  {#snippet child({ wrapperProps, props, open })}
+    {#if open}
+      <div {...wrapperProps}>
+        <div {...props}>Tooltip content</div>
+      </div>
+    {/if}
+  {/snippet}
+</Tooltip.Content>
+```
+
+**Styling via Data Attributes**:
+```css
+[data-accordion-trigger] {
+  padding: 1rem;
+  background-color: #3182ce;
+}
+[data-accordion-trigger][data-state="open"] {
+  background-color: #f0f0f0;
+}
+```
+
+### Production Deployment
+
+**Mastra Cloud** (recommended, zero cold start):
+- SSE: `https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/sse`
+- HTTP: `https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp`
+
+### Configuration
+
+**Zed IDE** (`.zed/settings.json`):
+```json
+{
+  "context_servers": {
+    "shadcn-svelte": {
+      "source": "custom",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/sse"
+      ]
+    }
+  }
+}
+```
+
+**Claude Code** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "shadcn-svelte": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp"
+      ]
+    }
   }
 }
 ```
@@ -491,6 +619,59 @@ task-master set-status --id=<id> --status=done
 
 ---
 
+## Testing & Monitoring Tools
+
+Questa sezione definisce i ruoli dei 5 strumenti di testing/monitoring per sviluppo locale e CI.
+
+### Ruoli
+
+| Tool | Ruolo | Fase |
+|------|-------|------|
+| **DevServer MCP** | Monitor errori dev server | Sempre attivo durante `pnpm dev` |
+| **Wallaby MCP** | Unit/integration test watch | TDD, logica di dominio |
+| **Agent Browser CLI** | E2E vibe coding esplorativo | Scoprire flussi rapidamente |
+| **TestSprite MCP** | E2E stabile + AI validation | **Pre-PR (locale)** |
+| **Chrome DevTools MCP** | Debug runtime + performance | **CI (non bloccante)** |
+
+### Workflow Locale (Pre-PR)
+
+1. `pnpm dev` con DevServer MCP attivo (errori build/runtime)
+2. Wallaby MCP per unit test in watch mode
+3. Agent Browser CLI per esplorare flussi E2E nuovi
+4. **TestSprite MCP per validazione pre-PR:**
+   ```bash
+   # Via MCP tools o slash command /testsprite-e2e
+   testsprite_bootstrap → generate_test_plan → execute
+   ```
+
+### Workflow CI (GitHub Actions)
+
+1. Unit test: `pnpm test:unit`
+2. E2E Playwright: `pnpm test:e2e`
+3. Chrome DevTools MCP (opzionale, **non bloccante**):
+   - Screenshot scenari chiave
+   - Performance trace (LCP, layout shift)
+   - Console errors collection
+
+### Regola: Un solo browser E2E alla volta (locale)
+
+Per evitare overload su Mac M2:
+- ✅ Agent Browser CLI **oppure** TestSprite (non entrambi contemporaneamente)
+- ✅ Chrome DevTools MCP solo quando serve debug visivo/performance
+
+### Decision Matrix
+
+| Scenario | Tool Primario | Complementare |
+|----------|---------------|---------------|
+| Fix errori build/dev | DevServer MCP | Wallaby |
+| TDD logica/API | Wallaby MCP | - |
+| Debug layout/CSS | Chrome DevTools MCP | DevServer MCP |
+| Esplorare flussi E2E | Agent Browser CLI | TestSprite |
+| Validazione pre-PR | TestSprite MCP | Agent Browser |
+| CI performance check | Chrome DevTools MCP | Playwright |
+
+---
+
 ## Cagent (Docker) usage
 - Agents and orchestration are defined in Cagent YAML.
 - Cagent does not require Docker to be running on the host.
@@ -576,6 +757,15 @@ If a web UI is added later, create a separate "Web UI rules" section.
     "svelte": {
       "command": "npx",
       "args": ["-y", "@sveltejs/mcp"]
+    },
+    "shadcn-svelte": {
+      "source": "custom",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/sse"
+      ]
     }
   },
   "assistant": {
@@ -610,6 +800,14 @@ If a web UI is added later, create a separate "Web UI rules" section.
     "devserver-mcp": {
       "type": "sse",
       "url": "http://127.0.0.1:9338/sse"
+    },
+    "shadcn-svelte": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://shadcn-svelte.mastra.cloud/api/mcp/shadcn/mcp"
+      ]
     }
   }
 }

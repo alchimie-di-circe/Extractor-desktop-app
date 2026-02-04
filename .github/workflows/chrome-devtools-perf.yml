@@ -1,0 +1,29 @@
+name: Performance Check (Non-blocking)
+
+on: [pull_request]
+
+jobs:
+  performance-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non blocca il merge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build application
+        run: pnpm run build
+      
+      - name: Chrome DevTools Performance Trace
+        run: |
+          echo "Chrome DevTools performance trace collection"
+          echo "Collecting metrics on: startup time, memory usage, network waterfall"
+          echo "This is a placeholder for actual Chrome DevTools integration"
