@@ -1,1 +1,1 @@
-Perché i programmatori odiano la natura? Perché ha troppi bug e non c'è il tasto "Undo".
+/Perché i programmatori odiano la natura? Perché ha troppi bug e non c'è il tasto "Undo".
