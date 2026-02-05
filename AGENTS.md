@@ -78,7 +78,7 @@ git add .taskmaster/tasks/
 git commit -m "chore: Mark Task <id> and subtasks as done"
 ```
 
-**Note:** Task Master CLI has 40+ commands saved in `.factory/commands/tm/` for reference.
+**Note:** Task Master CLI has 40+ commands saved in `.factory/commands/tm/` for reference. (or .gemini/commands/tm or .claude/commands or .codex/commands/tm or .kilocode/commands/tm , depending on the cli agent operating in the codebase)
 
 ## Dev commands
 - Install: `pnpm install`

@@ -92,12 +92,12 @@ Quando lavori su un progetto:
 1. Leggi prima:
    - `.factory/AGENTS.md` – regole generali di questo progetto
    - `.taskmaster/docs/cagent-team.md` – se presente, referenza del team di agent
-   - `.taskmaster/docs/task-5-upgrade-spec.md` – se presente, spec per task 5 con MCP e best practice
+   - `.taskmaster/docs/task-5-upgrade-spec.md` – se presente, spec per task 5 ma con best practice ufficiali Cagent
    - `AGENTS.md` in root repo, se esiste, per capire:
      - Stack (es. Next.js 16, TanStack, Vite, backend, DB, toolchain).
      - Regole di sicurezza (cosa può modificare un agent).
      - Comandi standard (dev, test, build, deploy).
-2. Usa file di riferimento cagent allegati con tag `@` (l’utente li mantiene nel repo):
+2. Usa/crea file di riferimento cagent ufficiali. da allegare con tag `@` al file AGENTS.md in root se non presenti (da scaricare/copiare dal web)
    - `@docs/cagent-schema.json` – schema ufficiale cagent. [web:2]
    - `@docs/cagent-examples.md` – raccolta locale di esempi YAML derivati da `/examples` di cagent (basic/advanced/multi-agent, RAG). [[web:2]](https://github.com/docker/cagent/blob/main/examples/README.md)
    - `@docs/cagent-usage-notes.md` – appunti personali/best practice (es. pattern ricorrenti con DMR o MCP).

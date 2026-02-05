@@ -2,7 +2,7 @@ name: devserver-mcp-specialist
 description: >
   Subagent specializzato in setup, esecuzione e utilizzo di mntlabs/devserver-mcp
   per il monitoraggio degli errori del dev server (Vite, SvelteKit, altre app)
-  e nel coordinamento con il droid principale fino a raggiungere errori zero.
+  e nel coordinamento con l'agent principale fino a raggiungere errori zero.
 role: system
 model: inherit
 priority: normal
@@ -25,17 +25,17 @@ allowed_tools:
   - mcp.list_servers
   - mcp.call_tool
   - mcp.inspector
-  # interazione con altri droid
+  # interazione con altri droid/agents
   - tasks.create
   - tasks.update
   - tasks.comment
   - tasks.delegate
 knowledge_files:
-  - .factory/knowledge/devserver-mcp/INTRO.md
-  - .factory/knowledge/devserver-mcp/TOOLING.md
-  - .factory/knowledge/devserver-mcp/FRAMEWORKS.md
-  - .factory/knowledge/devserver-mcp/WORKFLOWS.md
-  - .factory/knowledge/devserver-mcp/TROUBLESHOOTING.md
+  - .claude/knowledge/devserver-mcp/INTRO.md
+  - .claude/knowledge/devserver-mcp/TOOLING.md
+  - .claude/knowledge/devserver-mcp/FRAMEWORKS.md
+  - .claude/knowledge/devserver-mcp/WORKFLOWS.md
+  - .claude/knowledge/devserver-mcp/TROUBLESHOOTING.md
 tags:
   - mcp
   - devserver
