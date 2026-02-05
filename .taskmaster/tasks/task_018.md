@@ -1,571 +1,568 @@
-# Task ID: 18
+# Task ID: 19
 
-**Title:** OPTIONAL UPGRADE: MCP Deep Search con Jina AI e Firecrawl
+**Title:** OPTIONAL UPGRADE: Docker Model Runner per LLM Locali
 
 **Status:** pending
 
-**Dependencies:** 4 ✓, 5 ✓, 8
+**Dependencies:** 3 ✓, 4 ✓, 5 ✓, 16
 
 **Priority:** low
 
-**Description:** Implementare l'integrazione opzionale di Jina AI MCP e Firecrawl MCP per ricerca web approfondita, con rate limiting configurabile, quota tracking in UI, e fallback automatico a DuckDuckGo quando i servizi non sono disponibili.
+**Description:** Implementare l'integrazione opzionale con Docker Model Runner per l'esecuzione locale di modelli LLM (Qwen, Llama, Mistral, Gemma) senza costi API, includendo detection Docker Desktop 4.40+, UI Model Browser con download manager, benchmark performance e integrazione come provider 'dmr' in cagent.yaml con fallback automatico a cloud.
 
 **Details:**
 
 ## Struttura Directory
 
 ```
+electron/
+├── docker-model-runner.ts          # Detection e gestione Docker Model Runner
+├── dmr-benchmark.ts                 # Benchmark locale vs cloud
+└── ipc-handlers.ts                  # Estensione con handler DMR
+
 python/
-├── mcp/
+├── providers/
 │   ├── __init__.py
-│   ├── jina_client.py              # Wrapper Jina AI MCP
-│   ├── firecrawl_client.py         # Wrapper Firecrawl MCP
-│   ├── rate_limiter.py             # Token bucket rate limiter
-│   └── search_orchestrator.py      # Orchestrator con fallback chain
+│   ├── dmr_provider.py              # Provider LLM per Docker Model Runner
+│   └── fallback_manager.py          # Gestione fallback locale → cloud
+
 src/lib/
 ├── services/
-│   └── deep-search.ts              # Client TypeScript per sidecar
+│   └── dmr-client.ts                # Client TypeScript per Docker Model Runner
 ├── stores/
-│   └── search-quota.svelte.ts      # Store Svelte 5 per quota tracking
+│   └── dmr-models.svelte.ts         # Store Svelte 5 per modelli locali
 └── components/custom/
-    └── SearchQuotaWidget.svelte    # Widget UI per visualizzazione quota
-electron/
-└── ipc-handlers.ts                 # Estensione con handler deep search
+    ├── DMRModelBrowser.svelte       # Browser modelli disponibili
+    ├── DMRDownloadManager.svelte    # Download con progress bar
+    └── DMRBenchmarkCard.svelte      # Risultati benchmark
+
+src/routes/settings/
+└── local-llm/
+    └── +page.svelte                 # Pagina settings LLM locali
 ```
 
-## 1. Configurazione MCP Servers in `.mcp.json`
+## 1. Detection Docker Desktop e Model Runner (`electron/docker-model-runner.ts`)
 
-```json
-{
-  "mcpServers": {
-    "jina-ai": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-jina"],
-      "env": {
-        "JINA_API_KEY": "${JINA_API_KEY}"
+```typescript
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+interface DockerDesktopInfo {
+  installed: boolean;
+  version: string | null;
+  modelRunnerEnabled: boolean;
+  platform: 'macos' | 'windows' | 'linux';
+  architecture: 'arm64' | 'amd64';
+}
+
+interface DMRModel {
+  name: string;
+  size: string;
+  quantization: string;
+  downloaded: boolean;
+  downloadProgress?: number;
+}
+
+export class DockerModelRunnerDetector {
+  async detectDockerDesktop(): Promise<DockerDesktopInfo> {
+    try {
+      // Verifica Docker Desktop (NON solo Engine)
+      const { stdout: versionOutput } = await execAsync('docker version --format "{{.Server.Platform.Name}}"');
+      const isDesktop = versionOutput.includes('Docker Desktop');
+      
+      if (!isDesktop) {
+        return { installed: false, version: null, modelRunnerEnabled: false, platform: this.getPlatform(), architecture: this.getArch() };
       }
-    },
-    "firecrawl": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-firecrawl"],
-      "env": {
-        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
-      }
+      
+      // Estrai versione Docker Desktop
+      const { stdout: fullVersion } = await execAsync('docker version --format "{{.Client.Version}}"');
+      const version = fullVersion.trim();
+      const [major, minor] = version.split('.').map(Number);
+      
+      // Richiede Docker Desktop 4.40+
+      const meetsMinVersion = major > 4 || (major === 4 && minor >= 40);
+      
+      // Verifica Model Runner enabled
+      const modelRunnerEnabled = meetsMinVersion && await this.checkModelRunnerEnabled();
+      
+      return {
+        installed: true,
+        version,
+        modelRunnerEnabled,
+        platform: this.getPlatform(),
+        architecture: this.getArch()
+      };
+    } catch (error) {
+      return { installed: false, version: null, modelRunnerEnabled: false, platform: this.getPlatform(), architecture: this.getArch() };
     }
   }
+  
+  private async checkModelRunnerEnabled(): Promise<boolean> {
+    try {
+      // Docker Model Runner espone endpoint OpenAI-compatibile su localhost
+      const { stdout } = await execAsync('curl -s http://localhost:12434/v1/models');
+      return stdout.includes('models');
+    } catch {
+      return false;
+    }
+  }
+  
+  async listAvailableModels(): Promise<DMRModel[]> {
+    // Modelli supportati da Docker Model Runner
+    return [
+      { name: 'ai/qwen2.5:7B-Q4_K_M', size: '4.4GB', quantization: 'Q4_K_M', downloaded: false },
+      { name: 'ai/qwen2.5:14B-Q4_K_M', size: '8.9GB', quantization: 'Q4_K_M', downloaded: false },
+      { name: 'ai/llama3.2:3B-Q4_K_M', size: '2.0GB', quantization: 'Q4_K_M', downloaded: false },
+      { name: 'ai/llama3.1:8B-Q4_K_M', size: '4.9GB', quantization: 'Q4_K_M', downloaded: false },
+      { name: 'ai/mistral:7B-Q4_K_M', size: '4.4GB', quantization: 'Q4_K_M', downloaded: false },
+      { name: 'ai/gemma2:9B-Q4_K_M', size: '5.4GB', quantization: 'Q4_K_M', downloaded: false },
+    ];
+  }
+  
+  async pullModel(modelName: string, onProgress: (progress: number) => void): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const proc = exec(`docker model pull ${modelName}`);
+      
+      proc.stdout?.on('data', (data) => {
+        // Parse progress da output Docker
+        const match = data.match(/(\d+)%/);
+        if (match) onProgress(parseInt(match[1]));
+      });
+      
+      proc.on('close', (code) => resolve(code === 0));
+      proc.on('error', reject);
+    });
+  }
 }
 ```
 
-## 2. Rate Limiter (`python/mcp/rate_limiter.py`)
+## 2. Provider Python per Docker Model Runner (`python/providers/dmr_provider.py`)
 
 ```python
-import time
-from dataclasses import dataclass
-from typing import Dict
-import asyncio
+from typing import AsyncIterator, Optional
+import httpx
+import json
 
-@dataclass
-class RateLimitConfig:
-    requests_per_minute: int = 10
-    burst_limit: int = 3
-
-class TokenBucketRateLimiter:
-    def __init__(self, config: RateLimitConfig):
-        self.config = config
-        self.tokens = config.burst_limit
-        self.last_refill = time.time()
-        self._lock = asyncio.Lock()
+class DockerModelRunnerProvider:
+    """Provider LLM che utilizza Docker Model Runner via API OpenAI-compatibile."""
     
-    async def acquire(self) -> bool:
-        async with self._lock:
-            self._refill()
-            if self.tokens > 0:
-                self.tokens -= 1
-                return True
+    def __init__(self, base_url: str = "http://localhost:12434/v1"):
+        self.base_url = base_url
+        self.client = httpx.AsyncClient(base_url=base_url, timeout=120.0)
+    
+    async def health_check(self) -> bool:
+        """Verifica che Docker Model Runner sia attivo."""
+        try:
+            response = await self.client.get("/models")
+            return response.status_code == 200
+        except httpx.RequestError:
             return False
     
-    def _refill(self):
-        now = time.time()
-        elapsed = now - self.last_refill
-        refill_amount = elapsed * (self.config.requests_per_minute / 60)
-        self.tokens = min(self.config.burst_limit, self.tokens + refill_amount)
-        self.last_refill = now
-
-    def get_wait_time(self) -> float:
-        if self.tokens > 0:
-            return 0
-        return (1 - self.tokens) * (60 / self.config.requests_per_minute)
+    async def list_models(self) -> list[dict]:
+        """Elenca modelli disponibili localmente."""
+        response = await self.client.get("/models")
+        data = response.json()
+        return data.get("data", [])
+    
+    async def chat_completion(
+        self,
+        model: str,
+        messages: list[dict],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        stream: bool = False
+    ) -> AsyncIterator[str] | dict:
+        """Esegue inference locale con streaming opzionale."""
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": stream
+        }
+        
+        if stream:
+            async with self.client.stream("POST", "/chat/completions", json=payload) as response:
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        chunk = line[6:]
+                        if chunk != "[DONE]":
+                            yield json.loads(chunk)["choices"][0]["delta"].get("content", "")
+        else:
+            response = await self.client.post("/chat/completions", json=payload)
+            return response.json()
+    
+    async def close(self):
+        await self.client.aclose()
 ```
 
-## 3. Jina AI Client (`python/mcp/jina_client.py`)
+## 3. Fallback Manager (`python/providers/fallback_manager.py`)
 
 ```python
-from typing import List, Dict, Optional
-from cagent import Tool
-from .rate_limiter import TokenBucketRateLimiter, RateLimitConfig
-
-class JinaSearchClient:
-    def __init__(self, rate_limiter: TokenBucketRateLimiter):
-        self.rate_limiter = rate_limiter
-        self.tools = [
-            Tool('jina_search', 'Deep web search via Jina AI'),
-            Tool('jina_reader', 'Extract structured content from URL'),
-        ]
-    
-    async def deep_search(self, query: str, max_results: int = 10) -> List[Dict]:
-        """Ricerca web approfondita con estrazione contenuto strutturato"""
-        if not await self.rate_limiter.acquire():
-            wait_time = self.rate_limiter.get_wait_time()
-            raise RateLimitExceeded(f"Rate limit exceeded. Retry in {wait_time:.1f}s")
-        
-        # Chiama Jina MCP tool via cagent
-        results = await self._call_mcp_tool('jina_search', {'query': query, 'limit': max_results})
-        return results
-    
-    async def read_url(self, url: str) -> Dict:
-        """Estrae contenuto strutturato da una URL"""
-        if not await self.rate_limiter.acquire():
-            raise RateLimitExceeded("Rate limit exceeded")
-        
-        return await self._call_mcp_tool('jina_reader', {'url': url})
-    
-    async def _call_mcp_tool(self, tool_name: str, params: dict) -> Dict:
-        # Implementazione chiamata MCP
-        pass
-```
-
-## 4. Firecrawl Client (`python/mcp/firecrawl_client.py`)
-
-```python
-from typing import List, Dict
-from .rate_limiter import TokenBucketRateLimiter
-
-class FirecrawlClient:
-    def __init__(self, rate_limiter: TokenBucketRateLimiter):
-        self.rate_limiter = rate_limiter
-    
-    async def scrape_url(self, url: str, options: Dict = None) -> Dict:
-        """Web scraping avanzato con rendering JavaScript"""
-        if not await self.rate_limiter.acquire():
-            raise RateLimitExceeded("Rate limit exceeded")
-        
-        return await self._call_mcp_tool('firecrawl_scrape', {
-            'url': url,
-            'options': options or {'waitFor': 2000, 'formats': ['markdown', 'html']}
-        })
-    
-    async def crawl_site(self, start_url: str, max_pages: int = 10) -> List[Dict]:
-        """Crawling multi-pagina con limite configurabile"""
-        if not await self.rate_limiter.acquire():
-            raise RateLimitExceeded("Rate limit exceeded")
-        
-        return await self._call_mcp_tool('firecrawl_crawl', {
-            'url': start_url,
-            'limit': max_pages,
-            'scrapeOptions': {'formats': ['markdown']}
-        })
-```
-
-## 5. Search Orchestrator con Fallback Chain (`python/mcp/search_orchestrator.py`)
-
-```python
-from typing import List, Dict, Optional
-from enum import Enum
+from typing import Optional
 import logging
 
-class SearchProvider(Enum):
-    JINA = "jina"
-    FIRECRAWL = "firecrawl"
-    DUCKDUCKGO = "duckduckgo"
+logger = logging.getLogger(__name__)
 
-class DeepSearchOrchestrator:
-    def __init__(self, jina: JinaSearchClient, firecrawl: FirecrawlClient, duckduckgo_tool):
-        self.jina = jina
-        self.firecrawl = firecrawl
-        self.duckduckgo = duckduckgo_tool
-        self.logger = logging.getLogger(__name__)
-        
-        # Quota tracking
-        self.quota_used = {p.value: 0 for p in SearchProvider}
+class FallbackManager:
+    """Gestisce fallback automatico da locale a cloud."""
     
-    async def search(self, query: str, preferred_provider: SearchProvider = SearchProvider.JINA) -> Dict:
-        """Ricerca con fallback chain automatico"""
-        providers = self._get_fallback_chain(preferred_provider)
+    def __init__(self, local_provider, cloud_providers: dict):
+        self.local = local_provider
+        self.cloud_providers = cloud_providers  # {'anthropic': ..., 'openai': ...}
+        self.local_failures = 0
+        self.max_local_failures = 3
+    
+    async def execute_with_fallback(
+        self,
+        model: str,
+        messages: list[dict],
+        preferred_cloud: str = "anthropic",
+        **kwargs
+    ):
+        """Esegue locale con fallback automatico a cloud."""
         
-        for provider in providers:
+        # Tentativo locale
+        if self.local_failures < self.max_local_failures:
             try:
-                result = await self._search_with_provider(provider, query)
-                self.quota_used[provider.value] += 1
-                return {'provider': provider.value, 'results': result, 'fallback_used': provider != preferred_provider}
-            except RateLimitExceeded as e:
-                self.logger.warning(f"{provider.value} rate limited: {e}")
-                continue
-            except ServiceUnavailable as e:
-                self.logger.warning(f"{provider.value} unavailable: {e}")
-                continue
-        
-        raise AllProvidersUnavailable("All search providers failed")
-    
-    async def trend_research(self, topic: str, platforms: List[str]) -> Dict:
-        """Ricerca trend per CaptioningAgent"""
-        results = {}
-        for platform in platforms:
-            query = f"{topic} {platform} trends 2025 social media"
-            try:
-                search_result = await self.search(query)
-                results[platform] = search_result
-            except AllProvidersUnavailable:
-                results[platform] = {'error': 'No providers available'}
-        return results
-    
-    def get_quota_status(self) -> Dict:
-        return {
-            'used': self.quota_used.copy(),
-            'limits': {
-                'jina': 10,  # per minute
-                'firecrawl': 10,
-                'duckduckgo': 'unlimited'
-            }
-        }
-    
-    def _get_fallback_chain(self, preferred: SearchProvider) -> List[SearchProvider]:
-        chain = [preferred]
-        if preferred != SearchProvider.JINA:
-            chain.append(SearchProvider.JINA)
-        if preferred != SearchProvider.FIRECRAWL:
-            chain.append(SearchProvider.FIRECRAWL)
-        chain.append(SearchProvider.DUCKDUCKGO)  # Always last fallback
-        return chain
-```
-
-## 6. Integrazione CaptioningAgent (`python/agents/captioning_agent.py` - estensione)
-
-```python
-class CaptioningAgent:
-    def __init__(self, knowledge_base, llm_provider, search_orchestrator: DeepSearchOrchestrator = None):
-        self.knowledge_base = knowledge_base
-        self.llm_provider = llm_provider
-        self.search = search_orchestrator  # Optional deep search
-    
-    async def generate_caption_with_trends(self, content_desc: str, platform: str, tone: str) -> Dict:
-        """Genera caption arricchita con trend research"""
-        # 1. Contesto brand da RAG
-        brand_context = self._get_brand_context(content_desc)
-        
-        # 2. Trend research (se disponibile)
-        trend_context = ""
-        if self.search:
-            try:
-                trends = await self.search.trend_research(content_desc, [platform])
-                trend_context = self._format_trends(trends.get(platform, {}))
+                if await self.local.health_check():
+                    result = await self.local.chat_completion(model, messages, **kwargs)
+                    self.local_failures = 0  # Reset su successo
+                    return {"source": "local", "result": result}
             except Exception as e:
-                logging.warning(f"Trend research failed: {e}")
+                self.local_failures += 1
+                logger.warning(f"Local model failed ({self.local_failures}/{self.max_local_failures}): {e}")
         
-        # 3. Genera caption con contesto arricchito
-        prompt = self._build_prompt(content_desc, platform, tone, brand_context, trend_context)
-        return await self.llm_provider.generate(prompt)
+        # Fallback a cloud
+        cloud = self.cloud_providers.get(preferred_cloud)
+        if cloud:
+            logger.info(f"Falling back to cloud provider: {preferred_cloud}")
+            result = await cloud.chat_completion(messages, **kwargs)
+            return {"source": "cloud", "provider": preferred_cloud, "result": result}
+        
+        raise RuntimeError("No available LLM provider (local failed, no cloud configured)")
 ```
 
-## 7. TypeScript Client (`src/lib/services/deep-search.ts`)
-
-```typescript
-interface SearchQuota {
-  used: Record<string, number>;
-  limits: Record<string, number | 'unlimited'>;
-}
-
-interface SearchResult {
-  provider: string;
-  results: any[];
-  fallback_used: boolean;
-}
-
-export class DeepSearchClient {
-  async search(query: string, preferredProvider: 'jina' | 'firecrawl' = 'jina'): Promise<SearchResult> {
-    const response = await window.electronAPI.invoke('deep-search:query', { query, preferredProvider });
-    if (!response.success) throw new Error(response.error);
-    return response.data;
-  }
-  
-  async trendResearch(topic: string, platforms: string[]): Promise<Record<string, SearchResult>> {
-    const response = await window.electronAPI.invoke('deep-search:trends', { topic, platforms });
-    if (!response.success) throw new Error(response.error);
-    return response.data;
-  }
-  
-  async getQuotaStatus(): Promise<SearchQuota> {
-    const response = await window.electronAPI.invoke('deep-search:quota');
-    return response.data;
-  }
-}
-```
-
-## 8. Svelte 5 Store per Quota (`src/lib/stores/search-quota.svelte.ts`)
-
-```typescript
-import { DeepSearchClient } from '$lib/services/deep-search';
-
-const client = new DeepSearchClient();
-
-let quota = $state<SearchQuota>({ used: {}, limits: {} });
-let lastUpdated = $state<Date | null>(null);
-
-export const searchQuotaStore = {
-  get quota() { return quota; },
-  get lastUpdated() { return lastUpdated; },
-  
-  async refresh() {
-    quota = await client.getQuotaStatus();
-    lastUpdated = new Date();
-  },
-  
-  getUsagePercentage(provider: string): number {
-    const used = quota.used[provider] || 0;
-    const limit = quota.limits[provider];
-    if (limit === 'unlimited') return 0;
-    return Math.min(100, (used / (limit as number)) * 100);
-  }
-};
-
-// Auto-refresh ogni 30 secondi
-setInterval(() => searchQuotaStore.refresh(), 30000);
-```
-
-## 9. Widget UI Quota (`src/lib/components/custom/SearchQuotaWidget.svelte`)
+## 4. UI Model Browser (`src/lib/components/custom/DMRModelBrowser.svelte`)
 
 ```svelte
 <script lang="ts">
-  import { searchQuotaStore } from '$lib/stores/search-quota.svelte';
-  import { Progress } from '$lib/components/ui/progress';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+  import { Button } from '$lib/components/ui/button';
+  import { Progress } from '$lib/components/ui/progress';
   import { Badge } from '$lib/components/ui/badge';
+  import { dmrModelsStore } from '$lib/stores/dmr-models.svelte';
+  import { Download, Check, Cpu, HardDrive } from 'lucide-svelte';
   
-  const providers = ['jina', 'firecrawl', 'duckduckgo'];
+  interface Model {
+    name: string;
+    displayName: string;
+    size: string;
+    quantization: string;
+    downloaded: boolean;
+    downloading: boolean;
+    downloadProgress: number;
+    recommended: boolean;
+    minRam: string;
+  }
+  
+  let { models, dockerStatus } = $derived(dmrModelsStore);
+  
+  async function downloadModel(model: Model) {
+    await window.electronAPI.dmr.pullModel(model.name);
+  }
+  
+  function formatModelName(name: string): string {
+    return name.replace('ai/', '').replace(/:.*/, '');
+  }
 </script>
 
-<Card class="w-64">
-  <CardHeader class="pb-2">
-    <CardTitle class="text-sm">Search Quota</CardTitle>
-  </CardHeader>
-  <CardContent class="space-y-3">
-    {#each providers as provider}
-      {@const percentage = searchQuotaStore.getUsagePercentage(provider)}
-      {@const used = searchQuotaStore.quota.used[provider] || 0}
-      {@const limit = searchQuotaStore.quota.limits[provider]}
-      <div class="space-y-1">
-        <div class="flex justify-between text-xs">
-          <span class="capitalize">{provider}</span>
-          <span>{used}/{limit === 'unlimited' ? '∞' : limit}</span>
-        </div>
-        {#if limit !== 'unlimited'}
-          <Progress value={percentage} class="h-1" />
-        {:else}
-          <Badge variant="outline" class="text-xs">Unlimited</Badge>
-        {/if}
-      </div>
-    {/each}
-    {#if searchQuotaStore.lastUpdated}
-      <p class="text-xs text-muted-foreground">
-        Updated: {searchQuotaStore.lastUpdated.toLocaleTimeString()}
-      </p>
-    {/if}
-  </CardContent>
-</Card>
+<div class="space-y-4">
+  {#if !dockerStatus.modelRunnerEnabled}
+    <Card class="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+      <CardContent class="pt-6">
+        <p class="text-yellow-800 dark:text-yellow-200">
+          Docker Desktop 4.40+ con Model Runner è richiesto per i modelli locali.
+          <a href="https://docs.docker.com/desktop/features/model-runner/" class="underline" target="_blank">
+            Scopri come abilitarlo
+          </a>
+        </p>
+      </CardContent>
+    </Card>
+  {:else}
+    <div class="grid gap-4 md:grid-cols-2">
+      {#each models as model}
+        <Card class:border-green-500={model.downloaded}>
+          <CardHeader class="pb-2">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-lg">{formatModelName(model.name)}</CardTitle>
+              {#if model.recommended}
+                <Badge variant="secondary">Raccomandato</Badge>
+              {/if}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div class="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+              <span class="flex items-center gap-1">
+                <HardDrive class="h-4 w-4" />
+                {model.size}
+              </span>
+              <span class="flex items-center gap-1">
+                <Cpu class="h-4 w-4" />
+                {model.minRam} RAM min
+              </span>
+              <Badge variant="outline">{model.quantization}</Badge>
+            </div>
+            
+            {#if model.downloading}
+              <Progress value={model.downloadProgress} class="mb-2" />
+              <p class="text-sm text-muted-foreground">{model.downloadProgress}% completato</p>
+            {:else if model.downloaded}
+              <Button variant="outline" disabled class="w-full">
+                <Check class="mr-2 h-4 w-4" />
+                Installato
+              </Button>
+            {:else}
+              <Button onclick={() => downloadModel(model)} class="w-full">
+                <Download class="mr-2 h-4 w-4" />
+                Download
+              </Button>
+            {/if}
+          </CardContent>
+        </Card>
+      {/each}
+    </div>
+  {/if}
+</div>
 ```
 
-## 10. IPC Handlers (`electron/ipc-handlers.ts` - estensione)
+## 5. Integrazione cagent.yaml con provider 'dmr'
+
+Estendere `src/lib/services/cagent-config.ts` per supportare il provider DMR:
 
 ```typescript
-// Aggiungere a registerIpcHandlers()
-ipcMain.handle('deep-search:query', async (_, { query, preferredProvider }) => {
-  try {
-    const result = await sidecarClient.post('/search/query', { query, preferredProvider });
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+// Aggiungere a CagentConfig interface
+type LLMProvider = 'anthropic' | 'openai' | 'google' | 'perplexity' | 'dmr';
 
-ipcMain.handle('deep-search:trends', async (_, { topic, platforms }) => {
-  try {
-    const result = await sidecarClient.post('/search/trends', { topic, platforms });
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+interface AgentRole {
+  name: string;
+  model: string;
+  provider: LLMProvider;
+  fallbackProvider?: LLMProvider; // Fallback automatico se locale fallisce
+  // ...
+}
 
-ipcMain.handle('deep-search:quota', async () => {
-  try {
-    const result = await sidecarClient.get('/search/quota');
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+// Template YAML per DMR
+const DMR_CONFIG_TEMPLATE = `
+agents:
+  captioning_agent:
+    provider: dmr
+    model: ai/qwen2.5:7B-Q4_K_M
+    fallback_provider: anthropic
+    fallback_model: claude-3-haiku
+  extraction_agent:
+    provider: dmr
+    model: ai/llama3.2:3B-Q4_K_M
+    fallback_provider: openai
+    fallback_model: gpt-4o-mini
+`;
 ```
 
-## 11. FastAPI Endpoints (`python/main.py` - estensione)
+## 6. Benchmark Performance (`electron/dmr-benchmark.ts`)
 
-```python
-from fastapi import APIRouter
-from python.mcp.search_orchestrator import DeepSearchOrchestrator, SearchProvider
+```typescript
+interface BenchmarkResult {
+  model: string;
+  provider: 'local' | 'cloud';
+  tokensPerSecond: number;
+  latencyMs: number;
+  memoryUsageMB: number;
+  quality: 'high' | 'medium' | 'low';
+}
 
-search_router = APIRouter(prefix="/search", tags=["search"])
-
-@search_router.post("/query")
-async def search_query(query: str, preferredProvider: str = "jina"):
-    provider = SearchProvider(preferredProvider)
-    return await search_orchestrator.search(query, provider)
-
-@search_router.post("/trends")
-async def search_trends(topic: str, platforms: list[str]):
-    return await search_orchestrator.trend_research(topic, platforms)
-
-@search_router.get("/quota")
-async def get_quota():
-    return search_orchestrator.get_quota_status()
+export async function runBenchmark(
+  localModel: string,
+  cloudProvider: string,
+  cloudModel: string,
+  testPrompt: string
+): Promise<{local: BenchmarkResult, cloud: BenchmarkResult}> {
+  // Benchmark locale
+  const localStart = Date.now();
+  const localResult = await callDMR(localModel, testPrompt);
+  const localLatency = Date.now() - localStart;
+  
+  // Benchmark cloud
+  const cloudStart = Date.now();
+  const cloudResult = await callCloud(cloudProvider, cloudModel, testPrompt);
+  const cloudLatency = Date.now() - cloudStart;
+  
+  return {
+    local: {
+      model: localModel,
+      provider: 'local',
+      tokensPerSecond: calculateTPS(localResult, localLatency),
+      latencyMs: localLatency,
+      memoryUsageMB: await getProcessMemory(),
+      quality: evaluateQuality(localResult, cloudResult) // Usa cloud come riferimento
+    },
+    cloud: {
+      model: cloudModel,
+      provider: 'cloud',
+      tokensPerSecond: calculateTPS(cloudResult, cloudLatency),
+      latencyMs: cloudLatency,
+      memoryUsageMB: 0,
+      quality: 'high'
+    }
+  };
+}
 ```
 
-## Configurazione Rate Limiting
+## Requisiti Hardware Documentati
 
-Il rate limiting default è 10 req/min per Jina e Firecrawl, configurabile in:
-- `python/mcp/rate_limiter.py` - RateLimitConfig
-- UI Settings (futuro) per override utente
+Aggiungere in UI e documentazione:
+
+| Modello | RAM Minima | RAM Raccomandata | Note |
+|---------|------------|------------------|------|
+| 3B (Llama 3.2) | 8GB | 12GB | Veloce, qualità base |
+| 7B (Qwen, Mistral) | 16GB | 24GB | Buon compromesso |
+| 14B (Qwen) | 32GB | 48GB | Alta qualità, lento |
+
+- Apple Silicon M1+ raccomandato per performance ottimali
+- Su Intel/AMD, aspettarsi 2-5x più lento rispetto a Apple Silicon
+- GPU dedicata non utilizzata (Docker Model Runner usa CPU)
 
 **Test Strategy:**
 
+## Test Unitari TypeScript
+
+### 1. `test/docker-model-runner.test.ts`
+- Test `detectDockerDesktop()` con mock exec che simula Docker Desktop 4.40+ installato
+- Test `detectDockerDesktop()` con mock che simula solo Docker Engine (non Desktop)
+- Test `detectDockerDesktop()` con versione < 4.40 (modelRunnerEnabled deve essere false)
+- Test `checkModelRunnerEnabled()` con mock curl response successo
+- Test `checkModelRunnerEnabled()` con timeout/errore connessione
+- Test `listAvailableModels()` ritorna lista modelli corretta
+- Test `pullModel()` con mock progress events
+
+### 2. `test/dmr-client.test.ts`
+- Test client HTTP verso endpoint DMR mock
+- Test streaming response parsing
+- Test timeout handling (modelli locali possono essere lenti)
+- Test retry logic su errori temporanei
+
 ## Test Unitari Python
 
-### 1. `tests/unit/test_rate_limiter.py`
-- Test che TokenBucketRateLimiter blocchi dopo burst_limit richieste consecutive
-- Test che i token vengano ricaricati correttamente nel tempo (simulare 60s per refill completo)
-- Test che `get_wait_time()` ritorni valore corretto quando rate limited
-- Test concorrenza con asyncio.gather per verificare thread safety del lock
+### 1. `tests/unit/test_dmr_provider.py`
+- Test `health_check()` con mock server attivo → True
+- Test `health_check()` con connection refused → False
+- Test `chat_completion()` non-streaming con risposta valida
+- Test `chat_completion()` streaming con chunks multipli
+- Test handling errori API (4xx, 5xx)
+- Test timeout su risposte lente
 
-### 2. `tests/unit/test_jina_client.py`
-- Test `deep_search()` con mock MCP tool che ritorna risultati validi
-- Test che `RateLimitExceeded` venga sollevata quando rate limiter blocca
-- Test `read_url()` con URL valida e mock response
-- Test gestione errori per URL malformata
-
-### 3. `tests/unit/test_firecrawl_client.py`
-- Test `scrape_url()` con opzioni default
-- Test `scrape_url()` con opzioni custom (waitFor, formats)
-- Test `crawl_site()` rispetti max_pages limit
-- Test rate limiting integrato
-
-### 4. `tests/unit/test_search_orchestrator.py`
-- Test fallback chain: Jina → Firecrawl → DuckDuckGo
-- Test che quota tracking incrementi correttamente per ogni provider
-- Test `trend_research()` con multiple piattaforme
-- Test che `AllProvidersUnavailable` venga sollevata quando tutti falliscono
-- Test `get_quota_status()` ritorna struttura corretta
+### 2. `tests/unit/test_fallback_manager.py`
+- Test che locale venga usato se disponibile
+- Test fallback a cloud dopo 3 fallimenti locali consecutivi
+- Test reset contatore fallimenti dopo successo
+- Test errore se né locale né cloud disponibili
+- Test preferenza cloud provider rispettata
 
 ## Test Integrazione
 
-### 5. `tests/integration/test_captioning_with_trends.py`
-- Test CaptioningAgent con mock DeepSearchOrchestrator
-- Test che trend context venga incluso nel prompt quando disponibile
-- Test graceful degradation quando search fallisce (caption generata comunque)
-- Test che quota venga aggiornata dopo trend research
+### 1. `tests/integration/test_dmr_e2e.py`
+- Test con Docker Model Runner reale (skip se non disponibile)
+- Test pull modello piccolo (3B) e verifica download
+- Test inference base con prompt semplice
+- Test performance: latency < 30s per prompt corto su M1+
 
-### 6. `tests/integration/test_ipc_deep_search.py`
-- Test IPC handler `deep-search:query` con mock sidecar
-- Test IPC handler `deep-search:trends` ritorna risultati per ogni piattaforma
-- Test IPC handler `deep-search:quota` con quota parzialmente esaurita
-- Test error handling per sidecar non disponibile
+### 2. Test UI Svelte
+- Test rendering DMRModelBrowser con modelli mock
+- Test progress bar aggiornamento durante download
+- Test stato "non disponibile" quando Docker Desktop manca
+- Test click download triggera IPC corretto
+- Test badge "Installato" appare dopo download completato
 
-## Test Componenti Svelte
+## Test Benchmark
 
-### 7. `tests/components/SearchQuotaWidget.test.ts`
-- Test rendering con quota vuota
-- Test rendering con quota parziale (50% jina, 80% firecrawl)
-- Test che "unlimited" mostri badge invece di progress bar
-- Test aggiornamento timestamp "lastUpdated"
-- Test responsive su diverse dimensioni schermo
-
-### 8. `tests/stores/search-quota.test.ts`
-- Test `refresh()` aggiorna stato correttamente
-- Test `getUsagePercentage()` calcola percentuale corretta
-- Test `getUsagePercentage()` ritorna 0 per 'unlimited'
-- Test auto-refresh interval (mock timers)
+### 1. `tests/benchmark/test_performance.ts`
+- Test calcolo tokens/secondo corretto
+- Test comparazione locale vs cloud produce risultati validi
+- Test memory usage tracking durante inference
 
 ## Test E2E
 
-### 9. `tests/e2e/deep-search-flow.test.ts`
-- Test flusso completo: Settings → Abilita Jina API key → Caption generation con trends
-- Test fallback visibile in UI quando Jina rate limited
-- Test quota widget si aggiorna dopo ricerche
-- Test che DuckDuckGo funzioni come fallback finale senza API key
-
-## Test Fallback
-
-### 10. `tests/fallback/test_duckduckgo_fallback.py`
-- Test che ricerca funzioni con solo DuckDuckGo disponibile
-- Test che risultati DuckDuckGo siano formattati consistentemente con Jina/Firecrawl
-- Test performance: DuckDuckGo risponda entro 5s
-
-## Metriche di Qualità
-
-- Copertura test: minimo 80% per moduli search
-- Latenza media ricerca: < 3s per Jina, < 5s per Firecrawl, < 2s per DuckDuckGo
-- Rate limit accuracy: 10 ± 1 req/min
-- Fallback success rate: > 99% quando almeno un provider disponibile
+### 1. `e2e/dmr-flow.test.ts`
+- Flow completo: detect Docker → mostra UI → download modello → configura come provider → esegui inference
+- Verifica fallback automatico: disabilita Docker → verifica switch a cloud
+- Verifica persistenza: riavvia app → modelli scaricati ancora visibili
+- Test settings: assegna modello locale a ruolo → verifica cagent.yaml generato correttamente
 
 ## Subtasks
 
-### 18.1. Configurazione MCP Servers per Jina AI e Firecrawl
+### 19.1. Detection Docker Desktop 4.40+ e Model Runner Status
 
 **Status:** pending  
 **Dependencies:** None  
 
-Configurare i server MCP per Jina AI e Firecrawl nel file .mcp.json, implementare il wrapper client base per entrambi i servizi e gestire le API keys tramite variabili d'ambiente.
+Implementare il modulo di rilevamento Docker Desktop con verifica versione minima 4.40+ e stato di abilitazione del Model Runner.
 
 **Details:**
 
-Creare la configurazione MCP in .mcp.json con i server jina-ai e firecrawl utilizzando npx per l'esecuzione. Implementare python/mcp/__init__.py e le classi base JinaSearchClient e FirecrawlClient con integrazione cagent Tool. Gestire le API keys JINA_API_KEY e FIRECRAWL_API_KEY tramite variabili d'ambiente. Implementare i metodi _call_mcp_tool per invocare i tool MCP tramite cagent. Includere gestione errori per API keys mancanti e servizi non disponibili con eccezioni ServiceUnavailable.
+Creare `electron/docker-model-runner.ts` con classe `DockerModelRunnerDetector` che: 1) Esegue `docker version` per verificare presenza Docker Desktop (non solo Engine), 2) Estrae e valida versione >= 4.40, 3) Verifica Model Runner attivo tramite health check su `http://localhost:12434/v1/models`, 4) Rileva piattaforma (macos/windows/linux) e architettura (arm64/amd64), 5) Espone IPC handlers in `ipc-handlers.ts` per query stato da renderer. Gestire tutti i casi di errore con fallback graceful.
 
-### 18.2. Implementazione Token Bucket Rate Limiter
+### 19.2. UI Model Browser con Lista Modelli Disponibili
+
+**Status:** pending  
+**Dependencies:** 19.1  
+
+Creare interfaccia Svelte per visualizzare i modelli LLM disponibili (Qwen, Llama, Mistral, Gemma) con informazioni su dimensione, quantizzazione e requisiti hardware.
+
+**Details:**
+
+Implementare: 1) Store Svelte 5 `dmr-models.svelte.ts` con stato modelli e Docker status usando runes ($state, $derived), 2) Componente `DMRModelBrowser.svelte` con grid card per ogni modello mostrando: nome, dimensione disco, quantizzazione (Q4_K_M), RAM minima richiesta, badge 'Raccomandato' per modelli ottimali, 3) Warning card se Docker Desktop < 4.40 o Model Runner disabilitato con link documentazione, 4) Pagina settings `src/routes/settings/local-llm/+page.svelte` integrata nel menu esistente. Utilizzare componenti shadcn-svelte (Card, Badge, Button).
+
+### 19.3. Download Manager con Progress Tracking
+
+**Status:** pending  
+**Dependencies:** 19.1, 19.2  
+
+Implementare sistema di download modelli con progress bar real-time, gestione errori e resume capability.
+
+**Details:**
+
+Estendere `DockerModelRunnerDetector` con metodo `pullModel()` che: 1) Esegue `docker model pull <nome>` in background, 2) Parsa output per estrarre percentuale progresso, 3) Emette eventi IPC per aggiornare UI in tempo reale. Creare componente `DMRDownloadManager.svelte` con: Progress bar per download attivo, stato 'Installato' per modelli già scaricati, gestione cancellazione download, persistenza stato in store. Gestire edge cases: interruzione rete, spazio disco insufficiente, download paralleli.
+
+### 19.4. Provider Python per Docker Model Runner API OpenAI-compatibile
 
 **Status:** pending  
 **Dependencies:** None  
 
-Implementare il sistema di rate limiting con algoritmo token bucket per controllare il numero di richieste API verso Jina AI e Firecrawl, con configurazione personalizzabile e calcolo del tempo di attesa.
+Creare provider Python che utilizza l'API OpenAI-compatibile esposta da Docker Model Runner per inference locale.
 
 **Details:**
 
-Creare python/mcp/rate_limiter.py con la classe TokenBucketRateLimiter che implementa l'algoritmo token bucket. Definire RateLimitConfig con requests_per_minute=10 e burst_limit=3 come default. Implementare il metodo acquire() con lock asincrono per thread-safety, il metodo _refill() per ricaricare i token in base al tempo trascorso, e get_wait_time() per calcolare quanto tempo attendere prima della prossima richiesta disponibile. Sollevare eccezione RateLimitExceeded quando i token sono esauriti.
+Implementare `python/providers/dmr_provider.py` con classe `DockerModelRunnerProvider`: 1) Client httpx async con base URL `http://localhost:12434/v1`, 2) Metodo `health_check()` per verifica disponibilità, 3) Metodo `list_models()` per elenco modelli installati, 4) Metodo `chat_completion()` con supporto streaming SSE, 5) Parametri: model, messages, temperature, max_tokens. Timeout configurabile (default 120s per modelli lenti). Gestione errori con eccezioni specifiche per timeout, connessione refused, modello non trovato.
 
-### 18.3. Search Orchestrator con Fallback Chain Automatico
+### 19.5. Fallback Manager Locale → Cloud
 
 **Status:** pending  
-**Dependencies:** 18.1, 18.2  
+**Dependencies:** 19.4  
 
-Implementare l'orchestratore di ricerca che coordina Jina AI, Firecrawl e DuckDuckGo con fallback automatico, quota tracking e gestione intelligente dei provider non disponibili.
+Implementare gestore fallback automatico che passa da modello locale a provider cloud quando l'inference locale fallisce.
 
 **Details:**
 
-Creare python/mcp/search_orchestrator.py con DeepSearchOrchestrator che gestisce JinaSearchClient, FirecrawlClient e DuckDuckGo tool. Implementare il metodo search() che tenta i provider in ordine di preferenza (Jina → Firecrawl → DuckDuckGo) con gestione eccezioni RateLimitExceeded e ServiceUnavailable. Implementare _get_fallback_chain() per costruire la catena di fallback dinamica. Aggiungere quota_used tracking per ogni provider e metodo get_quota_status() per esporre le statistiche. Implementare _search_with_provider() per normalizzare le risposte dei diversi provider. Sollevare AllProvidersUnavailable solo quando tutti i provider falliscono.
+Creare `python/providers/fallback_manager.py` con classe `FallbackManager`: 1) Accetta provider locale + dizionario provider cloud (anthropic, openai), 2) Metodo `execute_with_fallback()` che tenta prima locale, poi cloud su failure, 3) Circuit breaker: dopo 3 fallimenti consecutivi locali, bypassa diretto a cloud per N minuti, 4) Logging dettagliato source (local/cloud) per analytics, 5) Reset contatore fallimenti su successo locale. Integrare in FastAPI sidecar come middleware per tutti gli endpoint agent. Configurazione fallback_provider in cagent.yaml per-agent.
 
-### 18.4. Integrazione Trend Research in CaptioningAgent
+### 19.6. Benchmark Performance Locale vs Cloud
 
 **Status:** pending  
-**Dependencies:** 18.3  
+**Dependencies:** 19.1, 19.4  
 
-Estendere il CaptioningAgent per utilizzare il DeepSearchOrchestrator per ricerche di trend social media, arricchendo la generazione di caption con insight contestuali aggiornati.
-
-**Details:**
-
-Modificare python/agents/captioning_agent.py per accettare un parametro opzionale search_orchestrator: DeepSearchOrchestrator. Implementare il metodo trend_research() in DeepSearchOrchestrator che esegue ricerche multi-piattaforma usando query ottimizzate '{topic} {platform} trends 2025 social media'. Estendere generate_caption_with_trends() per combinare brand_context da RAG con trend_context da deep search. Implementare _format_trends() per normalizzare i risultati di ricerca in formato utilizzabile dal prompt LLM. Gestire gracefully i fallimenti di ricerca trend con logging warning e fallback a generazione senza trend context.
-
-### 18.5. UI Quota Widget e IPC Handlers per Deep Search
-
-**Status:** pending  
-**Dependencies:** 18.3, 18.4  
-
-Implementare il widget Svelte 5 per visualizzare le quote di utilizzo dei provider di ricerca, il client TypeScript per comunicare con il sidecar, e gli handler IPC Electron per collegare frontend e backend.
+Creare sistema di benchmark per confrontare performance (tokens/sec, latenza) tra modelli locali Docker Model Runner e provider cloud.
 
 **Details:**
 
-Creare src/lib/services/deep-search.ts con DeepSearchClient che espone metodi search(), trendResearch() e getQuotaStatus() tramite window.electronAPI. Implementare src/lib/stores/search-quota.svelte.ts come Svelte 5 runes store con stato reattivo per quota, lastUpdated, e metodi refresh() e getUsagePercentage(). Creare src/lib/components/custom/SearchQuotaWidget.svelte con Progress bar per Jina e Firecrawl e Badge 'Unlimited' per DuckDuckGo. Estendere electron/ipc-handlers.ts con handler 'deep-search:query', 'deep-search:trends' e 'deep-search:quota' che chiamano il sidecar FastAPI. Aggiungere FastAPI endpoints in python/main.py: POST /search/query, POST /search/trends, GET /search/quota. Implementare auto-refresh quota ogni 30 secondi nel store.
+Implementare `electron/dmr-benchmark.ts` con funzione `runBenchmark()`: 1) Prompt di test standardizzato (~100 token input), 2) Misura tempo risposta e calcola tokens/secondo per locale e cloud, 3) Rileva memoria utilizzata dal processo Docker, 4) Valutazione qualità comparando output locale vs cloud reference. Creare componente `DMRBenchmarkCard.svelte` con: bottone 'Esegui Benchmark', risultati tabulari (locale vs cloud), indicatori visivi performance (verde/giallo/rosso), raccomandazione automatica quale modello usare per ogni ruolo agent. Salvare risultati in localStorage per riferimento.
