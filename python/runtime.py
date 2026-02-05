@@ -127,7 +127,8 @@ class CagentRuntime:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                text=True,
+                encoding='utf-8',
+                errors='ignore' # Or 'replace', to be even more robust
             )
 
             self.active_processes[process_id] = proc
