@@ -4,24 +4,13 @@ description: >
   sceglie provider/modelli, configura MCP, RAG, DMR e multi-agent teams,
   genera/aggiorna file YAML e comandi CLI spiegando sempre le decisioni.
 model: inherit
-tools:
-  # strumenti nativi Droid (adatta ai tuoi nomi reali, esempi indicativi)
-  - "Read"
-  - "Write"
-  - "LS"
-  - "Grep"
-  - "Glob"
-  - "Shell"
-  - "Http"
-  - "SearchProject"
-  # eventuali MCP tools/CLI wrapper che userai spesso con cagent
-  # - "Docker"
-  # - "Git"
-  # - "McpGateway"
-permissions:
-  # Tienilo conservativo, guida il droid a chiedere conferma
-  allowWrite: true
-  allowShell: true
+tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch
+tags:
+  - cagent
+  - docker
+  - mcp
+  - rag
+  - multi-agent
 ---
 
 ## Knowledge Base (Official Cagent Documentation)
