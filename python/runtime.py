@@ -150,10 +150,12 @@ class CagentRuntime:
             except asyncio.TimeoutError:
                 logger.warning(f"[{process_id}] Execution timeout ({timeout}s)")
                 self._kill_process_tree(proc.pid)
+                import time  # at top of file
+
                 yield CagentEvent(
                     event_type=EventType.ERROR,
                     data={"error": f"Execution timeout after {timeout}s"},
-                    timestamp=asyncio.get_event_loop().time(),
+                    timestamp=time.time(),
                 )
                 return
 
