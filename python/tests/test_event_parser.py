@@ -279,3 +279,154 @@ class TestEventParserEdgeCases:
 
         assert event is not None
         assert before <= event.timestamp <= after
+
+    def test_parse_line_with_only_pattern_marker(self, parser):
+        """Test parsing line with only pattern marker, no content."""
+        event = parser.parse_line("[THINKING]", is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.THINKING
+        assert event.data["content"] == "[THINKING]"
+
+    def test_parse_multiple_patterns_in_line(self, parser):
+        """Test that first matching pattern takes precedence."""
+        # THINKING appears before TOOL in the regex checks
+        line = "[THINKING] I will use [TOOL] later"
+        event = parser.parse_line(line, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.THINKING
+        assert "[TOOL]" in event.data["content"]
+
+    def test_parse_json_with_nested_objects(self, parser):
+        """Test parsing complex nested JSON."""
+        nested_json = json.dumps({
+            "result": {
+                "nested": {
+                    "value": "deep data",
+                    "array": [1, 2, 3]
+                }
+            }
+        })
+        event = parser.parse_line(nested_json, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.RESULT
+        assert "nested" in event.data["result"]
+
+    def test_parse_json_array(self, parser):
+        """Test parsing JSON array (non-dict)."""
+        json_array = json.dumps([1, 2, 3, 4])
+        event = parser.parse_line(json_array, is_stderr=False)
+        # Should fall through to pattern matching as it's not a dict
+        assert event is not None
+        assert event.event_type == EventType.INFO
+
+    def test_parse_line_with_tabs_and_newlines(self, parser):
+        """Test parsing line with tabs and embedded escape sequences."""
+        line = "[TOOL]\tCalling\nfunction"
+        event = parser.parse_line(line, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.TOOL_CALL
+
+    def test_parse_case_insensitive_patterns(self, parser):
+        """Test that patterns are case insensitive."""
+        variations = [
+            "[ThInKiNg] Mixed case",
+            "Thinking: Lowercase prefix",
+            "[THINKING] Uppercase",
+        ]
+        for line in variations:
+            event = parser.parse_line(line, is_stderr=False)
+            assert event is not None
+            assert event.event_type == EventType.THINKING
+
+    def test_parse_line_with_null_bytes(self, parser):
+        """Test parsing line with null bytes."""
+        line = "[THINKING] Text with \x00 null byte"
+        event = parser.parse_line(line, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.THINKING
+
+    def test_buffer_field_exists(self, parser):
+        """Test that parser has buffer field for potential buffering."""
+        assert hasattr(parser, 'buffer')
+        assert parser.buffer == ""
+
+
+class TestEventParserPatternPriority:
+    """Tests for pattern matching priority and conflicts."""
+
+    def test_error_pattern_overrides_info(self, parser):
+        """Test that error pattern is detected properly."""
+        line = "Error: This is an error message"
+        event = parser.parse_line(line, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.ERROR
+
+    def test_result_pattern_with_error_word(self, parser):
+        """Test that OUTPUT pattern takes priority over error detection."""
+        line = "[OUTPUT] Result contains word error in text"
+        event = parser.parse_line(line, is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.RESULT
+
+    def test_json_mode_disabled(self):
+        """Test parser with json_mode disabled."""
+        parser = EventParser(json_mode=False)
+        json_line = json.dumps({"result": "test"})
+        event = parser.parse_line(json_line, is_stderr=False)
+        # Should still match patterns or become INFO
+        assert event is not None
+        # With json_mode=False, should fall to INFO for valid JSON string
+        assert event.event_type == EventType.INFO
+
+
+class TestEventParserConcurrency:
+    """Tests for concurrent parsing scenarios."""
+
+    def test_parse_stream_with_large_volume(self, parser):
+        """Test parsing a large volume of lines."""
+        stdout_lines = [f"[THINKING] Line {i}" for i in range(1000)]
+        stderr_lines = []
+
+        events = list(parser.parse_stream(stdout_lines, stderr_lines))
+
+        assert len(events) == 1000
+        assert all(e.event_type == EventType.THINKING for e in events)
+
+    def test_parse_stream_interleaved_timestamps(self, parser):
+        """Test that events maintain chronological order with interleaving."""
+        stdout_lines = ["[THINKING] First", "[TOOL] Second"]
+        stderr_lines = ["Error in between"]
+
+        events = list(parser.parse_stream(stdout_lines, stderr_lines))
+
+        # Verify chronological ordering
+        for i in range(len(events) - 1):
+            assert events[i].timestamp <= events[i + 1].timestamp
+
+
+class TestEventParserRegressionTests:
+    """Regression tests for previously discovered bugs."""
+
+    def test_empty_content_after_pattern_split(self, parser):
+        """Regression: Ensure empty content after pattern doesn't cause issues."""
+        event = parser.parse_line("[TOOL]", is_stderr=False)
+        assert event is not None
+        assert event.event_type == EventType.TOOL_CALL
+        # Should use full line when split result is empty
+        assert event.data["content"] == "[TOOL]"
+
+    def test_json_parse_error_falls_back_gracefully(self, parser):
+        """Regression: JSON parse errors should not crash parser."""
+        invalid_json = '{"incomplete": '
+        event = parser.parse_line(invalid_json, is_stderr=False)
+        assert event is not None
+        # Should fall back to INFO
+        assert event.event_type == EventType.INFO
+
+    def test_stderr_never_parsed_as_json(self, parser):
+        """Regression: stderr should always be ERROR, never JSON parsed."""
+        json_error = json.dumps({"result": "This is stderr"})
+        event = parser.parse_line(json_error, is_stderr=True)
+        assert event is not None
+        assert event.event_type == EventType.ERROR
+        assert json_error in event.data["error"]
