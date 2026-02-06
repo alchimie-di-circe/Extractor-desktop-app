@@ -32,6 +32,23 @@ logger = logging.getLogger(__name__)
 settings = Settings()
 
 
+# Localhost-only security helper
+def _check_localhost(request: Request) -> None:
+    """Verify that request originates from localhost.
+    
+    Args:
+        request: FastAPI Request object
+        
+    Raises:
+        HTTPException: If request is not from localhost
+    """
+    if request.client.host not in ["127.0.0.1", "localhost", "::1"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Operation only allowed from localhost"
+        )
+
+
 # Pydantic models
 class AgentRequest(BaseModel):
     """Request to execute an agent"""
@@ -148,11 +165,14 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
 
     except Exception as e:
         logger.exception(f"[{request_id}] Background execution failed")
-        # Push error event
+        # Push generic error event to client (full error logged above)
         from event_parser import CagentEvent, EventType
         error_event = CagentEvent(
             event_type=EventType.ERROR,
-            data={"error": str(e)},
+            data={
+                "error": "Agent execution failed",
+                "error_code": "EXEC_ERROR"
+            },
             timestamp=time.time(),
         )
         await event_queue.put(error_event)
@@ -163,21 +183,23 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
 
 # Agent execution endpoint
 @app.post("/agent/execute", response_model=AgentStartResponse)
-async def execute_agent(request: AgentRequest):
+async def execute_agent(agent_request: AgentRequest, request: Request):
     """
     Execute an agent with the given input.
 
     Returns immediately with a request_id.
     Client should connect to /agent/stream/{request_id} to receive events.
     """
+    _check_localhost(request)
+    
     if not cagent_runtime:
         raise HTTPException(status_code=503, detail="Cagent runtime not initialized")
 
     request_id = str(uuid.uuid4())
-    logger.info(f"[{request_id}] Execution request: {request.agent_id}")
+    logger.info(f"[{request_id}] Execution request: {agent_request.agent_id}")
 
     # Start background task
-    asyncio.create_task(_execute_agent_background(request_id, request))
+    asyncio.create_task(_execute_agent_background(request_id, agent_request))
 
     return AgentStartResponse(
         request_id=request_id,
@@ -244,6 +266,8 @@ async def stream_events(request_id: str, request: Request):
     - Server sends events as they occur
     - Stream ends when terminal event (result/error) is sent
     """
+    _check_localhost(request)
+    
     logger.info(f"SSE stream started for request {request_id}")
     return EventSourceResponse(
         agent_event_generator(request_id),
@@ -253,8 +277,10 @@ async def stream_events(request_id: str, request: Request):
 
 # Shutdown endpoint
 @app.post("/shutdown")
-async def shutdown():
-    """Endpoint for graceful shutdown notification"""
+async def shutdown(request: Request):
+    """Endpoint for graceful shutdown notification - localhost only"""
+    _check_localhost(request)
+    
     logger.info("Shutdown requested, preparing cleanup")
 
     global cagent_runtime
