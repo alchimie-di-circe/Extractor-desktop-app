@@ -124,15 +124,32 @@ class OsxphotosTool:
             sock.connect(self.socket_path)
 
             try:
-                # Send request
-                sock.sendall(request_json.encode("utf-8"))
-                sock.sendall(b"\n")  # Line delimiter for stream protocol
+                # Send request with 4-byte length prefix to match server protocol
+                request_bytes = request_json.encode("utf-8")
+                request_length = len(request_bytes).to_bytes(4, byteorder="big")
+                sock.sendall(request_length + request_bytes)
 
-                # Receive response
-                response_data = sock.recv(65536).decode("utf-8")
-                response = json.loads(response_data)
+                # Receive response length prefix
+                response_length_bytes = sock.recv(4)
+                if not response_length_bytes:
+                    raise OsxphotosResponseError(
+                        "Server closed connection without response"
+                    )
+                response_length = int.from_bytes(response_length_bytes, byteorder="big")
 
-                logger.debug(f"RPC Response: {response_data}")
+                # Receive full response payload
+                response_data = b""
+                while len(response_data) < response_length:
+                    chunk = sock.recv(response_length - len(response_data))
+                    if not chunk:
+                        raise OsxphotosResponseError(
+                            "Connection closed before full response received"
+                        )
+                    response_data += chunk
+                response_text = response_data.decode("utf-8")
+                response = json.loads(response_text)
+
+                logger.debug(f"RPC Response: {response_text}")
 
                 # Check for RPC errors
                 if "error" in response and response["error"] is not None:

@@ -111,7 +111,9 @@ def validate_photo_export_path(album: str, photo_id: str) -> str:
         raise SecurityError(f"Invalid characters in photo_id: {photo_id}")
 
     # Build safe path: ~/Exports/{album}/{photo_id}.jpg
-    export_path = Path.home() / "Exports" / album / f"{photo_id}.jpg"
+    export_dir = Path.home() / "Exports" / album
+    export_dir.mkdir(parents=True, exist_ok=True)
+    export_path = export_dir / f"{photo_id}.jpg"
 
     # Validate before returning
     return validate_export_path(str(export_path))

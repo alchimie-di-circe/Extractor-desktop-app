@@ -18,7 +18,7 @@ _OriginalSocket = _socket.socket
 class _RestrictedSocket(_OriginalSocket):
     """Socket subclass that only allows AF_UNIX sockets."""
 
-    def __init__(self, family=_socket.AF_INET, type=_socket.SOCK_STREAM, proto=0, fileno=None):
+    def __init__(self, family=_socket.AF_UNIX, type=_socket.SOCK_STREAM, proto=0, fileno=None):
         """
         Override socket creation to restrict to AF_UNIX only.
 

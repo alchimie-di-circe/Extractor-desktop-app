@@ -26,6 +26,11 @@ except ImportError:
     # When imported as a module (tests)
     from .osxphotos_tool import OsxphotosTool, OsxphotosError
 
+try:
+    from sandboxed.path_whitelist import validate_export_path, SecurityError
+except ImportError:
+    from ..sandboxed.path_whitelist import validate_export_path, SecurityError
+
 # Configure logging (to stderr to avoid stdout pollution)
 logging.basicConfig(
     level=logging.INFO,
@@ -327,17 +332,24 @@ class OsxphotosMCPServer:
                 photo_ids = tool_params.get("photo_ids", [])
                 export_path = tool_params.get("export_path")
 
-                if not all([album_id, photo_ids, export_path]):
+                if album_id is None or photo_ids is None or export_path is None:
                     return self._error_response(
                         request_id,
                         -32602,
                         "Missing required parameters: album_id, photo_ids, export_path",
                     )
 
+                try:
+                    safe_path = validate_export_path(export_path)
+                except SecurityError as e:
+                    return self._error_response(
+                        request_id, -32602, f"Invalid export path: {e}"
+                    )
+
                 result = self.tool.request_export(
                     album_id=album_id,
                     photo_ids=photo_ids,
-                    export_path=export_path,
+                    export_path=safe_path,
                     format=tool_params.get("format", "original"),
                 )
                 return self._send_response(request_id, result)

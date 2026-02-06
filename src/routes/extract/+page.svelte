@@ -44,6 +44,12 @@ async function loadAlbums() {
 		loadingAlbums = false;
 	}
 }
+
+$effect(() => {
+	if (activeTab === 'photos' && albums.length === 0 && !loadingAlbums && !albumError) {
+		loadAlbums();
+	}
+});
 </script>
 
 <svelte:head>
@@ -74,10 +80,6 @@ async function loadAlbums() {
 				Libreria Foto
 			</Tabs.Trigger>
 		</Tabs.List>
-
-		{#if activeTab === 'photos' && albums.length === 0 && !loadingAlbums && !albumError}
-			{loadAlbums()}
-		{/if}
 
 		<!-- Tab 1: Upload -->
 		<Tabs.Content value="upload">

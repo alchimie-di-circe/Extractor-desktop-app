@@ -162,6 +162,13 @@ export class OsxphotosSuperviso extends EventEmitter {
 		} catch (error) {
 			console.error('[Osxphotos] Error during shutdown:', error);
 		} finally {
+			// Reject and clear pending requests so callers aren't left hanging
+			for (const { reject, timeout } of this.pendingRequests.values()) {
+				clearTimeout(timeout);
+				reject(new Error('Osxphotos process stopped'));
+			}
+			this.pendingRequests.clear();
+
 			this.process = null;
 			this.isShuttingDown = false;
 			this.emitToRenderers({
@@ -461,6 +468,10 @@ export class OsxphotosSuperviso extends EventEmitter {
 						targetLength = 0;
 					} catch (error) {
 						console.error('[Osxphotos] Error parsing JSON-RPC response:', error);
+						this.closeSocket();
+						buffer = Buffer.alloc(0);
+						targetLength = 0;
+						return;
 					}
 				} else {
 					break;
@@ -661,6 +672,14 @@ export function registerOsxphotosIpcHandlers(): void {
 				};
 			}
 
+			// Validate limit parameter when provided
+			if (limit !== undefined && (typeof limit !== 'number' || limit <= 0)) {
+				return {
+					success: false,
+					error: { code: 'INVALID_INPUT', message: 'Limit must be a positive number' },
+				};
+			}
+
 			await osxphotosSuperviso.ensureRunning();
 			const params = limit !== undefined ? { album_id: albumId, limit } : { album_id: albumId };
 			const result = await osxphotosSuperviso.sendJsonRpc<{
@@ -700,7 +719,11 @@ export function registerOsxphotosIpcHandlers(): void {
 				}
 
 				// Validate export path (both sides validate - defense in depth)
-				if (exportPath.includes('..') || exportPath.includes('\0')) {
+				if (
+					exportPath.includes('..') ||
+					exportPath.includes('\0') ||
+					path.isAbsolute(exportPath)
+				) {
 					return {
 						success: false,
 						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
