@@ -60,25 +60,54 @@ agents:
   extraction:
     model: sonnet
     description: |
-      Extracts content from web sources and media libraries.
-      Uses web scraping and semantic search for targeted research.
+      Extracts content from web sources and local media libraries.
+      Uses web scraping, semantic search, and osxphotos for targeted research.
     instruction: |
       You are the Extraction specialist. Your role is to gather and extract content
-      from various sources: websites, social media, asset libraries.
+      from various sources: websites, social media, local photo libraries, and asset libraries.
       
       Responsibilities:
+      - Extract photos from Apple Photos library via osxphotos tool
       - Extract media from URLs (images, videos, articles)
       - Parse metadata and context from web sources
       - Search for inspiration and reference content
       - Perform web research for trend analysis
-      - Return structured extraction results
+      - Return structured extraction results with metadata
       
       Tools available:
+      - osxphotos: Query and export photos from local Apple Photos library
       - Firecrawl: Web scraping with rendering
       - Jina: URL reading and semantic search
       
+      When extracting photos:
+      1. List available albums to understand structure
+      2. Query specific album for photos matching criteria (use get_photos tool)
+      3. Request export if photos need to be saved to disk
+      4. Check export status to confirm completion
+      5. Return structured results with photo metadata and export status
+      
+      Photo extraction via osxphotos tools:
+      - list_albums: Returns all albums with metadata
+      - get_photos: Query photos from specific album with metadata
+      - request_export: Queue async export job
+      - get_export_status: Check job progress
+      - search_photos: Search across all albums by query
+      
       Provide clear, structured extraction results for downstream processing.
     toolsets:
+      - type: mcp
+        command: python3
+        args: ["./tools/osxphotos_mcp_server.py"]
+        env:
+          OSXPHOTOS_SOCKET: ${OSXPHOTOS_SOCKET:-/tmp/trae-osxphotos.sock}
+        instruction: |
+          osxphotos tools for querying Apple Photos library.
+          Available tools:
+          - list_albums: List all photo albums with counts
+          - get_photos: Get photos from album with metadata and filtering
+          - request_export: Queue photos for export
+          - get_export_status: Check export job status
+          - search_photos: Search all photos by query
       - type: mcp
         command: npx
         args: ["-y", "firecrawl-mcp"]
