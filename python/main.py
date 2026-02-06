@@ -15,12 +15,15 @@ import sys
 import asyncio
 import uuid
 import time
+import json
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 from sse_starlette.sse import EventSourceResponse
 
 from config import Settings
 from runtime import CagentRuntime, CagentRuntimeError
+from event_parser import CagentEvent, EventType
 
 # Configure logging
 logging.basicConfig(
@@ -79,10 +82,28 @@ class StreamEvent(BaseModel):
 
 # Global state
 event_queues: dict[str, asyncio.Queue] = {}
+event_queues_timestamps: dict[str, datetime] = {}
 cagent_runtime: Optional[CagentRuntime] = None
 
 
 # Lifecycle handlers
+async def cleanup_orphaned_queues():
+    """Remove queues older than 5 minutes (abandoned connections)"""
+    while True:
+        await asyncio.sleep(60)  # Check every minute
+        now = datetime.now()
+        to_delete = [
+            req_id for req_id, ts in event_queues_timestamps.items()
+            if now - ts > timedelta(minutes=5)
+        ]
+        for req_id in to_delete:
+            if req_id in event_queues:
+                del event_queues[req_id]
+            if req_id in event_queues_timestamps:
+                del event_queues_timestamps[req_id]
+            logger.warning(f"Cleaned up orphaned queue: {req_id}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application startup and shutdown"""
@@ -97,14 +118,20 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize CagentRuntime: {e}")
         raise
 
+    # Start cleanup task
+    cleanup_task = asyncio.create_task(cleanup_orphaned_queues())
+
     yield
 
     logger.info("Cagent Sidecar shutting down")
+    cleanup_task.cancel()  # Stop cleanup task
+    
     if cagent_runtime:
         await cagent_runtime.shutdown()
 
     # Clear event queues
     event_queues.clear()
+    event_queues_timestamps.clear()
 
 
 # Create FastAPI app
@@ -142,14 +169,19 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
         request_id: Unique request identifier
         request: Agent execution request
     """
-    event_queue = asyncio.Queue()
-    event_queues[request_id] = event_queue
+    event_queue = event_queues.setdefault(request_id, asyncio.Queue())
+    event_queues_timestamps[request_id] = datetime.now()
 
     try:
+        user_id = request.context.get("user_id", "unknown") if request.context else "unknown"
+        logger.info(
+            f"[{request_id}] Execution request: agent={request.agent_id}, user={user_id}"
+        )
         logger.debug(f"[{request_id}] Starting background execution of {request.agent_id}")
 
         # Extract input from dict
         user_input = request.input.get("input", str(request.input))
+        last_event = None
 
         async for event in cagent_runtime.execute_agent(
             agent_id=request.agent_id,
@@ -157,16 +189,20 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
             context=request.context,
         ):
             await event_queue.put(event)
+            last_event = event
 
             if event.event_type in ("result", "error"):
                 break
 
         logger.debug(f"[{request_id}] Background execution completed")
+        logger.info(
+            f"[{request_id}] Execution completed: agent={request.agent_id}, "
+            f"outcome={success if last_event and last_event.event_type == result else error}"
+        )
 
     except Exception as e:
         logger.exception(f"[{request_id}] Background execution failed")
         # Push generic error event to client (full error logged above)
-        from event_parser import CagentEvent, EventType
         error_event = CagentEvent(
             event_type=EventType.ERROR,
             data={
@@ -211,13 +247,8 @@ async def execute_agent(agent_request: AgentRequest, request: Request):
 # SSE streaming endpoint
 async def agent_event_generator(request_id: str) -> AsyncGenerator:
     """Generate events from the agent event queue for SSE streaming"""
-    import json
-
-    # Get or create queue
-    if request_id not in event_queues:
-        event_queues[request_id] = asyncio.Queue()
-
-    queue = event_queues[request_id]
+    # Get or create queue (use setdefault to avoid race conditions)
+    queue = event_queues.setdefault(request_id, asyncio.Queue())
 
     try:
         while True:
@@ -245,7 +276,7 @@ async def agent_event_generator(request_id: str) -> AsyncGenerator:
                 logger.debug(f"[{request_id}] SSE keepalive")
                 yield {
                     "event": "keepalive",
-                    "data": '{"message": "keepalive"}',
+                    "data": json.dumps({"message": "keepalive"}),
                 }
     except asyncio.CancelledError:
         logger.info(f"[{request_id}] SSE stream cancelled")

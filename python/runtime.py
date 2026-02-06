@@ -8,11 +8,8 @@ and provides async generators for event streaming.
 import asyncio
 import json
 import logging
-import os
 import pathlib
-import signal
 import subprocess
-import sys
 from typing import AsyncGenerator, Optional
 
 import psutil

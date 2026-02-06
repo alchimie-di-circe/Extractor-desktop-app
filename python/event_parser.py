@@ -53,7 +53,7 @@ class EventParser:
         r"\[TOOL RESULT\]|\[tool result\]|Tool result:", re.IGNORECASE
     )
     AGENT_OUTPUT_PATTERN = re.compile(r"\[OUTPUT\]|\[output\]|Output:", re.IGNORECASE)
-    ERROR_PATTERN = re.compile(r"(error|failed|exception):", re.IGNORECASE)
+    ERROR_PATTERN = re.compile(r"\[ERROR\]")
 
     def __init__(self, json_mode: bool = True):
         """
@@ -63,7 +63,6 @@ class EventParser:
             json_mode: If True, expect JSON output from cagent --json flag
         """
         self.json_mode = json_mode
-        self.buffer = ""
 
     def parse_line(self, line: str, is_stderr: bool = False) -> Optional[CagentEvent]:
         """
@@ -204,39 +203,4 @@ class EventParser:
         # Sort by timestamp and yield
         events.sort(key=lambda e: e.timestamp)
         for event in events:
-            yield event
-
-    async def parse_async_stream(
-        self, stdout_iter, stderr_iter
-    ):
-        """
-        Parse asynchronous streams of stdout/stderr.
-
-        Args:
-            stdout_iter: Async iterator over stdout lines
-            stderr_iter: Async iterator over stderr lines
-
-        Yields:
-            CagentEvent objects as they are available
-        """
-        # Collect lines first (for merging)
-        stdout_lines = []
-        stderr_lines = []
-
-        try:
-            async for line in stdout_iter:
-                if line:
-                    stdout_lines.append(line)
-        except Exception as e:
-            logger.error(f"Error reading stdout: {e}")
-
-        try:
-            async for line in stderr_iter:
-                if line:
-                    stderr_lines.append(line)
-        except Exception as e:
-            logger.error(f"Error reading stderr: {e}")
-
-        # Parse collected lines
-        for event in self.parse_stream(stdout_lines, stderr_lines):
             yield event

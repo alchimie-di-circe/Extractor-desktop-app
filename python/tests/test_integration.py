@@ -2,7 +2,7 @@
 
 import pytest
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from pathlib import Path
 import tempfile
@@ -12,7 +12,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from main import app, event_queues
-from runtime import CagentRuntime, EventType
+from runtime import CagentRuntime
+from event_parser import EventType
 
 
 @pytest.fixture
@@ -156,7 +157,7 @@ class TestShutdownEndpoint:
     def test_shutdown_endpoint_available(self, client):
         """Test shutdown endpoint is callable."""
         with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime.shutdown = MagicMock(return_value=None)
+            mock_runtime.shutdown = AsyncMock(return_value=None)
 
             response = client.post("/shutdown")
             assert response.status_code == 200
@@ -168,7 +169,7 @@ class TestShutdownEndpoint:
         event_queues["test"] = MagicMock()
 
         with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime.shutdown = MagicMock(return_value=None)
+            mock_runtime.shutdown = AsyncMock(return_value=None)
 
             response = client.post("/shutdown")
             assert response.status_code == 200
