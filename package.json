@@ -26,7 +26,8 @@
     "package": "pnpm run build:sidecar && vite build && electron-forge package",
     "make": "pnpm run build:sidecar && vite build && electron-forge make -- --arch=all",
     "publish": "pnpm run build:sidecar && electron-forge publish",
-    "pre-pr": "./scripts/pre-pr-check.sh"
+    "pre-pr": "./scripts/pre-pr-check.sh",
+    "build": "echo \"No build needed for Python sidecar\""
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
