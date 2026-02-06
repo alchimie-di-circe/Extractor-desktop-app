@@ -2,6 +2,7 @@
 
 import pytest
 import asyncio
+from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from pathlib import Path
@@ -11,15 +12,36 @@ import time
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from main import app, event_queues, _execute_agent_background, agent_event_generator
+from main import (
+    app,
+    event_queues,
+    event_queues_timestamps,
+    active_request_ids,
+    cleanup_orphaned_queues,
+    _execute_agent_background,
+    agent_event_generator,
+)
 from runtime import EventType
 from event_parser import CagentEvent
 
 
 @pytest.fixture
 def client():
-    """FastAPI test client."""
-    return TestClient(app)
+    """FastAPI test client with mocked runtime lifecycle."""
+    event_queues.clear()
+    event_queues_timestamps.clear()
+    active_request_ids.clear()
+
+    mock_runtime = MagicMock()
+    mock_runtime.shutdown = AsyncMock(return_value=None)
+
+    with patch("main.CagentRuntime", return_value=mock_runtime):
+        with TestClient(app) as test_client:
+            yield test_client
+
+    event_queues.clear()
+    event_queues_timestamps.clear()
+    active_request_ids.clear()
 
 
 class TestSSEStreamingBehavior:
@@ -194,6 +216,28 @@ class TestBackgroundTaskExecution:
             assert call_args[1]["context"] == {"brand": "slowfood"}
 
     @pytest.mark.asyncio
+    async def test_background_task_invalid_input_returns_validation_error(self):
+        """Test invalid request.input shape emits explicit validation error event."""
+        from main import AgentRequest
+
+        request_id = "test-invalid-input"
+        request = AgentRequest(
+            agent_id="test",
+            input={"query": "missing input key"},
+            context=None,
+        )
+
+        with patch("main.cagent_runtime", MagicMock()):
+            await _execute_agent_background(request_id, request)
+
+        queue = event_queues[request_id]
+        event = await asyncio.wait_for(queue.get(), timeout=1.0)
+        assert event is not None
+        assert event.event_type == EventType.ERROR
+        assert event.data["error_code"] == "INVALID_INPUT"
+        assert "request.input" in event.data["error"]
+
+    @pytest.mark.asyncio
     async def test_background_task_stops_on_result_event(self):
         """Test background task stops on result event."""
         from main import AgentRequest
@@ -228,6 +272,65 @@ class TestBackgroundTaskExecution:
             assert len(events) == 2
             assert events[0].event_type == EventType.THINKING
             assert events[1].event_type == EventType.RESULT
+
+
+class TestQueueCleanupBehavior:
+    """Tests for periodic queue cleanup behavior."""
+
+    @pytest.mark.asyncio
+    async def test_cleanup_keeps_active_stale_queue(self):
+        """Active requests must not be removed even if their queue timestamp is stale."""
+        request_id = "active-stale-queue"
+        event_queues[request_id] = asyncio.Queue()
+        event_queues_timestamps[request_id] = datetime.now() - timedelta(minutes=10)
+        active_request_ids.add(request_id)
+
+        real_sleep = asyncio.sleep
+        sleep_calls = 0
+
+        async def fast_sleep(_seconds):
+            nonlocal sleep_calls
+            sleep_calls += 1
+            if sleep_calls > 1:
+                raise asyncio.CancelledError
+            await real_sleep(0)
+
+        try:
+            with patch("main.asyncio.sleep", side_effect=fast_sleep):
+                with pytest.raises(asyncio.CancelledError):
+                    await cleanup_orphaned_queues()
+
+            assert request_id in event_queues
+            assert request_id in event_queues_timestamps
+        finally:
+            active_request_ids.discard(request_id)
+            event_queues.pop(request_id, None)
+            event_queues_timestamps.pop(request_id, None)
+
+    @pytest.mark.asyncio
+    async def test_cleanup_removes_inactive_stale_queue(self):
+        """Inactive stale queues should still be removed by cleanup."""
+        request_id = "inactive-stale-queue"
+        event_queues[request_id] = asyncio.Queue()
+        event_queues_timestamps[request_id] = datetime.now() - timedelta(minutes=10)
+        active_request_ids.discard(request_id)
+
+        real_sleep = asyncio.sleep
+        sleep_calls = 0
+
+        async def fast_sleep(_seconds):
+            nonlocal sleep_calls
+            sleep_calls += 1
+            if sleep_calls > 1:
+                raise asyncio.CancelledError
+            await real_sleep(0)
+
+        with patch("main.asyncio.sleep", side_effect=fast_sleep):
+            with pytest.raises(asyncio.CancelledError):
+                await cleanup_orphaned_queues()
+
+        assert request_id not in event_queues
+        assert request_id not in event_queues_timestamps
 
 
 class TestErrorPropagation:

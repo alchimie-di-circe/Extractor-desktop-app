@@ -86,6 +86,7 @@ class StreamEvent(BaseModel):
 event_queues: dict[str, asyncio.Queue] = {}
 event_queues_timestamps: dict[str, datetime] = {}
 background_tasks: set[asyncio.Task] = set()
+active_request_ids: set[str] = set()
 cagent_runtime: Optional[CagentRuntime] = None
 
 
@@ -117,8 +118,9 @@ async def cleanup_orphaned_queues():
         await asyncio.sleep(60)  # Check every minute
         now = datetime.now()
         to_delete = [
-            req_id for req_id, ts in event_queues_timestamps.items()
-            if now - ts > timedelta(minutes=5)
+            req_id
+            for req_id, ts in list(event_queues_timestamps.items())
+            if req_id not in active_request_ids and now - ts > timedelta(minutes=5)
         ]
         for req_id in to_delete:
             event_queues.pop(req_id, None)
@@ -154,6 +156,7 @@ async def lifespan(app: FastAPI):
     # Clear event queues
     event_queues.clear()
     event_queues_timestamps.clear()
+    active_request_ids.clear()
 
 
 # Create FastAPI app
@@ -193,6 +196,7 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
     """
     event_queue = event_queues.setdefault(request_id, asyncio.Queue())
     event_queues_timestamps.setdefault(request_id, datetime.now())
+    active_request_ids.add(request_id)
 
     try:
         logger.info(
@@ -200,8 +204,25 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
         )
         logger.debug(f"[{request_id}] Starting background execution of {request.agent_id}")
 
-        # Extract input from dict
-        user_input = request.input.get("input", str(request.input))
+        request_input = request.input
+        if isinstance(request_input, dict):
+            if "input" not in request_input:
+                raise ValueError(
+                    "Invalid request.input: expected an object with an 'input' string field"
+                )
+            user_input = request_input["input"]
+        elif isinstance(request_input, str):
+            user_input = request_input
+        else:
+            raise ValueError(
+                "Invalid request.input: expected a string or an object with an 'input' string field"
+            )
+
+        if not isinstance(user_input, str):
+            raise ValueError(
+                "Invalid request.input: expected 'input' to be a string"
+            )
+
         last_event = None
 
         async for event in cagent_runtime.execute_agent(
@@ -210,6 +231,7 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
             context=request.context,
         ):
             await event_queue.put(event)
+            event_queues_timestamps[request_id] = datetime.now()
             last_event = event
 
             if event.event_type in ("result", "error"):
@@ -221,6 +243,18 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
             f"outcome={'success' if last_event and last_event.event_type == 'result' else 'error'}"
         )
 
+    except ValueError as e:
+        logger.warning(f"[{request_id}] Invalid execution input: {e}")
+        error_event = CagentEvent(
+            event_type=EventType.ERROR,
+            data={
+                "error": str(e),
+                "error_code": "INVALID_INPUT",
+            },
+            timestamp=time.time(),
+        )
+        await event_queue.put(error_event)
+        event_queues_timestamps[request_id] = datetime.now()
     except Exception:
         logger.exception(f"[{request_id}] Background execution failed")
         # Push generic error event to client (full error logged above)
@@ -233,9 +267,12 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
             timestamp=time.time(),
         )
         await event_queue.put(error_event)
+        event_queues_timestamps[request_id] = datetime.now()
     finally:
         # Signal end of stream
         await event_queue.put(None)
+        event_queues_timestamps[request_id] = datetime.now()
+        active_request_ids.discard(request_id)
 
 
 # Agent execution endpoint
@@ -278,6 +315,7 @@ async def agent_event_generator(request_id: str) -> AsyncGenerator:
             try:
                 # Wait for event with timeout (30s keepalive)
                 event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                event_queues_timestamps[request_id] = datetime.now()
 
                 # Check for end-of-stream marker
                 if event is None:
@@ -297,6 +335,7 @@ async def agent_event_generator(request_id: str) -> AsyncGenerator:
             except asyncio.TimeoutError:
                 # Send keepalive event to prevent connection timeout
                 logger.debug(f"[{request_id}] SSE keepalive")
+                event_queues_timestamps[request_id] = datetime.now()
                 yield {
                     "event": "keepalive",
                     "data": json.dumps({"message": "keepalive"}),
@@ -345,6 +384,7 @@ async def shutdown(request: Request):
     # Clean up any remaining event queues
     event_queues.clear()
     event_queues_timestamps.clear()
+    active_request_ids.clear()
 
     return {"status": "shutting down"}
 

@@ -11,13 +11,26 @@ import tempfile
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from main import app, event_queues
+from main import app, event_queues, event_queues_timestamps, active_request_ids
 
 
 @pytest.fixture
 def client():
-    """FastAPI test client."""
-    return TestClient(app)
+    """FastAPI test client with mocked runtime lifecycle."""
+    event_queues.clear()
+    event_queues_timestamps.clear()
+    active_request_ids.clear()
+
+    mock_runtime = MagicMock()
+    mock_runtime.shutdown = AsyncMock(return_value=None)
+
+    with patch("main.CagentRuntime", return_value=mock_runtime):
+        with TestClient(app) as test_client:
+            yield test_client
+
+    event_queues.clear()
+    event_queues_timestamps.clear()
+    active_request_ids.clear()
 
 
 @pytest.fixture
@@ -323,11 +336,14 @@ class TestEndpointAvailability:
             ("POST", "/shutdown", 200),
         ]
 
-        for method, path, expected_status in endpoints:
-            if method == "GET":
-                response = client.get(path)
-            else:
-                response = client.post(path, json={} if "shutdown" in path else None)
+        with patch("main.cagent_runtime") as mock_runtime:
+            mock_runtime.shutdown = AsyncMock(return_value=None)
 
-            assert response.status_code != 404, f"{method} {path} not found"
-            assert response.status_code == expected_status
+            for method, path, expected_status in endpoints:
+                if method == "GET":
+                    response = client.get(path)
+                else:
+                    response = client.post(path, json={} if "shutdown" in path else None)
+
+                assert response.status_code != 404, f"{method} {path} not found"
+                assert response.status_code == expected_status

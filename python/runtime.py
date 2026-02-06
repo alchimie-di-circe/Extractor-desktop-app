@@ -221,12 +221,6 @@ class CagentRuntime:
                 raise asyncio.TimeoutError
             await asyncio.wait_for(proc.wait(), timeout=remaining)
 
-            # Check exit code
-            if proc.returncode != 0:
-                logger.warning(
-                    f"[{process_id}] Process exited with code {proc.returncode}"
-                )
-
             if proc.returncode == 0:
                 logger.info(f"[{process_id}] Execution completed successfully")
             else:
