@@ -1,10 +1,7 @@
 #!/usr/bin/env cagent run
 
 # TRAE Extractor - Cagent Team Configuration
-# Version: 1.0
 # 7 Specialized Agents for Content Creation Workflow
-
-version: "1.0"
 
 models:
   sonnet:
