@@ -140,6 +140,7 @@ class TestCagentRuntimeExecution:
             async def mock_stderr_read():
                 return ""
             async def mock_wait():
+                mock_proc.returncode = 0
                 return 0
             mock_proc.stdout.read = mock_stdout_read
             mock_proc.stderr.read = mock_stderr_read
@@ -299,9 +300,10 @@ class TestProcessManagement:
             mock_proc.terminate = Mock()
             mock_process_class.return_value = mock_proc
 
-            runtime._kill_process_tree(12345)
+            with patch("psutil.wait_procs", return_value=([], [])):
+                runtime._kill_process_tree(12345)
 
-            mock_proc.terminate.assert_called()
+                mock_proc.terminate.assert_called()
 
     def test_kill_process_tree_with_children(self, tmp_path):
         """Test killing a process tree with children."""

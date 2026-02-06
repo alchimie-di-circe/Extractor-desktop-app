@@ -396,15 +396,13 @@ class TestConcurrentRequests:
             request_ids = [r.json()["request_id"] for r in responses]
             assert len(request_ids) == len(set(request_ids))
 
-    def test_concurrent_stream_connections(self, client):
-        """Test concurrent SSE stream connections."""
+    def test_stream_queue_registration_for_multiple_request_ids(self):
+        """Test queue bookkeeping for multiple stream request IDs."""
         # Create multiple request IDs with queues
         request_ids = [f"concurrent-{i}" for i in range(3)]
         for request_id in request_ids:
             event_queues[request_id] = asyncio.Queue()
 
-        # Connect to all streams would require async client
-        # For sync test client, just verify queues exist
         for request_id in request_ids:
             assert request_id in event_queues
 

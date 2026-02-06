@@ -5,7 +5,6 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from pathlib import Path
-import tempfile
 
 # Import app and dependencies
 import sys
@@ -31,15 +30,6 @@ def client():
     event_queues.clear()
     event_queues_timestamps.clear()
     active_request_ids.clear()
-
-
-@pytest.fixture
-def team_yaml_temp():
-    """Create a temporary team.yaml for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        team_yaml = Path(tmpdir) / "team.yaml"
-        team_yaml.write_text("metadata:\n  author: test\n")
-        yield str(team_yaml)
 
 
 class TestHealthEndpoint:
@@ -239,9 +229,12 @@ class TestCORSMiddleware:
 
     def test_cors_headers_present(self, client):
         """Test that CORS headers are set."""
-        response = client.get("/health")
-        # Should have successful response
+        response = client.get(
+            "/health",
+            headers={"Origin": "http://localhost"},
+        )
         assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "http://localhost"
 
 
 class TestErrorHandling:

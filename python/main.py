@@ -47,6 +47,7 @@ def _check_localhost(request: Request) -> None:
     """
     client = getattr(request, "client", None)
     host = getattr(client, "host", None)
+    # "testclient" is used by FastAPI TestClient during local test execution.
     if host not in ["127.0.0.1", "localhost", "::1", "testclient"]:
         raise HTTPException(
             status_code=403,
