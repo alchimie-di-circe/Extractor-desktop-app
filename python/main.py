@@ -195,9 +195,8 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
     event_queues_timestamps.setdefault(request_id, datetime.now())
 
     try:
-        user_id = request.context.get("user_id", "unknown") if request.context else "unknown"
         logger.info(
-            f"[{request_id}] Execution request: agent={request.agent_id}, user={user_id}"
+            f"[{request_id}] Execution request: agent={request.agent_id}"
         )
         logger.debug(f"[{request_id}] Starting background execution of {request.agent_id}")
 

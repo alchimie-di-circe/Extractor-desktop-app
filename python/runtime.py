@@ -227,7 +227,12 @@ class CagentRuntime:
                     f"[{process_id}] Process exited with code {proc.returncode}"
                 )
 
-            logger.info(f"[{process_id}] Execution completed successfully")
+            if proc.returncode == 0:
+                logger.info(f"[{process_id}] Execution completed successfully")
+            else:
+                logger.warning(
+                    f"[{process_id}] Execution completed with exit code {proc.returncode}"
+                )
 
         except asyncio.TimeoutError:
             logger.warning(f"[{process_id}] Execution timeout ({timeout}s)")

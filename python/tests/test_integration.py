@@ -293,7 +293,7 @@ class TestEventStreaming:
         )
 
         # Convert to dict and JSON
-        data = event.dict()
+        data = event.model_dump()
         json_str = json.dumps(data)
 
         # Should parse back

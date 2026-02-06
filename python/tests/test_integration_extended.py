@@ -431,7 +431,11 @@ class TestRegressionTests:
             await _execute_agent_background(request_id, request)
 
             # Queue should have been created during background task
-            # (and may be cleaned up after)
+            assert request_id in event_queues, "Queue was not created during background task"
+
+            # Cleanup to avoid test interference
+            if request_id in event_queues:
+                del event_queues[request_id]
 
     def test_request_id_is_uuid_format(self, client):
         """Regression: Ensure request_id is valid UUID."""

@@ -12,18 +12,21 @@ class TestSettingsDefaults:
 
     def test_default_host(self):
         """Test default HOST value."""
-        settings = Settings()
-        assert settings.HOST == "127.0.0.1"
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
+            assert settings.HOST == "127.0.0.1"
 
     def test_default_port(self):
         """Test default PORT value."""
-        settings = Settings()
-        assert settings.PORT == 8765
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
+            assert settings.PORT == 8765
 
     def test_default_log_level(self):
         """Test default LOG_LEVEL value."""
-        settings = Settings()
-        assert settings.LOG_LEVEL == "INFO"
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
+            assert settings.LOG_LEVEL == "INFO"
 
 
 class TestSettingsEnvironmentOverrides:
@@ -95,13 +98,15 @@ class TestSettingsValidation:
 
     def test_host_type_validation(self):
         """Test HOST is string."""
-        settings = Settings()
-        assert isinstance(settings.HOST, str)
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
+            assert isinstance(settings.HOST, str)
 
     def test_log_level_type_validation(self):
         """Test LOG_LEVEL is string."""
-        settings = Settings()
-        assert isinstance(settings.LOG_LEVEL, str)
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
+            assert isinstance(settings.LOG_LEVEL, str)
 
 
 class TestSettingsEdgeCases:
@@ -139,24 +144,26 @@ class TestSettingsImmutability:
 
     def test_settings_can_be_created_multiple_times(self):
         """Test that multiple Settings instances can be created."""
-        settings1 = Settings()
-        settings2 = Settings()
+        with patch.dict(os.environ, {}, clear=True):
+            settings1 = Settings()
+            settings2 = Settings()
 
-        assert settings1.HOST == settings2.HOST
-        assert settings1.PORT == settings2.PORT
-        assert settings1.LOG_LEVEL == settings2.LOG_LEVEL
+            assert settings1.HOST == settings2.HOST
+            assert settings1.PORT == settings2.PORT
+            assert settings1.LOG_LEVEL == settings2.LOG_LEVEL
 
     def test_environment_changes_affect_new_instances(self):
         """Test that environment changes affect new instances."""
-        settings1 = Settings()
-        original_host = settings1.HOST
+        with patch.dict(os.environ, {}, clear=True):
+            settings1 = Settings()
+            original_host = settings1.HOST
 
-        with patch.dict(os.environ, {"HOST": "192.168.1.1"}):
-            settings2 = Settings()
-            assert settings2.HOST == "192.168.1.1"
+            with patch.dict(os.environ, {"HOST": "192.168.1.1"}):
+                settings2 = Settings()
+                assert settings2.HOST == "192.168.1.1"
 
-        # Original instance unchanged
-        assert settings1.HOST == original_host
+            # Original instance unchanged
+            assert settings1.HOST == original_host
 
 
 class TestSettingsConfigClass:
@@ -178,26 +185,28 @@ class TestSettingsIntegration:
 
     def test_settings_can_be_used_in_app_context(self):
         """Test Settings works in application context."""
-        settings = Settings()
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
 
-        # Simulate app usage
-        host = settings.HOST
-        port = settings.PORT
-        log_level = settings.LOG_LEVEL.lower()
+            # Simulate app usage
+            host = settings.HOST
+            port = settings.PORT
+            log_level = settings.LOG_LEVEL.lower()
 
-        assert isinstance(host, str)
-        assert isinstance(port, int)
-        assert log_level in ["debug", "info", "warning", "error", "critical"]
+            assert isinstance(host, str)
+            assert isinstance(port, int)
+            assert log_level in ["debug", "info", "warning", "error", "critical"]
 
     def test_settings_default_suitable_for_development(self):
         """Test default settings are suitable for development."""
-        settings = Settings()
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings()
 
-        # Localhost for security
-        assert settings.HOST == "127.0.0.1"
+            # Localhost for security
+            assert settings.HOST == "127.0.0.1"
 
-        # Non-privileged port
-        assert settings.PORT > 1024
+            # Non-privileged port
+            assert settings.PORT > 1024
 
-        # INFO level for development
-        assert settings.LOG_LEVEL == "INFO"
+            # INFO level for development
+            assert settings.LOG_LEVEL == "INFO"
