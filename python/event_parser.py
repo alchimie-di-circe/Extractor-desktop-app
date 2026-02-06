@@ -47,13 +47,11 @@ class EventParser:
     """Parse cagent subprocess stdout/stderr into structured events."""
 
     # Pattern matching for cagent output
-    THINKING_PATTERN = re.compile(r"\[THINKING\]|\[thinking\]|Thinking:", re.IGNORECASE)
-    TOOL_CALL_PATTERN = re.compile(r"\[TOOL\]|\[tool\]|Calling tool:", re.IGNORECASE)
-    TOOL_RESULT_PATTERN = re.compile(
-        r"\[TOOL RESULT\]|\[tool result\]|Tool result:", re.IGNORECASE
-    )
-    AGENT_OUTPUT_PATTERN = re.compile(r"\[OUTPUT\]|\[output\]|Output:", re.IGNORECASE)
-    ERROR_PATTERN = re.compile(r"\[ERROR\]")
+    THINKING_PATTERN = re.compile(r"\[THINKING\]|Thinking:", re.IGNORECASE)
+    TOOL_CALL_PATTERN = re.compile(r"\[TOOL\]|Calling tool:", re.IGNORECASE)
+    TOOL_RESULT_PATTERN = re.compile(r"\[TOOL RESULT\]|Tool result:", re.IGNORECASE)
+    AGENT_OUTPUT_PATTERN = re.compile(r"\[OUTPUT\]|Output:", re.IGNORECASE)
+    ERROR_PATTERN = re.compile(r"\[ERROR\]|Error:", re.IGNORECASE)
 
     def __init__(self, json_mode: bool = True):
         """
@@ -63,6 +61,7 @@ class EventParser:
             json_mode: If True, expect JSON output from cagent --json flag
         """
         self.json_mode = json_mode
+        self.buffer = ""
 
     def parse_line(self, line: str, is_stderr: bool = False) -> Optional[CagentEvent]:
         """

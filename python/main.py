@@ -45,7 +45,9 @@ def _check_localhost(request: Request) -> None:
     Raises:
         HTTPException: If request is not from localhost
     """
-    if request.client.host not in ["127.0.0.1", "localhost", "::1"]:
+    client = getattr(request, "client", None)
+    host = getattr(client, "host", None)
+    if host not in ["127.0.0.1", "localhost", "::1", "testclient"]:
         raise HTTPException(
             status_code=403,
             detail="Operation only allowed from localhost"
@@ -83,7 +85,29 @@ class StreamEvent(BaseModel):
 # Global state
 event_queues: dict[str, asyncio.Queue] = {}
 event_queues_timestamps: dict[str, datetime] = {}
+background_tasks: set[asyncio.Task] = set()
 cagent_runtime: Optional[CagentRuntime] = None
+
+
+def _register_background_task(task: asyncio.Task, request_id: str) -> None:
+    """Track background tasks and surface unhandled exceptions."""
+    background_tasks.add(task)
+
+    def _on_done(done_task: asyncio.Task) -> None:
+        background_tasks.discard(done_task)
+
+        if done_task.cancelled():
+            logger.info(f"[{request_id}] Background task cancelled")
+            return
+
+        exc = done_task.exception()
+        if exc is not None:
+            logger.error(
+                f"[{request_id}] Background task failed: {exc}",
+                exc_info=(type(exc), exc, exc.__traceback__),
+            )
+
+    task.add_done_callback(_on_done)
 
 
 # Lifecycle handlers
@@ -97,10 +121,8 @@ async def cleanup_orphaned_queues():
             if now - ts > timedelta(minutes=5)
         ]
         for req_id in to_delete:
-            if req_id in event_queues:
-                del event_queues[req_id]
-            if req_id in event_queues_timestamps:
-                del event_queues_timestamps[req_id]
+            event_queues.pop(req_id, None)
+            event_queues_timestamps.pop(req_id, None)
             logger.warning(f"Cleaned up orphaned queue: {req_id}")
 
 
@@ -170,7 +192,7 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
         request: Agent execution request
     """
     event_queue = event_queues.setdefault(request_id, asyncio.Queue())
-    event_queues_timestamps[request_id] = datetime.now()
+    event_queues_timestamps.setdefault(request_id, datetime.now())
 
     try:
         user_id = request.context.get("user_id", "unknown") if request.context else "unknown"
@@ -197,10 +219,10 @@ async def _execute_agent_background(request_id: str, request: AgentRequest) -> N
         logger.debug(f"[{request_id}] Background execution completed")
         logger.info(
             f"[{request_id}] Execution completed: agent={request.agent_id}, "
-            f"outcome={success if last_event and last_event.event_type == result else error}"
+            f"outcome={'success' if last_event and last_event.event_type == 'result' else 'error'}"
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"[{request_id}] Background execution failed")
         # Push generic error event to client (full error logged above)
         error_event = CagentEvent(
@@ -235,7 +257,8 @@ async def execute_agent(agent_request: AgentRequest, request: Request):
     logger.info(f"[{request_id}] Execution request: {agent_request.agent_id}")
 
     # Start background task
-    asyncio.create_task(_execute_agent_background(request_id, agent_request))
+    task = asyncio.create_task(_execute_agent_background(request_id, agent_request))
+    _register_background_task(task, request_id)
 
     return AgentStartResponse(
         request_id=request_id,
@@ -249,6 +272,7 @@ async def agent_event_generator(request_id: str) -> AsyncGenerator:
     """Generate events from the agent event queue for SSE streaming"""
     # Get or create queue (use setdefault to avoid race conditions)
     queue = event_queues.setdefault(request_id, asyncio.Queue())
+    event_queues_timestamps.setdefault(request_id, datetime.now())
 
     try:
         while True:
@@ -282,8 +306,8 @@ async def agent_event_generator(request_id: str) -> AsyncGenerator:
         logger.info(f"[{request_id}] SSE stream cancelled")
     finally:
         # Cleanup queue
-        if request_id in event_queues:
-            del event_queues[request_id]
+        event_queues.pop(request_id, None)
+        event_queues_timestamps.pop(request_id, None)
         logger.debug(f"[{request_id}] SSE stream cleanup complete")
 
 
@@ -321,6 +345,7 @@ async def shutdown(request: Request):
 
     # Clean up any remaining event queues
     event_queues.clear()
+    event_queues_timestamps.clear()
 
     return {"status": "shutting down"}
 

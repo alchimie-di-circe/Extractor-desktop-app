@@ -1,7 +1,7 @@
 """Integration tests for FastAPI + CagentRuntime."""
 
+import asyncio
 import pytest
-import json
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from pathlib import Path
@@ -12,8 +12,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from main import app, event_queues
-from runtime import CagentRuntime
-from event_parser import EventType
 
 
 @pytest.fixture
@@ -73,9 +71,7 @@ class TestAgentExecutionEndpoint:
 
     def test_agent_execute_valid_request(self, client):
         """Test valid execution request."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None  # Simulate runtime available
-
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={
@@ -90,11 +86,11 @@ class TestAgentExecutionEndpoint:
             data = response.json()
             assert "request_id" in data
             assert data["status"] == "started"
-            assert "request_id" in data["message"]
+            assert data["request_id"] in data["message"]
 
     def test_agent_execute_returns_request_id(self, client):
         """Test that execute returns a valid request_id."""
-        with patch("main.cagent_runtime") as mock_runtime:
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={"agent_id": "test", "input": {"input": "query"}},
@@ -111,44 +107,25 @@ class TestAgentExecutionEndpoint:
 class TestSSEStreamingEndpoint:
     """Tests for /agent/stream/{request_id} endpoint."""
 
-    def test_stream_endpoint_creates_queue(self, client):
-        """Test that stream endpoint creates an event queue."""
-        import asyncio
+    @pytest.mark.asyncio
+    async def test_stream_endpoint_creates_queue(self):
+        """Test that stream generator creates an event queue."""
+        from main import agent_event_generator
 
-        with patch("main.cagent_runtime") as mock_runtime:
-            # First execute to get request_id
-            response = client.post(
-                "/agent/execute",
-                json={"agent_id": "test", "input": {"input": "query"}},
-            )
-            request_id = response.json()["request_id"]
+        request_id = "stream-queue-test"
+        event_queues.clear()
 
-            # Clear queues to verify stream creates one
-            event_queues.clear()
+        generator = agent_event_generator(request_id)
+        stream_task = asyncio.create_task(generator.__anext__())
 
-            # Connect to stream (will timeout but should create queue)
-            try:
-                response = client.get(f"/agent/stream/{request_id}", timeout=0.1)
-            except Exception:
-                pass  # Expected timeout
+        # Allow generator setup to run.
+        await asyncio.sleep(0)
+        assert request_id in event_queues
 
-            # Queue should have been created
-            assert request_id in event_queues or len(event_queues) == 0
-
-    def test_stream_endpoint_accessible(self, client):
-        """Test stream endpoint is accessible."""
-        request_id = "test-request-123"
-
-        with patch("main.agent_event_generator") as mock_gen:
-            # Mock generator that yields one event
-            async def mock_generator():
-                yield {"event": "test", "data": "{}"}
-
-            mock_gen.return_value = mock_generator()
-
-            response = client.get(f"/agent/stream/{request_id}", timeout=0.1)
-            # Should return streaming response (200 or timeout during stream)
-            assert response.status_code in [200, 500]  # 500 if stream fails
+        stream_task.cancel()
+        with pytest.raises((asyncio.CancelledError, StopAsyncIteration)):
+            await stream_task
+        await generator.aclose()
 
 
 class TestShutdownEndpoint:
@@ -276,7 +253,8 @@ class TestEventQueueManagement:
         event_queues["queue2"] = MagicMock()
         assert len(event_queues) > 0
 
-        with patch("main.cagent_runtime"):
+        with patch("main.cagent_runtime") as mock_runtime:
+            mock_runtime.shutdown = AsyncMock(return_value=None)
             response = client.post("/shutdown")
             assert response.status_code == 200
 
@@ -296,8 +274,8 @@ class TestLifecycleManagement:
     def test_middleware_installed(self):
         """Test CORS middleware is installed."""
         # Check if middleware is present
-        middleware_types = [type(m).__name__ for m in app.user_middleware]
-        assert "CORSMiddleware" in middleware_types
+        middleware_classes = [m.cls.__name__ for m in app.user_middleware]
+        assert "CORSMiddleware" in middleware_classes
 
 
 class TestEventStreaming:
@@ -351,5 +329,5 @@ class TestEndpointAvailability:
             else:
                 response = client.post(path, json={} if "shutdown" in path else None)
 
-            # Should not be 404 (endpoint exists)
             assert response.status_code != 404, f"{method} {path} not found"
+            assert response.status_code == expected_status

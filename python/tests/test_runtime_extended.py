@@ -44,8 +44,9 @@ class TestRuntimeEdgeCases:
             async for event in runtime.execute_agent("test", "input"):
                 events.append(event)
 
-            # Should still yield events and handle error
-            assert len(events) >= 0
+            # Should still yield events and surface stderr as an error event
+            error_events = [e for e in events if e.event_type == EventType.ERROR]
+            assert error_events, "Expected ERROR event from stderr on non-zero exit"
 
     @pytest.mark.asyncio
     async def test_execute_agent_with_empty_input(self, tmp_path):

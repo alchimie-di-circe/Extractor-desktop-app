@@ -1,7 +1,6 @@
 """Extended integration tests for FastAPI + CagentRuntime."""
 
 import pytest
-import json
 import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
@@ -13,7 +12,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from main import app, event_queues, _execute_agent_background, agent_event_generator
-from runtime import CagentRuntime, EventType
+from runtime import EventType
 from event_parser import CagentEvent
 
 
@@ -26,19 +25,39 @@ def client():
 class TestSSEStreamingBehavior:
     """Tests for SSE streaming behavior and edge cases."""
 
-    def test_stream_with_immediate_result(self, client):
+    @pytest.mark.asyncio
+    async def test_stream_with_immediate_result(self):
         """Test SSE stream with immediate result event."""
         request_id = "test-immediate"
+        queue = asyncio.Queue()
+        event_queues[request_id] = queue
 
-        with patch("main.event_queues", {request_id: asyncio.Queue()}):
-            # The queue exists but is empty, simulating no events yet
-            pass
+        await queue.put(CagentEvent(EventType.RESULT, {"result": "done"}, time.time()))
+        await queue.put(None)
 
-    def test_stream_with_delayed_events(self, client):
+        received = [event async for event in agent_event_generator(request_id)]
+        assert any(event["event"] == "result" for event in received)
+
+    @pytest.mark.asyncio
+    async def test_stream_with_delayed_events(self):
         """Test SSE stream handles delayed events."""
         request_id = "test-delayed"
-        # This tests the keepalive mechanism
-        pass
+        queue = asyncio.Queue()
+        event_queues[request_id] = queue
+
+        async def producer():
+            await asyncio.sleep(0.01)
+            await queue.put(CagentEvent(EventType.THINKING, {"content": "thinking"}, time.time()))
+            await queue.put(CagentEvent(EventType.RESULT, {"result": "done"}, time.time()))
+            await queue.put(None)
+
+        producer_task = asyncio.create_task(producer())
+        received = [event async for event in agent_event_generator(request_id)]
+        await producer_task
+
+        emitted_events = [event["event"] for event in received]
+        assert "thinking" in emitted_events
+        assert "result" in emitted_events
 
     @pytest.mark.asyncio
     async def test_event_queue_cleanup_after_stream_ends(self):
@@ -94,26 +113,17 @@ class TestSSEStreamingBehavior:
     async def test_keepalive_on_timeout(self):
         """Test keepalive event sent on timeout."""
         request_id = "test-keepalive"
-        queue = asyncio.Queue()
-        event_queues[request_id] = queue
 
-        # Don't add any events, let it timeout
-        received = []
-        try:
-            async for event in agent_event_generator(request_id):
-                received.append(event)
-                if event["event"] == "keepalive":
-                    # Got keepalive, end test
-                    break
-                # Wait a bit to trigger timeout
-                await asyncio.sleep(0.1)
-        except asyncio.CancelledError:
-            pass
+        async def immediate_timeout(coro, *args, **kwargs):
+            if asyncio.iscoroutine(coro):
+                coro.close()
+            raise asyncio.TimeoutError
 
-        # Should have received keepalive
-        keepalive_events = [e for e in received if e["event"] == "keepalive"]
-        # May or may not have received keepalive depending on timing
-        assert True  # Test completes without error
+        with patch("main.asyncio.wait_for", side_effect=immediate_timeout):
+            generator = agent_event_generator(request_id)
+            keepalive = await generator.__anext__()
+            assert keepalive["event"] == "keepalive"
+            await generator.aclose()
 
 
 class TestBackgroundTaskExecution:
@@ -267,9 +277,7 @@ class TestConcurrentRequests:
 
     def test_multiple_concurrent_execute_requests(self, client):
         """Test multiple concurrent execute requests."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             # Send multiple requests
             responses = []
             for i in range(3):
@@ -335,9 +343,7 @@ class TestInputValidation:
 
     def test_agent_id_with_special_characters(self, client):
         """Test agent_id with special characters."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={
@@ -349,9 +355,7 @@ class TestInputValidation:
 
     def test_input_with_unicode(self, client):
         """Test input with unicode characters."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={
@@ -363,9 +367,7 @@ class TestInputValidation:
 
     def test_context_with_nested_objects(self, client):
         """Test context with deeply nested objects."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={
@@ -386,9 +388,7 @@ class TestInputValidation:
 
     def test_very_large_input(self, client):
         """Test handling of very large input."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             large_input = "x" * 100000
 
             response = client.post(
@@ -435,9 +435,7 @@ class TestRegressionTests:
 
     def test_request_id_is_uuid_format(self, client):
         """Regression: Ensure request_id is valid UUID."""
-        with patch("main.cagent_runtime") as mock_runtime:
-            mock_runtime is not None
-
+        with patch("main.cagent_runtime", MagicMock()):
             response = client.post(
                 "/agent/execute",
                 json={"agent_id": "test", "input": {"input": "test"}}

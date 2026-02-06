@@ -202,25 +202,15 @@ class TestEventParserStream:
         assert events[0].event_type == EventType.THINKING
         assert events[1].event_type == EventType.RESULT
 
-    def test_parse_stream_chronological_order(self, parser):
+    def test_parse_stream_chronological_order(self, parser, monkeypatch):
         """Test that events are sorted chronologically."""
-        import time
+        timestamps = iter([1000.0, 998.0, 999.0])
+        monkeypatch.setattr("event_parser.time.time", lambda: next(timestamps))
 
         stdout_lines = ["Line 1", "Line 2", "Line 3"]
-        # Manually set timestamps to verify sorting
-        events = []
-        for i, line in enumerate(stdout_lines):
-            event = CagentEvent(
-                event_type=EventType.INFO,
-                data={"message": line},
-                timestamp=1000.0 - i,  # Reverse order
-            )
-            events.append(event)
+        events = list(parser.parse_stream(stdout_lines, []))
 
-        # Verify parser orders them
-        ordered_events = sorted(events, key=lambda e: e.timestamp)
-        assert ordered_events[0].data["message"] == "Line 3"
-        assert ordered_events[-1].data["message"] == "Line 1"
+        assert [event.data["message"] for event in events] == ["Line 2", "Line 3", "Line 1"]
 
     def test_parse_stream_filters_none(self, parser):
         """Test that None results are filtered."""

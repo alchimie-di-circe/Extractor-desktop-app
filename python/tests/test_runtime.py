@@ -31,7 +31,7 @@ class TestCagentRuntimeInitialization:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="cagent version v1.0.0\n")
 
-            with pytest.raises(CagentRuntimeError, match="team.yaml not found"):
+            with pytest.raises(CagentRuntimeError, match=r"team\.yaml not found"):
                 CagentRuntime("nonexistent/team.yaml")
 
     def test_runtime_initialization_cagent_not_found(self, tmp_path):

@@ -335,7 +335,7 @@ pytest tests/ --cov=. --cov-report=html
 
 ## Dependencies Required
 
-```
+```text
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 sse-starlette>=1.8.0

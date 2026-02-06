@@ -3,6 +3,7 @@
 import pytest
 import os
 from unittest.mock import patch
+from pydantic import ValidationError
 from config import Settings
 
 
@@ -30,9 +31,9 @@ class TestSettingsEnvironmentOverrides:
 
     def test_host_from_environment(self):
         """Test HOST can be overridden by environment."""
-        with patch.dict(os.environ, {"HOST": "0.0.0.0"}):
+        with patch.dict(os.environ, {"HOST": "127.0.0.2"}):
             settings = Settings()
-            assert settings.HOST == "0.0.0.0"
+            assert settings.HOST == "127.0.0.2"
 
     def test_port_from_environment(self):
         """Test PORT can be overridden by environment."""
@@ -89,7 +90,7 @@ class TestSettingsValidation:
     def test_invalid_port_raises_error(self):
         """Test invalid PORT value raises error."""
         with patch.dict(os.environ, {"PORT": "not_a_number"}):
-            with pytest.raises(Exception):  # Pydantic validation error
+            with pytest.raises(ValidationError):
                 Settings()
 
     def test_host_type_validation(self):

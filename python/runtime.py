@@ -10,6 +10,8 @@ import json
 import logging
 import pathlib
 import subprocess
+import time
+import uuid
 from typing import AsyncGenerator, Optional
 
 import psutil
@@ -40,7 +42,7 @@ class CagentRuntime:
         """
         self.team_yaml_path = team_yaml_path
         self.parser = EventParser(json_mode=True)
-        self.active_processes: dict[str, subprocess.Popen] = {}
+        self.active_processes: dict[str, asyncio.subprocess.Process] = {}
         self.shutdown_flag = False
 
         # Verify cagent is available
@@ -63,6 +65,49 @@ class CagentRuntime:
             raise CagentRuntimeError(f"team.yaml not found: {team_yaml_path}")
 
         logger.info(f"CagentRuntime initialized with {team_yaml_path}")
+
+    @staticmethod
+    def _decode_output(raw_data: object) -> str:
+        """Decode subprocess output from bytes to string safely."""
+        if raw_data is None:
+            return ""
+        if isinstance(raw_data, bytes):
+            return raw_data.decode("utf-8", errors="ignore")
+        return str(raw_data)
+
+    async def _await_stream_method(self, stream: object, method_name: str) -> None:
+        """Call an async stream method when available, no-op for sync test doubles."""
+        method = getattr(stream, method_name, None)
+        if not callable(method):
+            return
+
+        result = method()
+        if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+            await result
+
+    async def _stream_lines(self, stream: object) -> AsyncGenerator[str, None]:
+        """Read subprocess stream incrementally when possible."""
+        readline = getattr(stream, "readline", None)
+        if callable(readline) and asyncio.iscoroutinefunction(readline):
+            while True:
+                raw_line = await readline()
+                if not raw_line:
+                    return
+                yield self._decode_output(raw_line).rstrip("\r\n")
+
+        read = getattr(stream, "read", None)
+        if callable(read):
+            raw_data = read()
+            if asyncio.iscoroutine(raw_data) or isinstance(raw_data, asyncio.Future):
+                raw_data = await raw_data
+            text = self._decode_output(raw_data)
+            for line in text.splitlines():
+                yield line
+
+    @staticmethod
+    def _remaining_timeout(deadline: float) -> float:
+        """Return remaining timeout budget in seconds."""
+        return max(0.0, deadline - asyncio.get_running_loop().time())
 
     async def execute_agent(
         self,
@@ -89,12 +134,11 @@ class CagentRuntime:
         if self.shutdown_flag:
             raise CagentRuntimeError("Runtime is shutting down")
 
-        process_id = f"{agent_id}_{id(asyncio.current_task())}"
+        process_id = f"{agent_id}_{uuid.uuid4().hex[:8]}"
         logger.info(f"[{process_id}] Starting execution of agent: {agent_id}")
 
-        proc = None
-        stdout_lines = []
-        stderr_lines = []
+        proc: Optional[asyncio.subprocess.Process] = None
+        reader_tasks: list[asyncio.Task] = []
 
         try:
             # Build command
@@ -124,8 +168,6 @@ class CagentRuntime:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                encoding='utf-8',
-                errors='ignore' # Or 'replace', to be even more robust
             )
 
             self.active_processes[process_id] = proc
@@ -133,45 +175,51 @@ class CagentRuntime:
             logger.debug(f"[{process_id}] Subprocess spawned: PID={proc.pid}")
 
             # Send input and close stdin
-            proc.stdin.write(stdin_input)
-            proc.stdin.close()
+            if proc.stdin:
+                proc.stdin.write(stdin_input.encode("utf-8"))
+                await self._await_stream_method(proc.stdin, "drain")
+                proc.stdin.close()
+                await self._await_stream_method(proc.stdin, "wait_closed")
 
-            # Read stdout/stderr concurrently with timeout
-            try:
-                stdout_data, stderr_data = await asyncio.wait_for(
-                    asyncio.gather(
-                        proc.stdout.read(),
-                        proc.stderr.read(),
-                    ),
-                    timeout=timeout,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(f"[{process_id}] Execution timeout ({timeout}s)")
-                self._kill_process_tree(proc.pid)
-                import time  # at top of file
+            deadline = asyncio.get_running_loop().time() + timeout
+            line_queue: asyncio.Queue[tuple[bool, Optional[str]]] = asyncio.Queue()
 
-                yield CagentEvent(
-                    event_type=EventType.ERROR,
-                    data={"error": f"Execution timeout after {timeout}s"},
-                    timestamp=time.time(),
-                )
-                return
+            async def _pump_stream(stream: object, is_stderr: bool) -> None:
+                try:
+                    async for line in self._stream_lines(stream):
+                        await line_queue.put((is_stderr, line))
+                finally:
+                    await line_queue.put((is_stderr, None))
 
-            # Parse stdout/stderr
-            stdout_lines = stdout_data.split("\n") if stdout_data else []
-            stderr_lines = stderr_data.split("\n") if stderr_data else []
+            if proc.stdout:
+                reader_tasks.append(asyncio.create_task(_pump_stream(proc.stdout, False)))
+            if proc.stderr:
+                reader_tasks.append(asyncio.create_task(_pump_stream(proc.stderr, True)))
 
-            logger.debug(
-                f"[{process_id}] Stdout lines: {len(stdout_lines)}, "
-                f"Stderr lines: {len(stderr_lines)}"
-            )
+            closed_streams = 0
+            while closed_streams < len(reader_tasks):
+                remaining = self._remaining_timeout(deadline)
+                if remaining <= 0:
+                    raise asyncio.TimeoutError
 
-            # Parse and yield events
-            for event in self.parser.parse_stream(stdout_lines, stderr_lines):
-                yield event
+                is_stderr, line = await asyncio.wait_for(line_queue.get(), timeout=remaining)
+                if line is None:
+                    closed_streams += 1
+                    continue
 
-            # Wait for process exit
-            await proc.wait()
+                event = self.parser.parse_line(line, is_stderr=is_stderr)
+                if event is not None:
+                    yield event
+
+            reader_results = await asyncio.gather(*reader_tasks, return_exceptions=True)
+            for result in reader_results:
+                if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
+                    raise result
+
+            remaining = self._remaining_timeout(deadline)
+            if remaining <= 0:
+                raise asyncio.TimeoutError
+            await asyncio.wait_for(proc.wait(), timeout=remaining)
 
             # Check exit code
             if proc.returncode != 0:
@@ -181,12 +229,23 @@ class CagentRuntime:
 
             logger.info(f"[{process_id}] Execution completed successfully")
 
+        except asyncio.TimeoutError:
+            logger.warning(f"[{process_id}] Execution timeout ({timeout}s)")
+            if proc:
+                await self._kill_process_tree_async(proc.pid)
+            yield CagentEvent(
+                event_type=EventType.ERROR,
+                data={"error": f"Execution timeout after {timeout}s"},
+                timestamp=time.time(),
+            )
+            return
+
         except Exception as e:
             logger.exception(f"[{process_id}] Execution error")
             yield CagentEvent(
                 event_type=EventType.ERROR,
                 data={"error": str(e)},
-                timestamp=asyncio.get_event_loop().time(),
+                timestamp=time.time(),
             )
 
         finally:
@@ -194,8 +253,14 @@ class CagentRuntime:
             if process_id in self.active_processes:
                 del self.active_processes[process_id]
 
+            for task in reader_tasks:
+                if not task.done():
+                    task.cancel()
+            if reader_tasks:
+                await asyncio.gather(*reader_tasks, return_exceptions=True)
+
             if proc and proc.returncode is None:
-                self._kill_process_tree(proc.pid)
+                await self._kill_process_tree_async(proc.pid)
 
             logger.debug(f"[{process_id}] Cleanup complete")
 
@@ -226,7 +291,7 @@ class CagentRuntime:
                 pass
 
             # Wait a bit and force kill if still alive
-            gone, alive = psutil.wait_procs(children + [parent], timeout=2)
+            _, alive = psutil.wait_procs([*children, parent], timeout=2)
             for proc in alive:
                 try:
                     logger.warning(f"Force killing process: {proc.pid}")
@@ -236,8 +301,12 @@ class CagentRuntime:
 
         except psutil.NoSuchProcess:
             logger.debug(f"Process {pid} already terminated")
-        except Exception as e:
-            logger.error(f"Error killing process tree {pid}: {e}")
+        except Exception:
+            logger.exception(f"Error killing process tree {pid}")
+
+    async def _kill_process_tree_async(self, pid: int) -> None:
+        """Run potentially blocking process tree cleanup off the event loop."""
+        await asyncio.to_thread(self._kill_process_tree, pid)
 
     async def shutdown(self) -> None:
         """Shutdown runtime and kill all active processes."""
@@ -248,7 +317,7 @@ class CagentRuntime:
         for process_id, proc in list(self.active_processes.items()):
             logger.info(f"Killing process: {process_id}")
             if proc.returncode is None:
-                self._kill_process_tree(proc.pid)
+                await self._kill_process_tree_async(proc.pid)
 
         # Wait for all processes to finish
         await asyncio.sleep(0.1)
