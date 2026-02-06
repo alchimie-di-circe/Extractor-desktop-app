@@ -3,7 +3,7 @@ import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 import { getConfig, setConfig } from './config-manager';
 import { registerIpcHandlers } from './ipc-handlers';
-import { registerSidecarIpcHandlers } from './sidecar-ipc-handlers';
+import { registerOsxphotosIpcHandlers, registerSidecarIpcHandlers } from './sidecar-ipc-handlers';
 import { sidecarReloadManager } from './sidecar-reload';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -14,6 +14,7 @@ if (started) {
 // Register IPC handlers early
 registerIpcHandlers();
 registerSidecarIpcHandlers();
+registerOsxphotosIpcHandlers();
 
 let mainWindow: BrowserWindow | null = null;
 

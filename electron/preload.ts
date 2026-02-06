@@ -4,6 +4,7 @@ import {
 	ConfigChannels,
 	KeychainChannels,
 	LLMChannels,
+	OsxphotosChannels,
 	SidecarReloadChannels,
 	SystemChannels,
 } from '../shared/ipc-channels';
@@ -185,6 +186,31 @@ const sidecarApi = {
 };
 
 /**
+ * Osxphotos API exposed to renderer
+ */
+const osxphotosApi = {
+	listAlbums: (): Promise<
+		IpcResult<{ albums: Array<{ id: string; name: string; count: number }> }>
+	> => ipcRenderer.invoke(OsxphotosChannels.LIST_ALBUMS),
+
+	getPhotos: (
+		albumId: string,
+		limit?: number,
+	): Promise<
+		IpcResult<{
+			album_id: string;
+			photos: Array<{ id: string; filename: string; width: number; height: number }>;
+		}>
+	> => ipcRenderer.invoke(OsxphotosChannels.GET_PHOTOS, albumId, limit),
+
+	exportPhoto: (
+		photoId: string,
+		exportPath: string,
+	): Promise<IpcResult<{ success: boolean; path: string }>> =>
+		ipcRenderer.invoke(OsxphotosChannels.EXPORT_PHOTO, photoId, exportPath),
+};
+
+/**
  * Desktop API - main interface exposed to renderer via contextBridge
  */
 const desktopApi = {
@@ -193,6 +219,7 @@ const desktopApi = {
 	llm: llmApi,
 	cagent: cagentApi,
 	sidecar: sidecarApi,
+	osxphotos: osxphotosApi,
 	getPlatform: (): Promise<NodeJS.Platform> => ipcRenderer.invoke(SystemChannels.GET_PLATFORM),
 };
 
