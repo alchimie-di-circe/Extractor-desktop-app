@@ -166,6 +166,17 @@ class TestShutdownEndpoint:
             # Queues should be empty
             assert len(event_queues) == 0
 
+    def test_execute_returns_503_after_shutdown(self, client):
+        """After shutdown, runtime should be unavailable for new executions."""
+        shutdown_response = client.post("/shutdown")
+        assert shutdown_response.status_code == 200
+
+        execute_response = client.post(
+            "/agent/execute",
+            json={"agent_id": "test", "input": {"input": "query"}},
+        )
+        assert execute_response.status_code == 503
+
 
 class TestModelValidation:
     """Tests for Pydantic model validation."""

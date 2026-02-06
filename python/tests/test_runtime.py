@@ -45,6 +45,18 @@ class TestCagentRuntimeInitialization:
             with pytest.raises(CagentRuntimeError, match="Cannot execute cagent"):
                 CagentRuntime(str(team_yaml))
 
+    def test_runtime_initialization_preserves_cagent_error_cause(self, tmp_path):
+        """Test initialization chains underlying cagent invocation errors."""
+        team_yaml = tmp_path / "team.yaml"
+        team_yaml.write_text("metadata:\n  author: test\n")
+
+        original_error = FileNotFoundError("cagent not found")
+        with patch("subprocess.run", side_effect=original_error):
+            with pytest.raises(CagentRuntimeError, match="Cannot execute cagent") as exc_info:
+                CagentRuntime(str(team_yaml))
+
+        assert exc_info.value.__cause__ is original_error
+
     def test_runtime_initialization_cagent_version_fails(self, tmp_path):
         """Test initialization fails when cagent version check fails."""
         team_yaml = tmp_path / "team.yaml"

@@ -57,7 +57,7 @@ class CagentRuntime:
                 raise CagentRuntimeError("cagent not available in PATH")
             logger.info(f"Cagent available: {result.stdout.strip()}")
         except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-            raise CagentRuntimeError(f"Cannot execute cagent: {e}")
+            raise CagentRuntimeError(f"Cannot execute cagent: {e}") from e
 
         # Verify team.yaml exists
         team_path = pathlib.Path(team_yaml_path)

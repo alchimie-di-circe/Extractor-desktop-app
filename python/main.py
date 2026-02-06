@@ -380,6 +380,7 @@ async def shutdown(request: Request):
 
     if cagent_runtime:
         await cagent_runtime.shutdown()
+        cagent_runtime = None
 
     # Clean up any remaining event queues
     event_queues.clear()

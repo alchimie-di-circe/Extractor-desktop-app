@@ -21,8 +21,7 @@ from main import (
     _execute_agent_background,
     agent_event_generator,
 )
-from runtime import EventType
-from event_parser import CagentEvent
+from event_parser import CagentEvent, EventType
 
 
 @pytest.fixture
