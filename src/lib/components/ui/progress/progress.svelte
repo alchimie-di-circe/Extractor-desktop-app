@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Progress as ProgressPrimitive } from 'bits-ui';
+import { Progress as ProgressPrimitive } from 'bits-ui';
 import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
 
 const {
@@ -22,6 +22,6 @@ const {
 	<div
 		data-slot="progress-indicator"
 		class="bg-primary h-full w-full flex-1 transition-all"
-		style="transform: translateX(-{100 - (100 * (value ?? 0)) / (max ?? 1)}%)"
+		style="transform: translateX(-{100 - (100 * (value ?? 0)) / (max || 1)}%)"
 	></div>
 </ProgressPrimitive.Root>

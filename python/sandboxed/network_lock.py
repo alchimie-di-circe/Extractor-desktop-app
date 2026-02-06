@@ -23,8 +23,14 @@ class _RestrictedSocket(_OriginalSocket):
         Override socket creation to restrict to AF_UNIX only.
 
         Raises:
-            PermissionError: If family is anything other than AF_UNIX.
+            PermissionError: If family is anything other than AF_UNIX, or if fileno is provided.
         """
+        # Block fileno to prevent wrapping existing network sockets
+        if fileno is not None:
+            raise PermissionError(
+                "wrapping existing file descriptors is not allowed in sandboxed context."
+            )
+
         if family != _socket.AF_UNIX:
             raise PermissionError(
                 f"network operations not allowed: attempted socket family {family}. "

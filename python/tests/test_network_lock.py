@@ -51,3 +51,12 @@ def test_blocking_happens_on_import():
     # Immediately test
     with pytest.raises(PermissionError):
         socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+
+def test_fileno_parameter_blocked():
+    """Fileno parameter should be blocked to prevent socket descriptor wrapping."""
+    import python.sandboxed.network_lock  # noqa: F401
+
+    # Even AF_UNIX with fileno should be blocked
+    with pytest.raises(PermissionError, match="file descriptors"):
+        socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, fileno=3)

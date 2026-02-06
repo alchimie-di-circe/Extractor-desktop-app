@@ -94,8 +94,14 @@ def validate_photo_export_path(album: str, photo_id: str) -> str:
         Safe export path
 
     Raises:
-        SecurityError: If album/photo_id contain invalid characters
+        SecurityError: If album/photo_id are empty or contain invalid characters
     """
+    # Validate non-empty
+    if not album:
+        raise SecurityError("Album name cannot be empty")
+    if not photo_id:
+        raise SecurityError("Photo ID cannot be empty")
+
     # Sanitize album name (alphanumeric, dash, underscore only)
     if not all(c.isalnum() or c in "-_" for c in album):
         raise SecurityError(f"Invalid characters in album name: {album}")

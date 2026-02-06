@@ -7,7 +7,7 @@ RED phase: These tests define expected behavior before implementation.
 import os
 import pytest
 from pathlib import Path
-from python.sandboxed.path_whitelist import validate_export_path, SecurityError
+from python.sandboxed.path_whitelist import validate_export_path, validate_photo_export_path, SecurityError
 
 
 class TestPathWhitelist:
@@ -79,3 +79,13 @@ class TestPathWhitelist:
         """Empty paths should raise an error."""
         with pytest.raises(SecurityError):
             validate_export_path("")
+
+    def test_empty_album_name_blocked(self):
+        """Empty album name should be blocked."""
+        with pytest.raises(SecurityError, match="Album name cannot be empty"):
+            validate_photo_export_path("", "photo-123")
+
+    def test_empty_photo_id_blocked(self):
+        """Empty photo ID should be blocked."""
+        with pytest.raises(SecurityError, match="Photo ID cannot be empty"):
+            validate_photo_export_path("MyAlbum", "")
