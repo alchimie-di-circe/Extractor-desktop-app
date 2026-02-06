@@ -197,7 +197,7 @@ export class OsxphotosSuperviso extends EventEmitter {
 		method: string,
 		params: Record<string, unknown> | unknown[] = {},
 	): Promise<T> {
-		if (!this.isRunning()) {
+		if (!this.isRunning() || this.isShuttingDown) {
 			throw new Error('Osxphotos is not running');
 		}
 
@@ -719,11 +719,25 @@ export function registerOsxphotosIpcHandlers(): void {
 				}
 
 				// Validate export path (both sides validate - defense in depth)
-				if (
-					exportPath.includes('..') ||
-					exportPath.includes('\0') ||
-					path.isAbsolute(exportPath)
-				) {
+				// Check for null bytes
+				if (exportPath.includes('\0')) {
+					return {
+						success: false,
+						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
+					};
+				}
+
+				// Check for absolute paths
+				if (path.isAbsolute(exportPath)) {
+					return {
+						success: false,
+						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
+					};
+				}
+
+				// Check for directory traversal using segment-based check (not substring)
+				const segments = exportPath.split(path.sep);
+				if (segments.some(s => s === '..')) {
 					return {
 						success: false,
 						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },

@@ -329,7 +329,7 @@ class OsxphotosMCPServer:
 
             elif tool_name == "request_export":
                 album_id = tool_params.get("album_id")
-                photo_ids = tool_params.get("photo_ids", [])
+                photo_ids = tool_params.get("photo_ids")
                 export_path = tool_params.get("export_path")
 
                 if album_id is None or photo_ids is None or export_path is None:

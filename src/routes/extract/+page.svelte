@@ -20,19 +20,19 @@ interface AlbumItem {
 	count: number;
 }
 
-const activeTab = $state('upload');
+let activeTab = $state('upload');
 let albums = $state<AlbumItem[]>([]);
 let loadingAlbums = $state(false);
 let albumError = $state<string | null>(null);
-const exportProgress = $state(0);
-const selectedAlbum = $state<string | null>(null);
+let exportProgress = $state(0);
+let selectedAlbum = $state<string | null>(null);
 
 async function loadAlbums() {
 	loadingAlbums = true;
 	albumError = null;
 	try {
 		const result = await window.electronAPI.osxphotos.listAlbums();
-		if (result.success) {
+		if (result.success && result.data?.albums) {
 			albums = result.data.albums;
 		} else {
 			albumError = result.error?.message || 'Failed to load albums';
@@ -160,6 +160,7 @@ $effect(() => {
 												Seleziona album
 											</Button>
 											{#if selectedAlbum === album.id}
+												{/* TODO: Connect export progress from IPC events */}
 												<Progress value={exportProgress} class="w-full" />
 											{/if}
 										</div>

@@ -53,10 +53,26 @@ def test_blocking_happens_on_import():
         socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
-def test_fileno_parameter_blocked():
-    """Fileno parameter should be blocked to prevent socket descriptor wrapping."""
+def test_fileno_allowed_for_af_unix():
+    """Fileno parameter should be allowed for AF_UNIX (needed for asyncio.socketpair)."""
     import python.sandboxed.network_lock  # noqa: F401
 
-    # Even AF_UNIX with fileno should be blocked
-    with pytest.raises(PermissionError, match="file descriptors"):
-        socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, fileno=3)
+    # AF_UNIX with fileno should be allowed (no actual fd needed for this test)
+    # Just verify it doesn't raise PermissionError for AF_UNIX+fileno combination
+    try:
+        # This will fail with a different error (bad file descriptor) but NOT PermissionError
+        socket.socket(socket.AF_UNIX, socket.SOCK_STREAM, fileno=999)
+    except PermissionError:
+        pytest.fail("AF_UNIX with fileno should not raise PermissionError")
+    except (OSError, ValueError):
+        # Expected: invalid file descriptor, but that's OK -- we're just testing it doesn't raise PermissionError
+        pass
+
+
+def test_fileno_blocked_for_non_af_unix():
+    """Fileno parameter should be blocked for non-AF_UNIX sockets to prevent network wrapping."""
+    import python.sandboxed.network_lock  # noqa: F401
+
+    # AF_INET with fileno should be blocked
+    with pytest.raises(PermissionError, match="non-AF_UNIX"):
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM, fileno=3)
