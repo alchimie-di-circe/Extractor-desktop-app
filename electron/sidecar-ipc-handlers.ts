@@ -59,7 +59,7 @@ interface HealthCheckConfig {
 	maxBackoff: number;
 }
 
-export class OsxphotosSuperviso extends EventEmitter {
+export class OsxphotosSupervisor extends EventEmitter {
 	private process: ChildProcess | null = null;
 	private socketPath: string = '/tmp/trae-osxphotos.sock';
 	private socket: Socket | null = null;
@@ -120,7 +120,6 @@ export class OsxphotosSuperviso extends EventEmitter {
 				message: 'Osxphotos process started',
 				timestamp: Date.now(),
 			});
-			this.crashTimestamps = [];
 			this.currentBackoff = 1000;
 			this.failureCount = 0;
 			this.lastHealthyTime = Date.now();
@@ -137,6 +136,11 @@ export class OsxphotosSuperviso extends EventEmitter {
 			});
 			throw error;
 		}
+	}
+
+	async startFresh(): Promise<void> {
+		this.crashTimestamps = [];
+		await this.start();
 	}
 
 	async stop(): Promise<void> {
@@ -217,13 +221,15 @@ export class OsxphotosSuperviso extends EventEmitter {
 
 			this.pendingRequests.set(id, { resolve, reject, timeout });
 
-			try {
-				this.sendRequest(request);
-			} catch (error) {
-				this.pendingRequests.delete(id);
-				clearTimeout(timeout);
-				reject(error);
-			}
+			(async () => {
+				try {
+					await this.sendRequest(request);
+				} catch (error) {
+					this.pendingRequests.delete(id);
+					clearTimeout(timeout);
+					reject(error);
+				}
+			})();
 		});
 	}
 
@@ -423,11 +429,33 @@ export class OsxphotosSuperviso extends EventEmitter {
 		await this.start();
 	}
 
-	private sendRequest(request: JsonRpcRequest): void {
+	private async sendRequest(request: JsonRpcRequest): Promise<void> {
 		try {
 			if (!this.socket || !this.socket.writable) {
 				this.socket = createConnection(this.socketPath);
 				this.setupSocketHandlers();
+
+				// Wait for connection to be established before writing
+				await new Promise<void>((resolve, reject) => {
+					const timeout = setTimeout(() => {
+						reject(new Error('Socket connection timeout'));
+					}, 5000);
+
+					const onConnect = () => {
+						clearTimeout(timeout);
+						this.socket?.removeListener('error', onError);
+						resolve();
+					};
+
+					const onError = (error: Error) => {
+						clearTimeout(timeout);
+						this.socket?.removeListener('connect', onConnect);
+						reject(error);
+					};
+
+					this.socket!.once('connect', onConnect);
+					this.socket!.once('error', onError);
+				});
 			}
 
 			const json = JSON.stringify(request);
@@ -548,7 +576,7 @@ export class OsxphotosSuperviso extends EventEmitter {
 	}
 }
 
-export const osxphotosSuperviso = new OsxphotosSuperviso();
+export const osxphotosSupervisor = new OsxphotosSupervisor();
 
 export function registerSidecarIpcHandlers(): void {
 	/**
@@ -645,8 +673,8 @@ export function registerOsxphotosIpcHandlers(): void {
 	 */
 	ipcMain.handle(OsxphotosChannels.LIST_ALBUMS, async () => {
 		try {
-			await osxphotosSuperviso.ensureRunning();
-			const result = await osxphotosSuperviso.sendJsonRpc<{
+			await osxphotosSupervisor.ensureRunning();
+			const result = await osxphotosSupervisor.sendJsonRpc<{
 				albums: Array<{ id: string; name: string; count: number }>;
 			}>('list_albums');
 			return { success: true, data: result };
@@ -680,9 +708,9 @@ export function registerOsxphotosIpcHandlers(): void {
 				};
 			}
 
-			await osxphotosSuperviso.ensureRunning();
+			await osxphotosSupervisor.ensureRunning();
 			const params = limit !== undefined ? { album_id: albumId, limit } : { album_id: albumId };
-			const result = await osxphotosSuperviso.sendJsonRpc<{
+			const result = await osxphotosSupervisor.sendJsonRpc<{
 				album_id: string;
 				photos: Array<{ id: string; filename: string; width: number; height: number }>;
 			}>('get_photos', params);
@@ -737,15 +765,15 @@ export function registerOsxphotosIpcHandlers(): void {
 
 				// Check for directory traversal using segment-based check (not substring)
 				const segments = exportPath.split(path.sep);
-				if (segments.some(s => s === '..')) {
+				if (segments.some((s) => s === '..')) {
 					return {
 						success: false,
 						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
 					};
 				}
 
-				await osxphotosSuperviso.ensureRunning();
-				const result = await osxphotosSuperviso.sendJsonRpc<{
+				await osxphotosSupervisor.ensureRunning();
+				const result = await osxphotosSupervisor.sendJsonRpc<{
 					success: boolean;
 					path: string;
 				}>('export_photo', {

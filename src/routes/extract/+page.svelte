@@ -34,12 +34,19 @@ async function loadAlbums() {
 		const result = await window.electronAPI.osxphotos.listAlbums();
 		if (result.success && result.data?.albums) {
 			albums = result.data.albums;
-		} else {
+		} else if (!result.success && 'error' in result) {
 			albumError = result.error?.message || 'Failed to load albums';
+		} else {
+			albumError = 'Failed to load albums';
 		}
 	} catch (error) {
-		albumError =
-			'Full Disk Access not granted. Please enable in System Preferences > Security & Privacy > Full Disk Access';
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		if (errorMsg.includes('permission') || errorMsg.includes('Disk Access')) {
+			albumError =
+				'Full Disk Access not granted. Please enable in System Preferences > Security & Privacy > Full Disk Access';
+		} else {
+			albumError = `Failed to load albums: ${errorMsg}`;
+		}
 	} finally {
 		loadingAlbums = false;
 	}
@@ -160,7 +167,7 @@ $effect(() => {
 												Seleziona album
 											</Button>
 											{#if selectedAlbum === album.id}
-												{/* TODO: Connect export progress from IPC events */}
+												<!-- TODO: Connect export progress from IPC events -->
 												<Progress value={exportProgress} class="w-full" />
 											{/if}
 										</div>

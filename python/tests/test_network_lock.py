@@ -39,7 +39,6 @@ def test_af_inet6_blocked():
 def test_blocking_happens_on_import():
     """The block should be in place immediately after import."""
     # Fresh import in this test function scope
-    import importlib
     import sys
 
     # Clear any cached import
