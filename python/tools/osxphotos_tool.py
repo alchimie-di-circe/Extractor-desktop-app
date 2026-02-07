@@ -141,6 +141,14 @@ class OsxphotosTool:
                     response_length_bytes += chunk
                 response_length = int.from_bytes(response_length_bytes, byteorder="big")
 
+                # Guard against protocol violations / DoS
+                if response_length == 0:
+                    raise OsxphotosResponseError("Zero-length response from server")
+                if response_length > 1024 * 1024:  # 1MB max response
+                    raise OsxphotosResponseError(
+                        f"Response too large from server: {response_length}"
+                    )
+
                 # Receive full response payload
                 response_data = b""
                 while len(response_data) < response_length:
