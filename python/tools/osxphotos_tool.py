@@ -1,7 +1,7 @@
 """
 osxphotos Tool - JSON-RPC client for osxphotos sandboxed server.
 
-Connects to the osxphotos JSON-RPC 2.0 server running on /tmp/trae-osxphotos.sock
+Connects to the osxphotos JSON-RPC 2.0 server running on /tmp/trae-osxphotos-{uid}/server.sock
 and provides methods to query and manage photos from Apple Photos library.
 
 This module is designed to be used by cagent agents to access photos
@@ -16,6 +16,7 @@ import socket
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+DEFAULT_SOCKET_PATH = f"/tmp/trae-osxphotos-{os.getuid()}/server.sock"
 
 
 class OsxphotosError(Exception):
@@ -48,14 +49,14 @@ class OsxphotosTool:
 
     def __init__(
         self,
-        socket_path: str = "/tmp/trae-osxphotos.sock",
+        socket_path: str = DEFAULT_SOCKET_PATH,
         timeout: float = 30.0,
     ):
         """
         Initialize osxphotos tool.
 
         Args:
-            socket_path: Path to Unix socket (default: /tmp/trae-osxphotos.sock)
+            socket_path: Path to Unix socket (default: /tmp/trae-osxphotos-{uid}/server.sock)
             timeout: Request timeout in seconds (default: 30)
 
         Raises:
@@ -169,13 +170,13 @@ class OsxphotosTool:
         except socket.timeout:
             raise OsxphotosConnectionError(
                 f"Connection timeout to osxphotos server (>{self.timeout}s)"
-            )
+            ) from None
         except (socket.error, ConnectionRefusedError, FileNotFoundError) as e:
             raise OsxphotosConnectionError(
                 f"Failed to connect to osxphotos server: {e}"
-            )
+            ) from e
         except json.JSONDecodeError as e:
-            raise OsxphotosResponseError(f"Invalid JSON response from server: {e}")
+            raise OsxphotosResponseError(f"Invalid JSON response from server: {e}") from e
 
     def list_albums(self) -> list[dict[str, Any]]:
         """
@@ -397,7 +398,7 @@ class OsxphotosTool:
 
 # For backward compatibility and REPL/debugging
 async def list_albums_async(
-    socket_path: str = "/tmp/trae-osxphotos.sock",
+    socket_path: str = DEFAULT_SOCKET_PATH,
 ) -> list[dict[str, Any]]:
     """Async wrapper for list_albums (offloads blocking socket I/O to thread pool)."""
     def _sync() -> list[dict[str, Any]]:
@@ -410,7 +411,7 @@ async def list_albums_async(
 async def get_photos_async(
     album_id: str,
     limit: int = 50,
-    socket_path: str = "/tmp/trae-osxphotos.sock",
+    socket_path: str = DEFAULT_SOCKET_PATH,
 ) -> list[dict[str, Any]]:
     """Async wrapper for get_photos (offloads blocking socket I/O to thread pool)."""
     def _sync() -> list[dict[str, Any]]:

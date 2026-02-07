@@ -47,8 +47,8 @@ class PhotosService:
                 raise ImportError("osxphotos module not available")
             self.db = osxphotos.PhotosDB()
             logger.info("Photos database loaded successfully")
-        except ImportError:
-            raise PhotosServiceError("osxphotos not installed")
+        except ImportError as e:
+            raise PhotosServiceError("osxphotos not installed") from e
         except PermissionError as e:
             logger.error(f"Permission denied: {e}")
             raise PhotosPermissionError(
@@ -208,7 +208,12 @@ class PhotosService:
             export_dir = str(export_file.parent)
             export_filename = export_file.name
             
-            photo.export(export_dir, export_filename)
+            exported_paths = photo.export(export_dir, export_filename)
+            if not exported_paths:
+                raise PhotosServiceError(
+                    f"Export returned no files for photo {photo_id} "
+                    f"(dir={export_dir}, filename={export_filename}, target={export_file})"
+                )
 
             logger.info(f"Exported photo {photo_id} to {export_path}")
 

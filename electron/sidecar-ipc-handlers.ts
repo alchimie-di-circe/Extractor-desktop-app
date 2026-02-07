@@ -360,7 +360,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 		}
 
 		try {
-			await this.sendJsonRpc('ping');
+			await this.sendJsonRpc('ping', {}, this.config.timeout);
 			this.handleHealthy();
 		} catch (error) {
 			this.handleUnhealthy();
@@ -369,6 +369,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 	private handleHealthy(): void {
 		this.failureCount = 0;
+		this.currentBackoff = 1000;
 		this.lastHealthyTime = Date.now();
 		this.emitToRenderers({
 			type: 'healthy',
@@ -496,8 +497,8 @@ export class OsxphotosSupervisor extends EventEmitter {
 			const lengthBuffer = Buffer.alloc(4);
 			lengthBuffer.writeUInt32BE(length, 0);
 
-			this.socket.write(lengthBuffer);
-			this.socket.write(json);
+			const payload = Buffer.concat([lengthBuffer, Buffer.from(json)]);
+			this.socket.write(payload);
 		} catch (error) {
 			console.error('[Osxphotos] Error sending request:', error);
 			this.closeSocket();

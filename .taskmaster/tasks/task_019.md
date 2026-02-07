@@ -1,6 +1,6 @@
 # Task ID: 19
 
-**Title:** Implementazione osxphotos Sandboxed Server e Integration
+**Title:** CAGENT RUNTIME in SIDECAR PYTHON
 
 **Status:** done
 

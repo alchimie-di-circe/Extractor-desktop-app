@@ -468,9 +468,8 @@ Tool MCP '{self.tool_id}' non disponibile.
 Per risolvere:
 
 OPZIONE 1 - Docker MCP Gateway (consigliato):
-  1. Installa Docker Engine: https://docs.docker.com/engine/install/
-  2. Avvia Docker: `sudo systemctl start docker` o avvia Docker Desktop
-  3. Installa MCP Gateway: Settings > Tools > Installa Gateway
+  1. Docker MCP Gateway: Settings > Tools > Installa Gateway
+  2. Usa gli MCP server del Docker MCP Toolkit da Docker Hub (ogni map è un immagine/container su docker hub) SENZA INSTALLARE DOCKER DESKTOP o DOCKER ENGINE IN LOCALE (la gateway serve proprio a quello
 
 OPZIONE 2 - Modalità Locale:
   1. Assicurati che Node.js sia installato
@@ -617,7 +616,7 @@ export function registerDockerHandlers(ipcMain: Electron.IpcMain) {
 
 ## Note Implementative
 
-1. **Docker Engine vs Desktop**: Il codice usa `docker info` che funziona sia con Engine che Desktop. Il flag `isDesktop` è informativo ma non bloccante.
+1. **Docker Engine/Desktop vs Docker Hub**: Il codice usa `docker info` che funziona sia con Engine che Desktop. Il flag `isDesktop` è informativo ma non bloccante.
 
 2. **Sicurezza download**: Il download del binary Gateway usa HTTPS e verifica il redirect di GitHub releases.
 

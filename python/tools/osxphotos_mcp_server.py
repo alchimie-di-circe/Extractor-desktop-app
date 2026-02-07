@@ -9,7 +9,7 @@ Usage:
     python tools/osxphotos_mcp_server.py
 
 Environment variables:
-    OSXPHOTOS_SOCKET: Path to osxphotos JSON-RPC socket (default: /tmp/trae-osxphotos.sock)
+    OSXPHOTOS_SOCKET: Path to osxphotos JSON-RPC socket (default: /tmp/trae-osxphotos-{uid}/server.sock)
 """
 
 import asyncio
@@ -56,7 +56,7 @@ class OsxphotosMCPServer:
             socket_path: Path to osxphotos JSON-RPC socket
         """
         self.socket_path = socket_path or os.getenv(
-            "OSXPHOTOS_SOCKET", "/tmp/trae-osxphotos.sock"
+            "OSXPHOTOS_SOCKET", f"/tmp/trae-osxphotos-{os.getuid()}/server.sock"
         )
         self.request_id = 0
         self.tool = None
@@ -401,7 +401,7 @@ class OsxphotosMCPServer:
         """
         logger.info("osxphotos MCP server starting on stdio")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         try:
             while True:
@@ -430,7 +430,7 @@ class OsxphotosMCPServer:
 
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected error in main loop")
             raise
 

@@ -41,7 +41,8 @@ Created 9 new feature tasks with detailed specifications:
 | 27 | Persistent Chat AI | High | 6 | 5, 19, 11 |
 | 28 | Canva MCP (Optional) | Low | 4 | 5, 23 |
 
-### 4. **Task Files Created**
+### 4. **Task Files Created (Markdown)**
+- Note: Tasks 20-22 were added as task entries, but markdown files were created for 23-28 in this update.
 - `.taskmaster/tasks/task_023.md` - Shotstack integration (5 subtasks)
 - `.taskmaster/tasks/task_024.md` - Design compliance checker (5 subtasks)
 - `.taskmaster/tasks/task_025.md` - Brand elements kit (5 subtasks)
@@ -205,7 +206,7 @@ All 9 new tasks include detailed subtask recommendations from complexity analysi
 ## Appendix: Specification Reference
 
 All tasks align with approved specification:
-📄 Reference: `/Users/alexandthemusic/.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md`
+📄 Reference: `.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md` (relative to project root)
 
 Specification includes:
 - Detailed task descriptions

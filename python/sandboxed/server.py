@@ -18,6 +18,7 @@ import logging
 import signal
 import stat
 from pathlib import Path
+from typing import Optional
 
 from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode
 from photos_service import PhotosService, PhotosServiceError
@@ -37,7 +38,7 @@ class OsxphotosServer:
 
     def __init__(
         self,
-        socket_path: str = None,
+        socket_path: Optional[str] = None,
     ):
         """Initialize server."""
         # Use per-user private directory for socket (TOCTOU mitigation)
@@ -265,12 +266,16 @@ async def main() -> None:
         logger.info(f"Signal {sig} received, shutting down...")
         # Schedule shutdown on the event loop
         task = asyncio.create_task(server.shutdown())
-        # Attach error handler to prevent silent failures
-        task.add_done_callback(
-            lambda t: logger.error(f"Shutdown error: {t.exception()}", exc_info=True)
-            if t.exception()
-            else None
-        )
+
+        def _on_done(t: asyncio.Task) -> None:
+            try:
+                exc = t.exception()
+            except asyncio.CancelledError:
+                return
+            if exc is not None:
+                logger.error(f"Shutdown error: {exc}", exc_info=True)
+
+        task.add_done_callback(_on_done)
     
     # Register signal handlers with the event loop
     for sig in (signal.SIGTERM, signal.SIGINT):

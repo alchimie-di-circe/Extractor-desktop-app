@@ -150,7 +150,7 @@ $effect(() => {
 					<Card.Content>
 						<Accordion.Root type="single">
 							{#each albums as album, idx}
-								<Accordion.Item value="album-{album.id}">
+								<Accordion.Item value={`album-${album.id}`}>
 									<Accordion.Trigger class="flex items-center justify-between">
 										<span>{album.name}</span>
 										<span class="text-xs text-muted-foreground">
