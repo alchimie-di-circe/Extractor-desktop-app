@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { existsSync } from 'node:fs';
 import { createConnection, type Socket } from 'node:net';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -64,7 +65,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 	private process: ChildProcess | null = null;
 	private socketPath: string = path.join(
 		app.getPath('temp'),
-		`trae-osxphotos-${process.platform === 'win32' ? process.pid : process.getuid?.() ?? process.pid}.sock`,
+		`trae-osxphotos-${process.platform === 'win32' ? process.pid : (process.getuid?.() ?? process.pid)}.sock`,
 	);
 	private socket: Socket | null = null;
 	private healthCheckTimer: NodeJS.Timer | null = null;
@@ -618,16 +619,28 @@ export class OsxphotosSupervisor extends EventEmitter {
 	}
 
 	private getPythonPath(): string {
-		if (app.isPackaged) {
-			// TODO: Ensure Python is bundled in resources during build
-			// Currently should be at process.resourcesPath/sidecar/python3 or similar
-			// This requires build configuration to include bundled Python interpreter
-			const pythonPath = path.join(process.resourcesPath, 'sidecar', 'python3');
-			console.log(`[Osxphotos] Using bundled Python at ${pythonPath}`);
-			return pythonPath;
-		} else {
-			return process.platform === 'win32' ? 'python' : 'python3';
+		const fallbackPython = process.platform === 'win32' ? 'python' : 'python3';
+
+		if (!app.isPackaged) {
+			return fallbackPython;
 		}
+
+		const bundledInterpreterCandidates = [
+			path.join(process.resourcesPath, 'sidecar', 'python3'),
+			path.join(process.resourcesPath, 'sidecar', 'python'),
+			path.join(process.resourcesPath, 'sidecar', 'python.exe'),
+		];
+
+		const bundledPython = bundledInterpreterCandidates.find((candidate) => existsSync(candidate));
+		if (bundledPython) {
+			console.log(`[Osxphotos] Using bundled Python at ${bundledPython}`);
+			return bundledPython;
+		}
+
+		console.warn(
+			`[Osxphotos] Bundled Python interpreter not found in sidecar resources, falling back to ${fallbackPython}`,
+		);
+		return fallbackPython;
 	}
 }
 
@@ -817,12 +830,14 @@ export function registerOsxphotosIpcHandlers(): void {
 					path.join(homeDir, 'Exports'),
 					path.join(homeDir, 'Documents', 'TraeExports'),
 				];
-const normalizedPath = path.resolve(exportPath);
-const isAllowed = allowedDirs.some((dir) => {
-	const rel = path.relative(dir, normalizedPath);
-	return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel));
-});
-				);
+				const normalizedPath = path.resolve(exportPath);
+				const isAllowed = allowedDirs.some((dir) => {
+					const rel = path.relative(dir, normalizedPath);
+					return (
+						rel === '' ||
+						(!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel))
+					);
+				});
 
 				if (!isAllowed) {
 					return {

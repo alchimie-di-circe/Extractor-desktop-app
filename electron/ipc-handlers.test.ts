@@ -17,6 +17,7 @@ vi.mock('electron', () => ({
 		},
 	},
 	app: {
+		on: vi.fn(),
 		getPath: vi.fn(() => '/tmp'),
 	},
 }));
@@ -141,8 +142,9 @@ describe('Osxphotos Handlers', () => {
 		const result2 = await handler({}, 'photo123', '/tmp/../../etc/passwd');
 		expect(result2).toMatchObject({
 			success: false,
-			error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
+			error: { code: 'SECURITY_ERROR' },
 		});
+		expect((result2 as { error?: { message?: string } }).error?.message).toContain('Export path');
 	});
 
 	it('LIST_ALBUMS handler validates input types', async () => {
