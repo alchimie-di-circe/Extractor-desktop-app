@@ -113,7 +113,7 @@ describe('registerLLMHandlers', () => {
 });
 
 describe('Osxphotos Handlers', () => {
-	it('LIST_ALBUMS handler rejects if albumId is invalid in GET_PHOTOS', async () => {
+	it('GET_PHOTOS handler rejects if albumId is invalid', async () => {
 		const { registerOsxphotosIpcHandlers } = await import('./sidecar-ipc-handlers');
 		handlers.clear();
 		registerOsxphotosIpcHandlers();
@@ -217,5 +217,24 @@ describe('Osxphotos Handlers', () => {
 		const handler = getHandler(OsxphotosChannels.LIST_ALBUMS);
 		// Should not throw and should return a result
 		expect(handler).toBeDefined();
+	});
+
+	it('OsxphotosSupervisor does not restart on health-check failure during shutdown', async () => {
+		const { osxphotosSupervisor } = await import('./sidecar-ipc-handlers');
+		const supervisor = osxphotosSupervisor as unknown as {
+			isShuttingDown: boolean;
+			handleHealthCheckFailure: () => Promise<void>;
+			restart: () => Promise<void>;
+		};
+
+		const restartSpy = vi.spyOn(supervisor, 'restart').mockResolvedValue();
+		supervisor.isShuttingDown = true;
+
+		await supervisor.handleHealthCheckFailure();
+
+		expect(restartSpy).not.toHaveBeenCalled();
+
+		restartSpy.mockRestore();
+		supervisor.isShuttingDown = false;
 	});
 });

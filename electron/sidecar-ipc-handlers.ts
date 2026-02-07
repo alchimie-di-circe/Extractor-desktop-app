@@ -383,6 +383,10 @@ export class OsxphotosSupervisor extends EventEmitter {
 	}
 
 	private handleUnhealthy(): void {
+		if (this.isShuttingDown) {
+			return;
+		}
+
 		this.failureCount++;
 		this.emitToRenderers({
 			type: 'unhealthy',
@@ -398,6 +402,10 @@ export class OsxphotosSupervisor extends EventEmitter {
 	}
 
 	private async handleHealthCheckFailure(): Promise<void> {
+		if (this.isShuttingDown) {
+			return;
+		}
+
 		this.failureCount = 0;
 
 		// Record this failure and prune stale timestamps
