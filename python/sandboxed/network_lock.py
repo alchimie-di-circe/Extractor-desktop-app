@@ -23,14 +23,20 @@ class _RestrictedSocket(_OriginalSocket):
         Override socket creation to restrict to AF_UNIX only.
 
         Raises:
-            PermissionError: If family is anything other than AF_UNIX, or if fileno is provided for non-AF_UNIX.
+            PermissionError: If family is anything other than AF_UNIX, or if `fileno` is for a non-AF_UNIX socket.
         """
-        # Block fileno for non-AF_UNIX sockets to prevent wrapping network sockets
-        # Allow fileno for AF_UNIX (needed for asyncio.socketpair and socket.accept)
-        if fileno is not None and family != _socket.AF_UNIX:
-            raise PermissionError(
-                "wrapping existing file descriptors is not allowed for non-AF_UNIX sockets in sandboxed context."
-            )
+        if fileno is not None:
+            probe = _OriginalSocket(fileno=fileno)
+            try:
+                if probe.family != _socket.AF_UNIX:
+                    raise PermissionError(
+                        "wrapping existing file descriptors is not allowed for non-AF_UNIX sockets in sandboxed context."
+                    )
+            finally:
+                probe.detach()
+
+            # Ensure callers cannot lie about family when wrapping
+            family = _socket.AF_UNIX
 
         if family != _socket.AF_UNIX:
             raise PermissionError(
@@ -38,7 +44,6 @@ class _RestrictedSocket(_OriginalSocket):
                 "Only AF_UNIX sockets are permitted in sandboxed context."
             )
 
-        # Call original socket constructor with AF_UNIX
         super().__init__(family, type, proto, fileno)
 
 
