@@ -481,24 +481,33 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 				// Wait for connection to be established before writing
 				await new Promise<void>((resolve, reject) => {
-					const timeout = setTimeout(() => {
-						reject(new Error('Socket connection timeout'));
-					}, 5000);
+					const socket = this.socket!;
 
 					const onConnect = () => {
 						clearTimeout(timeout);
-						this.socket?.removeListener('error', onError);
+						cleanup();
 						resolve();
 					};
 
 					const onError = (error: Error) => {
 						clearTimeout(timeout);
-						this.socket?.removeListener('connect', onConnect);
+						cleanup();
 						reject(error);
 					};
 
-					this.socket!.once('connect', onConnect);
-					this.socket!.once('error', onError);
+					const cleanup = () => {
+						socket.removeListener('connect', onConnect);
+						socket.removeListener('error', onError);
+					};
+
+					const timeout = setTimeout(() => {
+						cleanup();
+						this.closeSocket();
+						reject(new Error('Socket connection timeout'));
+					}, 5000);
+
+					socket.once('connect', onConnect);
+					socket.once('error', onError);
 				});
 			}
 
