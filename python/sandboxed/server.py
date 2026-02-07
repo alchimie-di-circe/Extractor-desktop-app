@@ -144,6 +144,12 @@ class OsxphotosServer:
                     break
 
                 length = int.from_bytes(length_bytes, byteorder="big")
+                
+                # Guard against zero-length messages (protocol violation)
+                if length == 0:
+                    logger.error(f"Zero-length request from {addr}: protocol violation")
+                    break
+                
                 if length > 1024 * 1024:  # 1MB max request
                     logger.error(f"Request too large from {addr}: {length}")
                     break

@@ -120,7 +120,6 @@ export class OsxphotosSupervisor extends EventEmitter {
 				message: 'Osxphotos process started',
 				timestamp: Date.now(),
 			});
-			this.currentBackoff = 1000;
 			this.failureCount = 0;
 			this.lastHealthyTime = Date.now();
 
@@ -140,6 +139,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 	async startFresh(): Promise<void> {
 		this.crashTimestamps = [];
+		this.currentBackoff = 1000;
 		await this.start();
 	}
 
@@ -486,8 +486,11 @@ export class OsxphotosSupervisor extends EventEmitter {
 		this.socket.on('data', (data) => {
 			buffer = Buffer.concat([buffer, data]);
 
-			while (buffer.length >= 4) {
+			while (buffer.length > 0) {
 				if (targetLength === 0) {
+					if (buffer.length < 4) {
+						break;
+					}
 					targetLength = buffer.readUInt32BE(0);
 					buffer = buffer.slice(4);
 
