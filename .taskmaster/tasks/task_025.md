@@ -13,7 +13,7 @@
 **Details:**
 
 1. Restructure from `python/brands/slowfood/` to `python/brands/BRAND-1/`:
-   ```
+   ```text
    python/brands/{brand-slug}/
    ├── knowledge/           # RAG-indexed documents
    │   ├── brand-sheet.md   # tone, USP, UVP

@@ -1,8 +1,8 @@
-# Task ID: 20
+# Task ID: 19
 
-**Title:** Integrazione Runtime Cagent in Sidecar Python
+**Title:** Implementazione osxphotos Sandboxed Server e Integration
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 4 ✓, 5 ✓
 
