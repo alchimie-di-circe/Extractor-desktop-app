@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events';
+import { homedir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LLMChannels, OsxphotosChannels } from '../shared/ipc-channels';
 import { registerLLMHandlers, unregisterIpcHandlers } from './ipc-handlers';
@@ -125,11 +127,14 @@ describe('Osxphotos Handlers', () => {
 	});
 
 	it('EXPORT_PHOTO handler validates export path', async () => {
-		const { registerOsxphotosIpcHandlers } = await import('./sidecar-ipc-handlers');
+		const { registerOsxphotosIpcHandlers, osxphotosSupervisor } = await import(
+			'./sidecar-ipc-handlers'
+		);
 		handlers.clear();
 		registerOsxphotosIpcHandlers();
 
 		const handler = getHandler(OsxphotosChannels.EXPORT_PHOTO);
+		const ensureRunningSpy = vi.spyOn(osxphotosSupervisor, 'ensureRunning').mockResolvedValue();
 
 		// Test empty path
 		const result1 = await handler({}, 'photo123', '');
@@ -138,13 +143,70 @@ describe('Osxphotos Handlers', () => {
 			error: { code: 'INVALID_INPUT', message: 'Export path is required' },
 		});
 
-		// Test path with traversal
-		const result2 = await handler({}, 'photo123', '/tmp/../../etc/passwd');
+		// Test path with traversal in raw input (would resolve inside whitelist)
+		const result2 = await handler({}, 'photo123', `${homedir()}/Exports/../Exports/file.jpg`);
 		expect(result2).toMatchObject({
 			success: false,
 			error: { code: 'SECURITY_ERROR' },
 		});
-		expect((result2 as { error?: { message?: string } }).error?.message).toContain('Export path');
+		expect((result2 as { error?: { message?: string } }).error?.message).toContain(
+			'Invalid export path',
+		);
+		expect(ensureRunningSpy).not.toHaveBeenCalled();
+		ensureRunningSpy.mockRestore();
+	});
+
+	it('OsxphotosSupervisor rejects pending requests on socket error and close', async () => {
+		const { osxphotosSupervisor } = await import('./sidecar-ipc-handlers');
+		const supervisor = osxphotosSupervisor as unknown as {
+			socket: EventEmitter | null;
+			pendingRequests: Map<
+				number | string,
+				{ resolve: Function; reject: Function; timeout: NodeJS.Timeout }
+			>;
+			setupSocketHandlers: () => void;
+		};
+
+		class FakeSocket extends EventEmitter {
+			writable = true;
+			destroy = vi.fn();
+		}
+
+		const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+		const fakeSocket = new FakeSocket();
+
+		supervisor.socket = fakeSocket;
+		supervisor.pendingRequests.clear();
+		supervisor.setupSocketHandlers();
+
+		const rejectOnError = vi.fn();
+		supervisor.pendingRequests.set(1, {
+			resolve: vi.fn(),
+			reject: rejectOnError,
+			timeout: setTimeout(() => {}, 10_000),
+		});
+
+		fakeSocket.emit('error', new Error('boom'));
+		expect(rejectOnError).toHaveBeenCalledTimes(1);
+		expect((rejectOnError.mock.calls[0][0] as Error).message).toContain('Socket error: boom');
+		expect(supervisor.pendingRequests.size).toBe(0);
+
+		const rejectOnClose = vi.fn();
+		supervisor.pendingRequests.set(2, {
+			resolve: vi.fn(),
+			reject: rejectOnClose,
+			timeout: setTimeout(() => {}, 10_000),
+		});
+
+		fakeSocket.emit('close');
+		expect(rejectOnClose).toHaveBeenCalledTimes(1);
+		expect((rejectOnClose.mock.calls[0][0] as Error).message).toContain('Socket closed');
+		expect(supervisor.pendingRequests.size).toBe(0);
+		expect(clearTimeoutSpy).toHaveBeenCalled();
+
+		clearTimeoutSpy.mockRestore();
+		supervisor.pendingRequests.clear();
+		supervisor.socket = null;
 	});
 
 	it('LIST_ALBUMS handler validates input types', async () => {

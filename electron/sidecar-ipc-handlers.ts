@@ -561,12 +561,15 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 		this.socket.on('error', (error) => {
 			console.error('[Osxphotos] Socket error:', error);
+			const message = error instanceof Error ? error.message : String(error);
+			this.rejectAllPendingRequests(new Error(`Socket error: ${message}`));
 			this.closeSocket();
 		});
 
 		this.socket.on('close', () => {
 			console.log('[Osxphotos] Socket closed');
-			this.socket = null;
+			this.rejectAllPendingRequests(new Error('Socket closed'));
+			this.closeSocket();
 		});
 	}
 
@@ -592,6 +595,14 @@ export class OsxphotosSupervisor extends EventEmitter {
 		} else {
 			pending.resolve(response.result);
 		}
+	}
+
+	private rejectAllPendingRequests(error: Error): void {
+		for (const { reject, timeout } of this.pendingRequests.values()) {
+			clearTimeout(timeout);
+			reject(error);
+		}
+		this.pendingRequests.clear();
 	}
 
 	private closeSocket(): void {
@@ -823,6 +834,14 @@ export function registerOsxphotosIpcHandlers(): void {
 					};
 				}
 
+				const rawSegments = exportPath.split(/[/\\]+/);
+				if (rawSegments.some((segment) => segment === '..')) {
+					return {
+						success: false,
+						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
+					};
+				}
+
 				// SECURITY 1a: Path whitelist validation
 				// Accept absolute paths but validate they are within allowed directories
 				const homeDir = homedir();
@@ -846,16 +865,6 @@ export function registerOsxphotosIpcHandlers(): void {
 							code: 'SECURITY_ERROR',
 							message: `Export path must be within ${allowedDirs.join(' or ')}`,
 						},
-					};
-				}
-
-				// Check for directory traversal attempts using segment-based check (not substring)
-				const normalized = path.normalize(normalizedPath);
-				const segments = normalized.split(/[/\\]+/);
-				if (segments.some((s) => s === '..')) {
-					return {
-						success: false,
-						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
 					};
 				}
 
