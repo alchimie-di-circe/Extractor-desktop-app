@@ -510,7 +510,21 @@ export class OsxphotosSupervisor extends EventEmitter {
 			lengthBuffer.writeUInt32BE(length, 0);
 
 			const payload = Buffer.concat([lengthBuffer, Buffer.from(json)]);
-			this.socket.write(payload);
+			const wrote = this.socket.write(payload);
+			if (!wrote) {
+				await new Promise<void>((resolve, reject) => {
+					const onDrain = () => {
+						this.socket?.removeListener('close', onClose);
+						resolve();
+					};
+					const onClose = () => {
+						this.socket?.removeListener('drain', onDrain);
+						reject(new Error('Socket closed before drain'));
+					};
+					this.socket!.once('drain', onDrain);
+					this.socket!.once('close', onClose);
+				});
+			}
 		} catch (error) {
 			console.error('[Osxphotos] Error sending request:', error);
 			this.closeSocket();
