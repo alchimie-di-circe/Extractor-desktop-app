@@ -130,20 +130,34 @@ async def test_get_photos_pagination(mock_osxphotos):
 
 
 @pytest.mark.asyncio
-async def test_export_photo_success(mock_osxphotos):
+async def test_export_photo_success(mock_osxphotos, tmp_path):
     """Test photo export."""
     service = PhotosService()
 
     # Mock the export method
     mock_photo = list(service.db.photos(uuid="photo-0"))[0]
-    mock_photo.export = Mock()
+    export_path = tmp_path / "Exports" / "photo.jpg"
+    mock_photo.export = Mock(return_value=[str(export_path)])
 
-    result = await service.export_photo("photo-0", "/Users/test/Exports/photo.jpg")
+    result = await service.export_photo("photo-0", str(export_path))
 
     assert result["success"] is True
     assert result["photo_id"] == "photo-0"
-    assert result["export_path"] == "/Users/test/Exports/photo.jpg"
-    mock_photo.export.assert_called_once_with("/Users/test/Exports", "photo.jpg")
+    assert result["export_path"] == str(export_path)
+    mock_photo.export.assert_called_once_with(str(export_path.parent), "photo.jpg")
+
+
+@pytest.mark.asyncio
+async def test_export_photo_empty_export_result_raises(mock_osxphotos, tmp_path):
+    """Test export_photo raises PhotosServiceError when export returns no files."""
+    service = PhotosService()
+
+    mock_photo = list(service.db.photos(uuid="photo-0"))[0]
+    mock_photo.export = Mock(return_value=[])
+    export_path = tmp_path / "Exports" / "photo.jpg"
+
+    with pytest.raises(PhotosServiceError, match="Export returned no files"):
+        await service.export_photo("photo-0", str(export_path))
 
 
 @pytest.mark.asyncio
