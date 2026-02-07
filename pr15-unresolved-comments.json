@@ -1,0 +1,324 @@
+{
+  "total": 23,
+  "by_file": {
+    ".taskmaster/COMPLETION_SUMMARY.md": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQiC3",
+        "line": 51,
+        "startLine": 44,
+        "comments": [
+          {
+            "id": 2777511253,
+            "body": "_⚠️ Potential issue_ | _🟡 Minor_\n\n**Inconsistency: Missing task files for tasks 20-22.**\n\nThe table at lines 32-42 shows 9 new tasks (20-28) were created, but this section only lists task files for tasks 23-28. Where are the task files for tasks 20, 21, and 22?\n\n\n\n<details>\n<summary>🔍 Verification needed</summary>\n\n```shell\n#!/bin/bash\n# Check which task files actually exist in the 20-28 range\nfd -t f 'task_0(2[0-8]).md$' .taskmaster/tasks/\n```\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn @.taskmaster/COMPLETION_SUMMARY.md around lines 44 - 51, The completion\nsummary lists tasks 20-28 but the \"Task Files Created\" section only includes\ntask_023.md through task_028.md; add the missing entries for task_020.md,\ntask_021.md, and task_022.md (or remove/update the earlier table if those tasks\nwere not created) so the two sections are consistent—update the\n`.taskmaster/COMPLETION_SUMMARY.md` \"Task Files Created\" list to include\n`task_020.md`, `task_021.md`, and `task_022.md` (or delete the 20-22 entries\nfrom the top table), and ensure the filenames match the actual files under\n`.taskmaster/tasks/` (e.g., `task_020.md`, `task_021.md`, `task_022.md`).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T12:53:06Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQiC4",
+        "line": 208,
+        "startLine": 208,
+        "comments": [
+          {
+            "id": 2777511254,
+            "body": "_⚠️ Potential issue_ | _🟡 Minor_\n\n**Local filesystem path won't work for other users.**\n\nThe specification reference contains a local absolute path (`/Users/alexandthemusic/...`) that won't be accessible to other team members. Consider using a relative path or a project-relative reference.\n\n\n\n<details>\n<summary>♻️ Suggested fix</summary>\n\n```diff\n-📄 Reference: `/Users/alexandthemusic/.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md`\n+📄 Reference: `.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md` (relative to project root)\n```\n\nOr reference by document title if the path should remain internal:\n```diff\n-📄 Reference: `/Users/alexandthemusic/.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md`\n+📄 Reference: Approved specification dated 2026-02-07 (nuove task update)\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n📄 Reference: `.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md` (relative to project root)\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn @.taskmaster/COMPLETION_SUMMARY.md at line 208, Replace the hard-coded\nabsolute filesystem path\n`/Users/alexandthemusic/.factory/specs/2026-02-07-nuove-task-update-task-esistenti-per-task-master.md`\nin .taskmaster/COMPLETION_SUMMARY.md with a project-relative or\nrepository-relative path (e.g., ./specs/2026-02-07-...md) or, if the spec is\ninternal, replace the path with the document title\n\"2026-02-07-nuove-task-update-task-esistenti-per-task-master\" (or an equivalent\nhuman-readable title) so other contributors can access the reference without\nrelying on a local user directory.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T12:53:06Z"
+          }
+        ]
+      }
+    ],
+    ".taskmaster/tasks/task_025.md": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQiC5",
+        "line": 31,
+        "startLine": 15,
+        "comments": [
+          {
+            "id": 2777511255,
+            "body": "_⚠️ Potential issue_ | _🟡 Minor_\n\n**Specify a language for the fenced code block (MD040).**  \nmarkdownlint flags this fence; add a language (e.g., `text`) to the opening backticks.  \n\n\n<details>\n<summary>💡 Suggested fix</summary>\n\n```diff\n-   ```\n+   ```text\n   python/brands/{brand-slug}/\n   ├── knowledge/           # RAG-indexed documents\n   │   ├── brand-sheet.md   # tone, USP, UVP\n   │   ├── competitors.md\n   │   └── guidelines.pdf\n   ├── elements/            # NOT indexed in RAG\n   │   ├── logos/           # full, icon, mono, dark, light versions\n   │   ├── fonts/           # font files (.ttf, .otf)\n   │   ├── frames/          # PNG transparent frames\n   │   ├── cards/           # card template PNG\n   │   ├── symbols/         # brand icons/symbols\n   │   ├── watermarks/      # overlay watermarks\n   │   └── palette.json     # colors (hex, rgb, usage)\n   └── config.json          # metadata\n   ```\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n1. Restructure from `python/brands/slowfood/` to `python/brands/BRAND-1/`:\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 markdownlint-cli2 (0.20.0)</summary>\n\n[warning] 16-16: Fenced code blocks should have a language specified\n\n(MD040, fenced-code-language)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n````\nIn @.taskmaster/tasks/task_025.md around lines 15 - 31, The fenced code block\nshowing the directory tree in task_025.md is missing a language specifier;\nupdate the opening backticks for that block (the triple-backtick block\ncontaining \"python/brands/{brand-slug}/\") to include a language such as \"text\"\n(e.g., change ``` to ```text) so markdownlint MD040 is satisfied.\n````\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T12:53:06Z"
+          }
+        ]
+      }
+    ],
+    ".taskmaster/tasks/tasks.json": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQiC7",
+        "line": 1584,
+        "startLine": 1569,
+        "comments": [
+          {
+            "id": 2777511257,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n<details>\n<summary>🧩 Analysis chain</summary>\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Find task_019.md or task_19.md under .taskmaster/tasks\nfind .taskmaster/tasks -name 'task_019.md' -o -name 'task_19.md' 2>/dev/null | head -20\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 112\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check content of task_019.md if it exists\nif [ -f \".taskmaster/tasks/task_019.md\" ]; then\n  echo \"=== Content of task_019.md ===\"\n  cat -n \".taskmaster/tasks/task_019.md\"\nelif [ -f \".taskmaster/tasks/task_19.md\" ]; then\n  echo \"=== Content of task_19.md ===\"\n  cat -n \".taskmaster/tasks/task_19.md\"\nelse\n  echo \"No task file found for Task 19\"\nfi\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1388\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Verify the exact snippet from tasks.json to see if it was edited by hand\nsed -n '1569,1584p' .taskmaster/tasks/tasks.json | head -20\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1819\n\n---\n\n\n\n</details>\n\n**Sync task_019.md with tasks.json status and ID.**\n\nTask 19 is marked \"done\" in tasks.json, but task_019.md still shows `Status: pending` and incorrectly lists `Task ID: 20`. Update the markdown file to set status to \"done\", correct the Task ID to 19, and ensure all subtask statuses are aligned using Task Master commands per the workflow guidelines.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn @.taskmaster/tasks/tasks.json around lines 1569 - 1584, Open task_019.md and\nupdate the frontmatter/metadata to match tasks.json: change \"Task ID\" to 19 and\nset \"Status\" to done; then scan the markdown for any listed subtasks and update\ntheir statuses to match the corresponding entries in\n.taskmaster/tasks/tasks.json (task id 19) or mark them done if tasks.json shows\nthem complete, and run the Task Master sync command specified in the project\nworkflow to persist the changes so task_019.md and .taskmaster/tasks/tasks.json\nremain consistent.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T12:53:07Z"
+          }
+        ]
+      }
+    ],
+    "electron/preload.ts": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4D",
+        "line": 211,
+        "startLine": 188,
+        "comments": [
+          {
+            "id": 2775063250,
+            "body": "_⚠️ Potential issue_ | _🔴 Critical_\n\n<details>\n<summary>🧩 Analysis chain</summary>\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Search for osxphotos handler implementations in electron/ipc-handlers.ts\nrg -n 'OsxphotosChannels|osxphotos' --type=ts electron/ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 65\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check for the actual channel definitions in shared/ipc-channels.ts\nrg -n 'OsxphotosChannels' --type=ts shared/ipc-channels.ts -A 5\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 261\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Verify app.d.ts has osxphotos type definitions\nrg -n 'osxphotos' --type=ts src/app.d.ts -B 2 -A 5\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 270\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check how contextBridge exposes osxphotosApi in preload.ts\nrg -n 'contextBridge\\|osxphotos:' --type=ts electron/preload.ts -A 2 -B 2\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 65\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check the full electron/ipc-handlers.ts file structure\nhead -100 electron/ipc-handlers.ts | tail -50\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1851\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Search for all ipcMain.handle calls to see what handlers exist\nrg -n 'ipcMain\\.handle' --type=ts electron/ipc-handlers.ts | head -20\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1428\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check file size and get line count of ipc-handlers.ts\nwc -l electron/ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 111\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any references to osxphotos anywhere in the electron directory (case-insensitive)\nrg -i 'osxphotos' --type=ts electron/\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 6594\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Get the EXPORT_PHOTO handler implementation with full context\nrg -A 20 \"ipcMain.handle\\(OsxphotosChannels.EXPORT_PHOTO\" --type=ts electron/sidecar-ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 65\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check if validateAndNormalizePath is imported or used in sidecar-ipc-handlers.ts\nrg -n 'validateAndNormalizePath|path.resolve|path.isAbsolute' --type=ts electron/sidecar-ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 65\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check the imports in sidecar-ipc-handlers.ts to see what validation utilities are available\nhead -30 electron/sidecar-ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1151\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Search more broadly for EXPORT_PHOTO handler\nrg -n \"EXPORT_PHOTO\" --type=ts electron/sidecar-ipc-handlers.ts -B 2 -A 25\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 982\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Look for any path validation or exportPath parameter handling\nrg -n \"exportPath\" --type=ts electron/sidecar-ipc-handlers.ts -B 3 -A 10\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 1595\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# Check the line numbers where EXPORT_PHOTO handler should be\nwc -l electron/sidecar-ipc-handlers.ts && rg -n \"EXPORT_PHOTO\" --type=ts electron/sidecar-ipc-handlers.ts\n```\n\nRepository: alchimie-di-circe/Extractor-desktop-app\n\nLength of output: 157\n\n---\n\n\n\n</details>\n\n**Path validation in EXPORT_PHOTO handler is insufficient; use `validateAndNormalizePath` for file paths.**\n\nThe handler validates type and checks for `'..'` and null bytes (lines 703-708), but this does not meet security requirements. Per the codebase standards, file paths crossing IPC boundaries must use `validateAndNormalizePath()` to enforce absolute path requirement, home directory boundary, and prevent path traversal escapes. The current check only catches `'..'` but does not normalize paths, validate absolute paths, or enforce directory boundaries. Replace lines 703-708 with proper validation using the `validateAndNormalizePath()` utility function already defined in this codebase.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@electron/preload.ts` around lines 188 - 211, The EXPORT_PHOTO handler\ncurrently performs ad‑hoc checks for '..' and null bytes; replace that logic by\ncalling the existing validateAndNormalizePath utility to validate and normalize\nthe provided exportPath before using it. Locate the IPC handler for\nOsxphotosChannels.EXPORT_PHOTO (and the exportPhoto method exposed in\nosxphotosApi) and call validateAndNormalizePath(exportPath) to enforce absolute\npaths, home-directory/ boundary checks and path traversal prevention, then use\nthe returned normalized path or handle/return validation errors accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      }
+    ],
+    "electron/sidecar-ipc-handlers.ts": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJhYM",
+        "line": 494,
+        "startLine": 494,
+        "comments": [
+          {
+            "id": 2775055052,
+            "body": "![security-medium](https://www.gstatic.com/codereviewagent/security-medium-priority.svg) ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)\n\nThe Electron supervisor reads a 4-byte length prefix from the Unix socket and then attempts to read that many bytes into a buffer without validating the size. A compromised or malicious sandboxed process could send a very large length (e.g., 4GB), causing the supervisor to consume excessive memory and eventually crash the entire application (OOM Denial of Service).\n\nRecommended remediation: Implement a maximum length check for the incoming message size (e.g., 1MB or 10MB) before allocating memory or reading the data.",
+            "author": "gemini-code-assist",
+            "createdAt": "2026-02-06T16:46:13Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJhYS",
+        "line": 113,
+        "startLine": 109,
+        "comments": [
+          {
+            "id": 2775055058,
+            "body": "![security-medium](https://www.gstatic.com/codereviewagent/security-medium-priority.svg) ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)\n\nWhen spawning the sandboxed Python process, the supervisor passes the entire `process.env` to the child. This environment contains sensitive API keys (e.g., `FIRECRAWL_API_KEY`, `JINA_API_KEY`) that the sandboxed process does not need for its operation. This violates the principle of least privilege and significantly increases the impact of a potential compromise of the sandboxed process.\n\nRecommended remediation: Explicitly define only the necessary environment variables for the child process instead of passing the full parent environment.",
+            "author": "gemini-code-assist",
+            "createdAt": "2026-02-06T16:46:13Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4K",
+        "line": 220,
+        "startLine": 217,
+        "comments": [
+          {
+            "id": 2775063258,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**RPC request timeout reuses health-check timeout (2 seconds) — likely too short for real operations.**\n\n`sendJsonRpc` uses `this.config.timeout` (line 209), which defaults to `2000` ms (the health-check timeout). Operations like `export_photo` or `get_photos` on large albums will easily exceed 2 seconds, causing spurious timeouts.\n\nConsider adding a separate `rpcTimeout` config or accepting a per-call timeout parameter.\n\n\n<details>\n<summary>🛠️ Proposed fix sketch</summary>\n\n```diff\n \tasync sendJsonRpc<T = unknown>(\n \t\tmethod: string,\n \t\tparams: Record<string, unknown> | unknown[] = {},\n+\t\ttimeoutMs?: number,\n \t): Promise<T> {\n \t\tif (!this.isRunning()) {\n \t\t\tthrow new Error('Osxphotos is not running');\n \t\t}\n\n \t\tconst id = ++this.jsonRpcId;\n \t\tconst request: JsonRpcRequest = {\n \t\t\tjsonrpc: '2.0',\n \t\t\tmethod,\n \t\t\tparams,\n \t\t\tid,\n \t\t};\n\n \t\treturn new Promise<T>((resolve, reject) => {\n \t\t\tconst timeout = setTimeout(() => {\n \t\t\t\tthis.pendingRequests.delete(id);\n \t\t\t\treject(new Error(`JSON-RPC request timeout for ${method}`));\n-\t\t\t}, this.config.timeout);\n+\t\t\t}, timeoutMs ?? 30_000);\n```\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@electron/sidecar-ipc-handlers.ts` around lines 206 - 209, The RPC timeout is\nincorrectly using the global health-check timeout (this.config.timeout) inside\nsendJsonRpc, causing spurious timeouts for long operations; update sendJsonRpc\nin sidecar-ipc-handlers.ts to accept an optional per-call timeout parameter\n(e.g., timeoutMs) and/or read a new this.config.rpcTimeout fallback, and use\nthat value when creating the timeout (replace this.config.timeout with the new\ntimeout source), ensure pendingRequests cleanup and reject still behave the\nsame, and add/update any callers (e.g., export_photo/get_photos invocations) to\npass a larger timeout when needed.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4N",
+        "line": 277,
+        "startLine": 263,
+        "comments": [
+          {
+            "id": 2775063262,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**Async callbacks in SIGINT/SIGTERM handlers won't be awaited.**\n\nNode.js process signal handlers execute synchronously — `async () => { await this.stop(); }` starts the promise but the process may exit before `stop()` completes, leaving the child process orphaned or partially terminated.\n\nA common pattern is to block exit by calling `process.exitCode = 0` in the handler and letting the cleanup finish before calling `process.exit()` explicitly.\n\n\n<details>\n<summary>🛠️ Sketch for graceful signal handling</summary>\n\n```diff\n \t\tprocess.on('SIGINT', async () => {\n \t\t\tconsole.log('[Osxphotos] SIGINT received');\n-\t\t\tawait this.stop();\n+\t\t\tawait this.stop().catch((e) =>\n+\t\t\t\tconsole.error('[Osxphotos] Error stopping on SIGINT:', e),\n+\t\t\t);\n+\t\t\tprocess.exit(0);\n \t\t});\n\n \t\tprocess.on('SIGTERM', async () => {\n \t\t\tconsole.log('[Osxphotos] SIGTERM received');\n-\t\t\tawait this.stop();\n+\t\t\tawait this.stop().catch((e) =>\n+\t\t\t\tconsole.error('[Osxphotos] Error stopping on SIGTERM:', e),\n+\t\t\t);\n+\t\t\tprocess.exit(0);\n \t\t});\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n\tprivate setupAppHooks(): void {\n\t\tapp.on('before-quit', async () => {\n\t\t\tconsole.log('[Osxphotos] App before-quit hook');\n\t\t\tawait this.stop();\n\t\t});\n\n\t\tprocess.on('SIGINT', async () => {\n\t\t\tconsole.log('[Osxphotos] SIGINT received');\n\t\t\tawait this.stop().catch((e) => {\n\t\t\t\tconsole.error('[Osxphotos] Error stopping on SIGINT:', e);\n\t\t\t});\n\t\t\tprocess.exit(0);\n\t\t});\n\n\t\tprocess.on('SIGTERM', async () => {\n\t\t\tconsole.log('[Osxphotos] SIGTERM received');\n\t\t\tawait this.stop().catch((e) => {\n\t\t\t\tconsole.error('[Osxphotos] Error stopping on SIGTERM:', e);\n\t\t\t});\n\t\t\tprocess.exit(0);\n\t\t});\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@electron/sidecar-ipc-handlers.ts` around lines 250 - 264, The SIGINT/SIGTERM\nhandlers in setupAppHooks use async callbacks that start this.stop() but don't\nguarantee completion before process exit; change them to synchronous handlers\nthat set process.exitCode (e.g., process.exitCode = 0), synchronously start a\nsingle cleanup sequence (ensure only one cleanup runs) and then explicitly call\nprocess.exit() after this.stop() completes. Concretely: modify the SIGINT and\nSIGTERM listeners in setupAppHooks to call a non-async helper (e.g.,\nensureCleanupAndExit or the existing this.stop wrapped so it enforces\nsingle-run) that sets process.exitCode, invokes this.stop() and on promise\nresolution calls process.exit(), and make sure app.on('before-quit') continues\nto await this.stop() as appropriate.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tLhpH",
+        "line": 594,
+        "startLine": 587,
+        "comments": [
+          {
+            "id": 2775740355,
+            "body": "_⚠️ Potential issue_ | _🔴 Critical_\n\n**`getPythonPath()` returns the sidecar binary in packaged mode — wrong executable for osxphotos.**\n\nIn packaged mode this returns `resources/sidecar/cagent-sidecar`, which is the Rust sidecar binary. Line 107 then runs `spawn(pythonPath, ['sandboxed/server.py'], ...)`, effectively calling `cagent-sidecar sandboxed/server.py` — this will fail at runtime.\n\nThis looks like it was copied from the existing sidecar manager. You need a path to the bundled Python interpreter (or a frozen osxphotos server binary) instead.\n\n\n\n```shell\n#!/bin/bash\n# Check what the existing sidecar manager uses vs this new supervisor\nrg -n 'getPythonPath\\|pythonPath\\|python3\\|cagent-sidecar' --type=ts -C2\n```\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@electron/sidecar-ipc-handlers.ts` around lines 541 - 548, getPythonPath()\ncurrently returns the Rust sidecar binary in packaged mode which causes\nspawn(pythonPath, ['sandboxed/server.py'], ...) to run the wrong executable;\nupdate getPythonPath to return the bundled Python interpreter (or a frozen\nosxphotos server binary) instead of 'cagent-sidecar' when app.isPackaged is true\n— locate getPythonPath and the code that calls spawn (uses pythonPath and\n['sandboxed/server.py']) and change the packaged-mode branch to point to the\ncorrect resource (e.g., process.resourcesPath +\n'/sidecar/<bundled-python-or-osxphotos-server>'), preserving platform\ndifferences for win32 vs macOS as needed.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T19:45:35Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQr8X",
+        "line": 782,
+        "startLine": 777,
+        "comments": [
+          {
+            "id": 2777564421,
+            "body": "**Bug:** The client rejects absolute paths for photo exports, while the server's `validate_export_path` function requires them, causing all export attempts to fail validation.\n<sub>Severity: CRITICAL</sub>\n<!-- BUG_PREDICTION -->\n\n<details>\n<summary><b title=\"Reference ID: `712246/0`\">Suggested Fix</b></summary>\n\nThe server should be updated to correctly handle the relative path sent by the client. Instead of calling `validate_export_path(export_path)` directly, the server-side handler should construct the full, absolute export path from the provided components (like album and photo ID) using a function like `validate_photo_export_path` before performing validation. This ensures the path is resolved correctly within the whitelisted export directory.\n</details>\n\n<details open>\n<summary><b title=\"Reference ID: `712246/0`\">Prompt for AI Agent</b></summary>\n\n```\nReview the code at the location below. A potential bug has been identified by an AI\nagent.\nVerify if this is a real issue. If it is, propose a fix; if not, explain why it's not\nvalid.\n\nLocation: electron/sidecar-ipc-handlers.ts#L777-L782\n\nPotential issue: A path validation mismatch exists between the client and server for\nphoto exports. The client-side code in `electron/sidecar-ipc-handlers.ts` explicitly\nrejects absolute paths. However, the server-side `validate_export_path` function in\n`python/sandboxed/path_whitelist.py` expects an absolute path. When the client sends a\nrelative path, the server resolves it relative to its current working directory, which\nis not a whitelisted export location. This causes the validation to fail, effectively\nbreaking all photo export functionality.\n```\n</details>\n\n<!--\n<sub>Reference ID: `712246`</sub>-->",
+            "author": "sentry",
+            "createdAt": "2026-02-07T13:44:45Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQr_6",
+        "line": 184,
+        "startLine": 146,
+        "comments": [
+          {
+            "id": 2777564725,
+            "body": "_⚠️ Potential issue_ | _🟡 Minor_\n\n**`isShuttingDown` reset to `false` in `finally` may allow spurious restarts during app quit.**\n\nLine 177 unconditionally resets `isShuttingDown = false` in the `finally` block. When `stop()` is called from the `before-quit` hook, after it completes `isShuttingDown` becomes `false`. If the child process emits a late `exit` event (e.g., from SIGKILL), `handleUnexpectedExit` will see `isShuttingDown === false` and attempt a restart during app shutdown.\n\nConsider only resetting `isShuttingDown` when `stop()` is called from `restart()`, or using a separate flag to track intentional shutdown vs. restart-stop.\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@electron/sidecar-ipc-handlers.ts` around lines 146 - 184, The stop() method\nunconditionally clears isShuttingDown in its finally block which allows\nhandleUnexpectedExit to treat a late child exit as unexpected and restart during\napp quit; change stop() to only reset isShuttingDown when the stop was part of a\nrestart flow (or introduce a separate flag like\nisRestarting/isIntentionalShutdown). Concretely: add an optional boolean\nparameter to stop(e.g., forRestart = false) or add a new class flag\nisRestarting, ensure restart() calls stop(true) or sets isRestarting before\ncalling stop(), ensure before-quit (app shutdown) calls stop() with the\ndefault/forRestart=false, and only clear isShuttingDown (or clear isRestarting)\nwhen forRestart/isRestarting indicates a restart; update handleUnexpectedExit to\ncheck the new flag(s) (isShuttingDown vs isRestarting) to avoid restarting\nduring app quit.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T13:44:56Z"
+          }
+        ]
+      }
+    ],
+    "python/sandboxed/photos_service.py": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4d",
+        "line": 95,
+        "startLine": 61,
+        "comments": [
+          {
+            "id": 2775063287,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**Async methods perform only synchronous work — they will block the event loop.**\n\n`list_albums`, `get_photos`, and `export_photo` are declared `async` but never `await` anything. All work (database iteration, file export) is synchronous, so callers using `await service.list_albums()` will block the entire event loop for the duration of the call.\n\nIf the caller is a JSON-RPC server running on `asyncio`, this stalls all concurrent request handling. Consider wrapping the synchronous work in `asyncio.to_thread()` or using `loop.run_in_executor()`.\n\n\n<details>\n<summary>Proposed approach (example for list_albums)</summary>\n\n```diff\n+import asyncio\n+\n ...\n \n     async def list_albums(self) -> List[Dict[str, Any]]:\n-        try:\n-            if not self.db:\n-                raise PhotosServiceError(\"Database not initialized\")\n-            albums = []\n-            for album in self.db.albums:\n+        return await asyncio.to_thread(self._list_albums_sync)\n+\n+    def _list_albums_sync(self) -> List[Dict[str, Any]]:\n+        if not self.db:\n+            raise PhotosServiceError(\"Database not initialized\")\n+        albums = []\n+        for album in self.db.albums:\n             ...\n```\n\n</details>\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 Ruff (0.14.14)</summary>\n\n[warning] 74-74: Abstract `raise` to an inner function\n\n(TRY301)\n\n---\n\n[warning] 74-74: Avoid specifying long messages outside the exception class\n\n(TRY003)\n\n---\n\n[warning] 89-89: Consider moving this statement to an `else` block\n\n(TRY300)\n\n---\n\n[warning] 95-95: Avoid specifying long messages outside the exception class\n\n(TRY003)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/sandboxed/photos_service.py` around lines 61 - 95, The async methods\n(list_albums, get_photos, export_photo) are declared async but run only\nsynchronous, blocking operations; change them to offload blocking work to a\nthread pool (e.g., use asyncio.to_thread or loop.run_in_executor). Extract the\ncurrent synchronous bodies into small sync helpers (e.g., _list_albums_sync,\n_get_photos_sync, _export_photo_sync) that perform DB iteration and file I/O,\nthen call them from the async methods with await\nasyncio.to_thread(self._list_albums_sync, ...) (or equivalent executor usage),\npreserving the same exception translation (PhotosPermissionError,\nPhotosServiceError) in the async wrapper so logging and error mapping remain\nintact.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tNybJ",
+        "line": 190,
+        "startLine": 190,
+        "comments": [
+          {
+            "id": 2776514461,
+            "body": "**Bug:** The `photo.export()` function is incorrectly called with a full file path instead of the expected directory path, which will cause the export to fail.\n<sub>Severity: HIGH</sub>\n<!-- BUG_PREDICTION -->\n\n<details>\n<summary><b title=\"Reference ID: `711165/1`\">Suggested Fix</b></summary>\n\nModify the call to `photo.export()` in `photos_service.py`. The `export_path` variable, which contains the full file path, should be split into a directory and a filename. Pass the directory as the first argument and the filename as the second argument to `photo.export()` to match the library's expected signature.\n</details>\n\n<details open>\n<summary><b title=\"Reference ID: `711165/1`\">Prompt for AI Agent</b></summary>\n\n```\nReview the code at the location below. A potential bug has been identified by an AI\nagent.\nVerify if this is a real issue. If it is, propose a fix; if not, explain why it's not\nvalid.\n\nLocation: python/sandboxed/photos_service.py#L190\n\nPotential issue: The `photo.export()` method from the `osxphotos` library is called with\nan incorrect argument type. The `validate_photo_export_path` function generates a full\nfile path (e.g., `/path/to/file.jpg`), which is then passed to `photo.export()`.\nHowever, the `osxphotos` library expects this method to be called with a destination\ndirectory path as the first argument and an optional filename as the second. Passing a\nfull file path will cause the export operation to fail at runtime.\n```\n</details>\n\n<!--\n<sub>Reference ID: `711165`</sub>-->",
+            "author": "sentry",
+            "createdAt": "2026-02-07T00:22:27Z"
+          }
+        ]
+      }
+    ],
+    "python/sandboxed/server.py": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4h",
+        "line": 8,
+        "startLine": 8,
+        "comments": [
+          {
+            "id": 2775063290,
+            "body": "_⚠️ Potential issue_ | _🔴 Critical_\n\n**Conflicting import styles — one will fail depending on working directory.**\n\nLine 8 uses the absolute path `python.sandboxed.network_lock`, which requires `python/` parent to be on `sys.path` (e.g., running from repo root). Line 17 uses a bare `from jsonrpc_handler import ...`, which requires `python/sandboxed/` itself to be on `sys.path`. These two imports cannot both resolve under the same `sys.path` configuration.\n\n\n<details>\n<summary>🐛 Proposed fix: use consistent import paths</summary>\n\nEither make both absolute:\n```diff\n-from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode\n+from python.sandboxed.jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode\n```\n\nOr make both relative (if this module is run as part of the `python.sandboxed` package):\n```diff\n-import python.sandboxed.network_lock  # noqa: F401\n+from . import network_lock  # noqa: F401\n```\n```diff\n-from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode\n+from .jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode\n```\n</details>\n\n\nAlso applies to: 17-17\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 Ruff (0.14.14)</summary>\n\n[warning] 8-8: Unused `noqa` directive (non-enabled: `F401`)\n\nRemove unused `noqa` directive\n\n(RUF100)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/sandboxed/server.py` at line 8, The imports in this module mix\nabsolute (\"import python.sandboxed.network_lock\") and bare (\"from\njsonrpc_handler import ...\") styles which will fail under different sys.path\nsetups; pick one consistent style and update both imports accordingly — either\nmake them both package-relative (e.g., change \"import\npython.sandboxed.network_lock\" to \"from . import network_lock\" and \"from\njsonrpc_handler import ...\" to \"from .jsonrpc_handler import ...\") or make them\nboth absolute within the top-level package (e.g., \"import\npython.sandboxed.network_lock\" and \"from python.sandboxed.jsonrpc_handler import\n...\"); modify the import lines referencing network_lock and jsonrpc_handler to\nthe chosen form.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4l",
+        "line": 259,
+        "startLine": 243,
+        "comments": [
+          {
+            "id": 2775063295,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**Signal handler uses `asyncio.create_task` outside the event loop's normal flow.**\n\n`signal.signal()` handlers run between Python bytecodes, not inside the asyncio event loop's callback cycle. Calling `asyncio.create_task` from there is fragile. Additionally, the returned task reference is discarded (Ruff RUF006), so any exception in `shutdown()` would be silently lost.\n\nUse `loop.add_signal_handler` for proper asyncio signal integration:\n\n\n<details>\n<summary>🔧 Proposed fix: use asyncio-native signal handling</summary>\n\n```diff\n async def main() -> None:\n     \"\"\"Main entry point.\"\"\"\n     server = OsxphotosServer()\n \n-    # Handle signals\n-    def signal_handler(sig: int, frame) -> None:\n-        logger.info(f\"Signal {sig} received\")\n-        asyncio.create_task(server.shutdown())\n-\n-    signal.signal(signal.SIGTERM, signal_handler)\n-    signal.signal(signal.SIGINT, signal_handler)\n+    loop = asyncio.get_running_loop()\n+    for sig in (signal.SIGTERM, signal.SIGINT):\n+        loop.add_signal_handler(sig, lambda s=sig: _handle_signal(s, server))\n \n     try:\n         await server.start()\n     except Exception as e:\n         logger.error(f\"Server error: {e}\", exc_info=True)\n         sys.exit(1)\n+\n+\n+def _handle_signal(sig: int, server: OsxphotosServer) -> None:\n+    logger.info(f\"Signal {sig} received\")\n+    server.shutdown_event.set()\n```\n</details>\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 Ruff (0.14.14)</summary>\n\n[warning] 150-150: Unused function argument: `frame`\n\n(ARG001)\n\n---\n\n[warning] 152-152: Store a reference to the return value of `asyncio.create_task`\n\n(RUF006)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/sandboxed/server.py` around lines 145 - 161, Replace the synchronous\nsignal.signal registration in main() with asyncio's loop.add_signal_handler:\nobtain the running event loop (e.g., loop = asyncio.get_running_loop()), call\nloop.add_signal_handler(signal.SIGTERM, handler) and\nloop.add_signal_handler(signal.SIGINT, handler) instead of signal.signal, where\nhandler schedules server.shutdown() on the loop (create a task via\nasyncio.create_task) but store the returned Task reference and attach a done\ncallback that logs exceptions from OsxphotosServer.shutdown so errors aren't\nsilently dropped; remove the existing signal_handler function and any direct\nsignal.signal calls.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tLgtU",
+        "line": 8,
+        "startLine": 8,
+        "comments": [
+          {
+            "id": 2775735424,
+            "body": "**Bug:** The import `import python.sandboxed.network_lock` in `server.py` will fail with a `ModuleNotFoundError` at startup because the `python` package is not in the `sys.path`.\n<sub>Severity: CRITICAL</sub>\n<!-- BUG_PREDICTION -->\n\n<details>\n<summary><b title=\"Reference ID: `710568/0`\">Suggested Fix</b></summary>\n\nChange the absolute import to a relative one. Since `server.py` and `network_lock.py` are in the same directory (`sandboxed`), the import should be changed to `from . import network_lock`. Alternatively, since the working directory is `python/`, an import like `import sandboxed.network_lock` would also work.\n</details>\n\n<details open>\n<summary><b title=\"Reference ID: `710568/0`\">Prompt for AI Agent</b></summary>\n\n```\nReview the code at the location below. A potential bug has been identified by an AI\nagent.\nVerify if this is a real issue. If it is, propose a fix; if not, explain why it's not\nvalid.\n\nLocation: python/sandboxed/server.py#L8\n\nPotential issue: The python server script `server.py` is executed with its working\ndirectory set to `python/`. The script then attempts to import a module using an\nabsolute path from the project root: `import python.sandboxed.network_lock`. However,\nwhen a script is run, Python adds the script's directory (`python/sandboxed/`) and the\ncurrent working directory (`python/`) to `sys.path`, but not the parent of the working\ndirectory. As a result, the top-level `python` package is not found, leading to a\n`ModuleNotFoundError`. This will cause the server process to crash immediately upon\nstartup, rendering the associated functionality unusable.\n```\n</details>\n\n\n<sub><i>Did we get this right? :+1: / :-1: to inform future reviews.</i></sub>\n<!--\n<sub>Reference ID: `710568`</sub>-->",
+            "author": "sentry",
+            "createdAt": "2026-02-06T19:44:05Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tNybG",
+        "line": 56,
+        "startLine": 54,
+        "comments": [
+          {
+            "id": 2776514458,
+            "body": "**Bug:** The `export_photo` RPC method is called by the client but is not registered in the Python server, which will cause all photo export attempts to fail.\n<sub>Severity: CRITICAL</sub>\n<!-- BUG_PREDICTION -->\n\n<details>\n<summary><b title=\"Reference ID: `711165/0`\">Suggested Fix</b></summary>\n\nIn `python/sandboxed/server.py`, create a handler method `handle_export_photo` that calls the `self.service.export_photo` method. Then, register this new handler in the `_register_methods` function with `self.handler.register(\"export_photo\", self.handle_export_photo)`.\n</details>\n\n<details open>\n<summary><b title=\"Reference ID: `711165/0`\">Prompt for AI Agent</b></summary>\n\n```\nReview the code at the location below. A potential bug has been identified by an AI\nagent.\nVerify if this is a real issue. If it is, propose a fix; if not, explain why it's not\nvalid.\n\nLocation: python/sandboxed/server.py#L43-L45\n\nPotential issue: The `export_photo` function is called from the Electron process but is\nnot registered as a valid method on the Python JSON-RPC server. The `_register_methods`\nfunction in `server.py` only registers `ping`, `list_albums`, and `get_photos`. When the\nfrontend attempts to call `export_photo`, the Python server will return a\n`METHOD_NOT_FOUND` error, causing the photo export functionality to fail for the user.\nAlthough the `export_photo` implementation exists in `photos_service.py`, it is never\nwired up to the server's handler.\n```\n</details>\n\n<!--\n<sub>Reference ID: `711165`</sub>-->",
+            "author": "sentry",
+            "createdAt": "2026-02-07T00:22:27Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQr_8",
+        "line": 208,
+        "startLine": 194,
+        "comments": [
+          {
+            "id": 2777564728,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**Symlink-following in directory verification allows a local attacker to bypass ownership checks.**\n\n`socket_dir.stat()` (line 196) follows symlinks, so it checks the *target* rather than the directory entry itself. An attacker could create a symlink at `/tmp/trae-osxphotos-{uid}/` pointing to a victim-owned directory; `stat()` would see the victim's uid and pass the ownership check, while the attacker controls the symlink.\n\nAdd an explicit symlink check before trusting `stat()`:\n\n<details>\n<summary>🔒 Proposed fix</summary>\n\n```diff\n         else:\n             # Verify ownership and permissions on existing directory\n+            if socket_dir.is_symlink():\n+                raise RuntimeError(\n+                    f\"Socket directory {socket_dir} is a symlink — possible attack. \"\n+                    \"Remove it and retry.\"\n+                )\n-            dir_stat = socket_dir.stat()\n+            dir_stat = socket_dir.lstat()\n             current_uid = os.getuid()\n             dir_mode = stat.S_IMODE(dir_stat.st_mode)\n```\n</details>\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 Ruff (0.14.14)</summary>\n\n[warning] 201-204: Avoid specifying long messages outside the exception class\n\n(TRY003)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/sandboxed/server.py` around lines 194 - 208, The ownership check\ncurrently uses socket_dir.stat() which follows symlinks; first ensure the\ndirectory entry itself is not a symlink by calling socket_dir.is_symlink() or\nusing socket_dir.lstat() and checking S_ISLNK, and if it is a symlink raise a\nRuntimeError; only after confirming it's not a symlink call socket_dir.stat()\n(as currently done) to compare dir_stat.st_uid with os.getuid(), and then keep\nthe permission fix using os.chmod as before (references: socket_dir.stat(),\nsocket_dir.is_symlink()/socket_dir.lstat(), dir_stat.st_uid, os.getuid(),\nos.chmod).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T13:44:56Z"
+          }
+        ]
+      },
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tQr_9",
+        "line": 213,
+        "startLine": 210,
+        "comments": [
+          {
+            "id": 2777564729,
+            "body": "_⚠️ Potential issue_ | _🟡 Minor_\n\n**Stale symlink at socket path would not be cleaned up.**\n\n`socket_file.exists()` follows symlinks and returns `False` for a broken symlink, so a dangling symlink at the socket path won't be unlinked. `start_unix_server` will then fail to bind. Consider using `socket_file.is_symlink() or socket_file.exists()` or `try/except` around `unlink`.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n         # Remove old socket if it exists\n-        if socket_file.exists():\n+        if socket_file.exists() or socket_file.is_symlink():\n             socket_file.unlink()\n             logger.info(f\"Removed stale socket: {self.socket_path}\")\n```\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/sandboxed/server.py` around lines 210 - 213, The stale socket cleanup\nin start_unix_server uses socket_file.exists() which misses dangling symlinks;\nupdate the removal logic in start_unix_server (the socket_file variable) to\ncheck socket_file.exists() or socket_file.is_symlink() before unlinking, and\nwrap socket_file.unlink() in a try/except that logs any OSError (use\nlogger.error) to avoid crashing if unlink fails; ensure the log still reports\nthe removed path (f\"Removed stale socket: {self.socket_path}\") on success and\nlogs the exception on failure.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-07T13:44:56Z"
+          }
+        ]
+      }
+    ],
+    "python/tools/osxphotos_mcp_server.py": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJi4p",
+        "line": 108,
+        "startLine": 103,
+        "comments": [
+          {
+            "id": 2775063299,
+            "body": "_⚠️ Potential issue_ | _🔴 Critical_\n\n**Bug: `result or {}` silently replaces falsy results (empty list, `0`, `False`) with `{}`.**\n\nIf a tool method legitimately returns `[]`, `0`, `False`, or even `\"\"`, the `or` short-circuit at line 101 will substitute `{}`, corrupting the response. For example, `list_albums` returning an empty list would yield `{\"result\": {}}` instead of `{\"result\": []}`.\n\nUse an explicit `None` check instead.\n\n\n<details>\n<summary>🐛 Proposed fix</summary>\n\n```diff\n         if error:\n             response[\"error\"] = error\n         else:\n-            response[\"result\"] = result or {}\n+            response[\"result\"] = result if result is not None else {}\n```\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/tools/osxphotos_mcp_server.py` around lines 98 - 103, The code sets\nresponse[\"result\"] = result or {}, which wrongly replaces legitimate falsy\nresults ([], 0, False, \"\") with {} — change this to an explicit None check: set\nresponse[\"result\"] to result if result is not None else {} so only None becomes\nan empty dict; update the assignment near response/variable result in\nosxphotos_mcp_server.py (the block that currently does response[\"error\"] = error\n/ response[\"result\"] = result or {}) to use the explicit None check.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T16:47:55Z"
+          }
+        ]
+      }
+    ],
+    "python/tools/osxphotos_tool.py": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tLhpY",
+        "line": 414,
+        "startLine": 398,
+        "comments": [
+          {
+            "id": 2775740378,
+            "body": "_⚠️ Potential issue_ | _🟠 Major_\n\n**Async wrappers are misleading — they block the event loop.**\n\n`list_albums_async` and `get_photos_async` are `async def` but perform synchronous blocking socket I/O (via `OsxphotosTool`). Any caller `await`-ing these will block the entire event loop for the duration of the socket call. Either use `asyncio.to_thread()` to offload, or document that these are not truly non-blocking.\n\n<details>\n<summary>Suggested fix using asyncio.to_thread</summary>\n\n```diff\n async def list_albums_async(\n     socket_path: str = \"/tmp/trae-osxphotos.sock\",\n ) -> list[dict[str, Any]]:\n     \"\"\"Async wrapper for list_albums.\"\"\"\n-    tool = OsxphotosTool(socket_path)\n-    return tool.list_albums()\n+    def _sync():\n+        tool = OsxphotosTool(socket_path)\n+        return tool.list_albums()\n+    return await asyncio.to_thread(_sync)\n \n \n async def get_photos_async(\n     album_id: str,\n     limit: int = 50,\n     socket_path: str = \"/tmp/trae-osxphotos.sock\",\n ) -> list[dict[str, Any]]:\n     \"\"\"Async wrapper for get_photos.\"\"\"\n-    tool = OsxphotosTool(socket_path)\n-    return tool.get_photos(album_id, limit)\n+    def _sync():\n+        tool = OsxphotosTool(socket_path)\n+        return tool.get_photos(album_id, limit)\n+    return await asyncio.to_thread(_sync)\n```\n</details>\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 Ruff (0.14.14)</summary>\n\n[error] 400-400: Probable insecure usage of temporary file or directory: \"/tmp/trae-osxphotos.sock\"\n\n(S108)\n\n---\n\n[error] 410-410: Probable insecure usage of temporary file or directory: \"/tmp/trae-osxphotos.sock\"\n\n(S108)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nIn `@python/tools/osxphotos_tool.py` around lines 398 - 414, The async wrappers\nlist_albums_async and get_photos_async call synchronous OsxphotosTool methods\nand block the event loop; change them to offload the blocking calls to a thread\nusing asyncio.to_thread (e.g., create OsxphotosTool and replace direct calls to\ntool.list_albums() and tool.get_photos(...) with await\nasyncio.to_thread(tool.list_albums) and await asyncio.to_thread(tool.get_photos,\nalbum_id, limit)) so awaiting these functions does not block the event loop.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+            "author": "coderabbitai",
+            "createdAt": "2026-02-06T19:45:36Z"
+          }
+        ]
+      }
+    ],
+    "src/routes/extract/+page.svelte": [
+      {
+        "thread_id": "PRRT_kwDOQxLWHs5tJhTQ",
+        "line": 153,
+        "startLine": 153,
+        "comments": [
+          {
+            "id": 2775054638,
+            "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use a unique accordion item value**\n\nThis sets a literal string for every item (`album-{album.id}`), so all accordion items share the same value. In `type=\"single\"` mode that means expanding one album will also mark every other item as the active value, so you can’t reliably open a single album or distinguish selections. Use a computed value (e.g., `value={`album-${album.id}`}`) so each item is unique.\n\nUseful? React with 👍 / 👎.",
+            "author": "chatgpt-codex-connector",
+            "createdAt": "2026-02-06T16:46:07Z"
+          }
+        ]
+      }
+    ]
+  }
+}
