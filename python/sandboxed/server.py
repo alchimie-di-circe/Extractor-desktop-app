@@ -11,6 +11,7 @@ import asyncio
 import logging
 import os
 import signal
+import stat
 import sys
 from pathlib import Path
 
@@ -184,6 +185,21 @@ class OsxphotosServer:
         if not socket_dir.exists():
             socket_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             logger.info(f"Created private socket directory: {socket_dir}")
+        else:
+            # Verify ownership and permissions on existing directory
+            dir_stat = socket_dir.stat()
+            current_uid = os.getuid()
+            dir_mode = stat.S_IMODE(dir_stat.st_mode)
+
+            if dir_stat.st_uid != current_uid:
+                raise RuntimeError(
+                    f"Socket directory {socket_dir} is owned by uid {dir_stat.st_uid}, "
+                    f"expected {current_uid}. Directory may have been compromised."
+                )
+
+            if dir_mode != 0o700:
+                logger.warning(f"Fixing insecure permissions on socket directory {socket_dir}")
+                os.chmod(str(socket_dir), 0o700)
 
         # Remove old socket if it exists
         if socket_file.exists():

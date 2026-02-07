@@ -479,6 +479,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 	private setupSocketHandlers(): void {
 		if (!this.socket) return;
 
+		const MAX_MESSAGE_SIZE = 1_048_576; // 1 MB
 		let buffer = Buffer.alloc(0);
 		let targetLength = 0;
 
@@ -489,6 +490,16 @@ export class OsxphotosSupervisor extends EventEmitter {
 				if (targetLength === 0) {
 					targetLength = buffer.readUInt32BE(0);
 					buffer = buffer.slice(4);
+
+					if (targetLength <= 0 || targetLength > MAX_MESSAGE_SIZE) {
+						console.error(
+							`[Osxphotos] Invalid message length: ${targetLength} (max: ${MAX_MESSAGE_SIZE})`,
+						);
+						this.closeSocket();
+						buffer = Buffer.alloc(0);
+						targetLength = 0;
+						return;
+					}
 				}
 
 				if (buffer.length >= targetLength) {
