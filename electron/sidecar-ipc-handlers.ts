@@ -6,6 +6,7 @@
 
 import { EventEmitter } from 'node:events';
 import { createConnection, type Socket } from 'node:net';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { type ChildProcess, spawn } from 'child_process';
@@ -69,6 +70,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 	private currentBackoff: number = 1000;
 	private lastHealthyTime: number = 0;
 	private isShuttingDown: boolean = false;
+	private isAppQuitting: boolean = false;
 	private jsonRpcId: number = 0;
 	private pendingRequests = new Map<
 		number | string,
@@ -104,10 +106,20 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 			console.log(`[Osxphotos] Starting osxphotos server`);
 
+			// Security: Filter environment variables passed to sandboxed child process
+			// Only pass essential variables, blocking API keys and sensitive credentials
+			const safeEnv: Record<string, string> = {};
+			const allowedVars = ['PATH', 'HOME', 'USER', 'LANG'];
+			for (const key of allowedVars) {
+				if (process.env[key]) {
+					safeEnv[key] = process.env[key];
+				}
+			}
+
 			this.process = spawn(pythonPath, ['sandboxed/server.py'], {
 				cwd: pythonDir,
 				env: {
-					...process.env,
+					...safeEnv,
 					LOG_LEVEL: 'INFO',
 					PYTHONUNBUFFERED: '1',
 				},
@@ -174,7 +186,10 @@ export class OsxphotosSupervisor extends EventEmitter {
 			this.pendingRequests.clear();
 
 			this.process = null;
-			this.isShuttingDown = false;
+			// Don't reset isShuttingDown if app is quitting (prevents restart during quit)
+			if (!this.isAppQuitting) {
+				this.isShuttingDown = false;
+			}
 			this.emitToRenderers({
 				type: 'stopped',
 				message: 'Osxphotos stopped',
@@ -200,10 +215,15 @@ export class OsxphotosSupervisor extends EventEmitter {
 	async sendJsonRpc<T = unknown>(
 		method: string,
 		params: Record<string, unknown> | unknown[] = {},
+		timeoutMs?: number,
 	): Promise<T> {
 		if (!this.isRunning() || this.isShuttingDown) {
 			throw new Error('Osxphotos is not running');
 		}
+
+		// Use custom timeout if provided, otherwise default to 30 seconds
+		// Health checks use config.timeout (2s), long-running ops use higher values
+		const requestTimeout = timeoutMs ?? 30_000;
 
 		const id = ++this.jsonRpcId;
 		const request: JsonRpcRequest = {
@@ -217,7 +237,7 @@ export class OsxphotosSupervisor extends EventEmitter {
 			const timeout = setTimeout(() => {
 				this.pendingRequests.delete(id);
 				reject(new Error(`JSON-RPC request timeout for ${method}`));
-			}, this.config.timeout);
+			}, requestTimeout);
 
 			this.pendingRequests.set(id, { resolve, reject, timeout });
 
@@ -263,17 +283,26 @@ export class OsxphotosSupervisor extends EventEmitter {
 	private setupAppHooks(): void {
 		app.on('before-quit', async () => {
 			console.log('[Osxphotos] App before-quit hook');
-			await this.stop();
+			this.isAppQuitting = true;
+			await this.stop().catch((e) => {
+				console.error('[Osxphotos] Error during app quit:', e);
+			});
 		});
 
 		process.on('SIGINT', async () => {
 			console.log('[Osxphotos] SIGINT received');
-			await this.stop();
+			await this.stop().catch((e) => {
+				console.error('[Osxphotos] Error handling SIGINT:', e);
+			});
+			process.exit(0);
 		});
 
 		process.on('SIGTERM', async () => {
 			console.log('[Osxphotos] SIGTERM received');
-			await this.stop();
+			await this.stop().catch((e) => {
+				console.error('[Osxphotos] Error handling SIGTERM:', e);
+			});
+			process.exit(0);
 		});
 	}
 
@@ -586,8 +615,12 @@ export class OsxphotosSupervisor extends EventEmitter {
 
 	private getPythonPath(): string {
 		if (app.isPackaged) {
-			const sidecarPath = path.join(process.resourcesPath, 'sidecar', 'cagent-sidecar');
-			return sidecarPath;
+			// TODO: Ensure Python is bundled in resources during build
+			// Currently should be at process.resourcesPath/sidecar/python3 or similar
+			// This requires build configuration to include bundled Python interpreter
+			const pythonPath = path.join(process.resourcesPath, 'sidecar', 'python3');
+			console.log(`[Osxphotos] Using bundled Python at ${pythonPath}`);
+			return pythonPath;
 		} else {
 			return process.platform === 'win32' ? 'python' : 'python3';
 		}
@@ -773,16 +806,31 @@ export function registerOsxphotosIpcHandlers(): void {
 					};
 				}
 
-				// Check for absolute paths
-				if (path.isAbsolute(exportPath)) {
+				// SECURITY 1a: Path whitelist validation
+				// Accept absolute paths but validate they are within allowed directories
+				const homeDir = homedir();
+				const allowedDirs = [
+					path.join(homeDir, 'Exports'),
+					path.join(homeDir, 'Documents', 'TraeExports'),
+				];
+
+				const normalizedPath = path.resolve(exportPath);
+				const isAllowed = allowedDirs.some(
+					(dir) => normalizedPath.startsWith(dir + path.sep) || normalizedPath === dir,
+				);
+
+				if (!isAllowed) {
 					return {
 						success: false,
-						error: { code: 'SECURITY_ERROR', message: 'Invalid export path' },
+						error: {
+							code: 'SECURITY_ERROR',
+							message: `Export path must be within ${allowedDirs.join(' or ')}`,
+						},
 					};
 				}
 
-				// Check for directory traversal using segment-based check (not substring)
-				const normalized = path.normalize(exportPath);
+				// Check for directory traversal attempts using segment-based check (not substring)
+				const normalized = path.normalize(normalizedPath);
 				const segments = normalized.split(/[/\\]+/);
 				if (segments.some((s) => s === '..')) {
 					return {
@@ -792,13 +840,18 @@ export function registerOsxphotosIpcHandlers(): void {
 				}
 
 				await osxphotosSupervisor.ensureRunning();
+				// Use 60s timeout for export_photo as it may be I/O intensive
 				const result = await osxphotosSupervisor.sendJsonRpc<{
 					success: boolean;
 					path: string;
-				}>('export_photo', {
-					photo_id: photoId,
-					export_path: exportPath,
-				});
+				}>(
+					'export_photo',
+					{
+						photo_id: photoId,
+						export_path: normalizedPath,
+					},
+					60_000,
+				);
 				return { success: true, data: result };
 			} catch (error) {
 				console.error('osxphotos:export-photo error:', error);
