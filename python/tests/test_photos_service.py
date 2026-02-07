@@ -33,7 +33,7 @@ def mock_osxphotos():
             mock_photo.date = None
             mock_photo.width = 1920
             mock_photo.height = 1080
-            mock_photo.size = 1024 * 100
+            mock_photo.original_filesize = 1024 * 100
             mock_album_1.photos.append(mock_photo)
 
         mock_db.albums = [mock_album_1]
@@ -102,6 +102,7 @@ async def test_get_photos_success(mock_osxphotos):
     assert result["returned"] == 2
     assert len(result["photos"]) == 2
     assert result["photos"][0]["filename"] == "photo_0.jpg"
+    assert result["photos"][0]["size_bytes"] == 1024 * 100
 
 
 @pytest.mark.asyncio

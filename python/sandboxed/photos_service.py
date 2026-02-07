@@ -150,7 +150,7 @@ class PhotosService:
                     "date": photo.date.isoformat() if photo.date else None,
                     "width": photo.width,
                     "height": photo.height,
-                    "size_bytes": photo.size,
+                    "size_bytes": photo.original_filesize,
                 })
 
             logger.info(f"Retrieved {len(photos)} photos from album {album_id}")
