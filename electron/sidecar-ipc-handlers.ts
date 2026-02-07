@@ -62,7 +62,10 @@ interface HealthCheckConfig {
 
 export class OsxphotosSupervisor extends EventEmitter {
 	private process: ChildProcess | null = null;
-	private socketPath: string = `/tmp/trae-osxphotos-${process.getuid()}/server.sock`;
+	private socketPath: string = path.join(
+		app.getPath('temp'),
+		`trae-osxphotos-${process.platform === 'win32' ? process.pid : process.getuid?.() ?? process.pid}.sock`,
+	);
 	private socket: Socket | null = null;
 	private healthCheckTimer: NodeJS.Timer | null = null;
 	private crashTimestamps: number[] = [];
