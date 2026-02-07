@@ -293,20 +293,18 @@ export class OsxphotosSupervisor extends EventEmitter {
 			});
 		});
 
-		process.on('SIGINT', async () => {
+		process.once('SIGINT', async () => {
 			console.log('[Osxphotos] SIGINT received');
 			await this.stop().catch((e) => {
 				console.error('[Osxphotos] Error handling SIGINT:', e);
 			});
-			process.exit(0);
 		});
 
-		process.on('SIGTERM', async () => {
+		process.once('SIGTERM', async () => {
 			console.log('[Osxphotos] SIGTERM received');
 			await this.stop().catch((e) => {
 				console.error('[Osxphotos] Error handling SIGTERM:', e);
 			});
-			process.exit(0);
 		});
 	}
 
