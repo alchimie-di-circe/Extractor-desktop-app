@@ -16,6 +16,7 @@ from pathlib import Path
 
 from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode
 from python.sandboxed.photos_service import PhotosService, PhotosServiceError
+from python.sandboxed.path_whitelist import validate_export_path, SecurityError
 
 
 logger = logging.getLogger(__name__)
@@ -29,12 +30,19 @@ logging.basicConfig(
 class OsxphotosServer:
     """Unix domain socket server for sandboxed osxphotos."""
 
-    def __init__(self, socket_path: str = "/tmp/trae-osxphotos.sock"):
+    def __init__(
+        self,
+        socket_path: str = None,
+    ):
         """Initialize server."""
+        # Use per-user private directory for socket (TOCTOU mitigation)
+        if socket_path is None:
+            uid = os.getuid()
+            socket_path = f"/tmp/trae-osxphotos-{uid}/server.sock"
         self.socket_path = socket_path
         self.handler = JsonRpcHandler()
         self.server = None
-        self.shutdown_event = asyncio.Event()
+        self.shutdown_event = None
         self.photos_service = PhotosService()
 
         # Register methods
@@ -52,23 +60,55 @@ class OsxphotosServer:
         return {"status": "ok", "message": "pong"}
 
     async def handle_list_albums(self) -> dict:
-        """List available albums (placeholder)."""
-        # TODO: Implement with osxphotos.PhotosDB
-        return {
-            "albums": [
-                {"id": "1", "name": "Library", "count": 100},
-            ]
-        }
+        """List available albums."""
+        try:
+            albums = await self.photos_service.list_albums()
+            return {"albums": albums}
+        except PhotosServiceError as e:
+            logger.error(f"Photos service error: {e}")
+            return {
+                "success": False,
+                "error": {"code": "SERVICE_ERROR", "message": str(e)},
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error listing albums: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": {"code": "INTERNAL_ERROR", "message": "Failed to list albums"},
+            }
 
-    async def handle_get_photos(self, album_id: str) -> dict:
-        """Get photos from album (placeholder)."""
-        # TODO: Implement with osxphotos.PhotosDB
-        return {"album_id": album_id, "photos": []}
+    async def handle_get_photos(self, album_id: str, limit: int = 100, offset: int = 0) -> dict:
+        """Get photos from album."""
+        try:
+            result = await self.photos_service.get_photos(album_id, limit=limit, offset=offset)
+            return result
+        except PhotosServiceError as e:
+            logger.error(f"Photos service error: {e}")
+            return {
+                "success": False,
+                "error": {"code": "SERVICE_ERROR", "message": str(e)},
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error getting photos: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": {"code": "INTERNAL_ERROR", "message": "Failed to get photos"},
+            }
 
     async def handle_export_photo(self, photo_id: str, export_path: str) -> dict:
         """Export a photo to disk."""
         try:
-            result = await self.photos_service.export_photo(photo_id, export_path)
+            # Validate export path against whitelist (defense-in-depth)
+            try:
+                validated_path = validate_export_path(export_path)
+            except SecurityError as e:
+                logger.warning(f"Export path validation failed: {e}")
+                return {
+                    "success": False,
+                    "error": {"code": "SECURITY_ERROR", "message": str(e)},
+                }
+
+            result = await self.photos_service.export_photo(photo_id, validated_path)
             return {"success": True, "data": result}
         except PhotosServiceError as e:
             logger.error(f"Photos service error: {e}")
@@ -94,7 +134,7 @@ class OsxphotosServer:
             while not self.shutdown_event.is_set():
                 # Read request (format: 4-byte length + JSON)
                 try:
-                    length_bytes = await asyncio.wait_for(reader.readexactly(4), timeout=5.0)
+                    length_bytes = await asyncio.wait_for(reader.readexactly(4), timeout=30.0)
                 except asyncio.TimeoutError:
                     logger.debug(f"Timeout waiting for data from {addr}")
                     break
@@ -108,7 +148,7 @@ class OsxphotosServer:
                     break
 
                 try:
-                    request_data = await asyncio.wait_for(reader.readexactly(length), timeout=5.0)
+                    request_data = await asyncio.wait_for(reader.readexactly(length), timeout=30.0)
                 except asyncio.TimeoutError:
                     logger.error(f"Timeout reading request from {addr}")
                     break
@@ -135,27 +175,42 @@ class OsxphotosServer:
 
     async def start(self) -> None:
         """Start the server."""
-        # Remove old socket if it exists
+        # Initialize shutdown event in the running loop (Python 3.9 compatibility)
+        self.shutdown_event = asyncio.Event()
+
+        # Create private socket directory with restrictive permissions (TOCTOU mitigation)
         socket_file = Path(self.socket_path)
+        socket_dir = socket_file.parent
+        if not socket_dir.exists():
+            socket_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            logger.info(f"Created private socket directory: {socket_dir}")
+
+        # Remove old socket if it exists
         if socket_file.exists():
             socket_file.unlink()
             logger.info(f"Removed stale socket: {self.socket_path}")
 
-        # Create server
-        self.server = await asyncio.start_unix_server(
-            self.handle_client, path=self.socket_path
-        )
+        # Set umask to restrict socket file creation permissions
+        old_umask = os.umask(0o077)
+        try:
+            # Create server
+            self.server = await asyncio.start_unix_server(
+                self.handle_client, path=self.socket_path
+            )
 
-        # Set socket permissions (accessible only to owner)
-        os.chmod(self.socket_path, 0o600)
+            # Set socket permissions explicitly (accessible only to owner)
+            os.chmod(self.socket_path, 0o600)
 
-        logger.info(f"Server listening on: {self.socket_path}")
+            logger.info(f"Server listening on: {self.socket_path}")
 
-        # Wait for shutdown
-        async with self.server:
-            await self.shutdown_event.wait()
+            # Wait for shutdown
+            async with self.server:
+                await self.shutdown_event.wait()
 
-        logger.info("Server shutting down")
+            logger.info("Server shutting down")
+        finally:
+            # Restore old umask
+            os.umask(old_umask)
 
     async def shutdown(self) -> None:
         """Trigger shutdown."""
