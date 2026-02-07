@@ -202,12 +202,19 @@ class PhotosService:
             if not photo:
                 raise PhotosServiceError(f"Photo not found: {photo_id}")
 
-            # Export to path: osxphotos expects (directory, filename), not full path
             from pathlib import Path
-            export_file = Path(export_path)
-            export_dir = str(export_file.parent)
-            export_filename = export_file.name
-            
+            export_target = Path(export_path)
+
+            # If caller provides a directory, export using the photo's own filename
+            if export_target.suffix == "":
+                export_target.mkdir(parents=True, exist_ok=True)
+                export_dir = str(export_target)
+                export_filename = photo.filename
+            else:
+                export_target.parent.mkdir(parents=True, exist_ok=True)
+                export_dir = str(export_target.parent)
+                export_filename = export_target.name
+
             exported_paths = photo.export(export_dir, export_filename)
             if not exported_paths:
                 raise PhotosServiceError(
