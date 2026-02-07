@@ -5,19 +5,23 @@ CRITICAL: network_lock must be the FIRST import to enable socket restrictions.
 """
 
 # CRITICAL: Import network_lock FIRST to install socket restriction
-import python.sandboxed.network_lock  # noqa: F401
+import os
+import sys
+
+# Add current directory to sys.path for relative imports (cwd is python/, this file is python/sandboxed/)
+sys.path.insert(0, os.path.dirname(__file__))
+
+import network_lock  # noqa: F401
 
 import asyncio
 import logging
-import os
 import signal
 import stat
-import sys
 from pathlib import Path
 
 from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode
-from python.sandboxed.photos_service import PhotosService, PhotosServiceError
-from python.sandboxed.path_whitelist import validate_export_path, SecurityError
+from photos_service import PhotosService, PhotosServiceError
+from path_whitelist import validate_export_path, SecurityError
 
 
 logger = logging.getLogger(__name__)
@@ -192,6 +196,13 @@ class OsxphotosServer:
             socket_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             logger.info(f"Created private socket directory: {socket_dir}")
         else:
+            # Security: Check for symlinks before trusting stat() results
+            if socket_dir.is_symlink():
+                raise RuntimeError(
+                    f"Socket directory {socket_dir} is a symlink — possible attack. "
+                    "Remove it and retry."
+                )
+            
             # Verify ownership and permissions on existing directory
             dir_stat = socket_dir.stat()
             current_uid = os.getuid()
@@ -207,10 +218,13 @@ class OsxphotosServer:
                 logger.warning(f"Fixing insecure permissions on socket directory {socket_dir}")
                 os.chmod(str(socket_dir), 0o700)
 
-        # Remove old socket if it exists
-        if socket_file.exists():
-            socket_file.unlink()
-            logger.info(f"Removed stale socket: {self.socket_path}")
+        # Remove old socket if it exists (handles both regular files and broken symlinks)
+        if socket_file.exists() or socket_file.is_symlink():
+            try:
+                socket_file.unlink()
+                logger.info(f"Removed stale socket: {self.socket_path}")
+            except OSError as e:
+                logger.error(f"Failed to remove stale socket {self.socket_path}: {e}")
 
         # Set umask to restrict socket file creation permissions
         old_umask = os.umask(0o077)
@@ -244,13 +258,23 @@ async def main() -> None:
     """Main entry point."""
     server = OsxphotosServer()
 
-    # Handle signals
-    def signal_handler(sig: int, frame) -> None:
-        logger.info(f"Signal {sig} received")
-        asyncio.create_task(server.shutdown())
-
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    # Handle signals using asyncio's proper signal handling (not raw signal.signal)
+    loop = asyncio.get_running_loop()
+    
+    def signal_handler(sig: int) -> None:
+        logger.info(f"Signal {sig} received, shutting down...")
+        # Schedule shutdown on the event loop
+        task = asyncio.create_task(server.shutdown())
+        # Attach error handler to prevent silent failures
+        task.add_done_callback(
+            lambda t: logger.error(f"Shutdown error: {t.exception()}", exc_info=True)
+            if t.exception()
+            else None
+        )
+    
+    # Register signal handlers with the event loop
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, signal_handler, sig)
 
     try:
         await server.start()

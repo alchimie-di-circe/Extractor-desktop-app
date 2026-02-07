@@ -103,7 +103,8 @@ class OsxphotosMCPServer:
         if error:
             response["error"] = error
         else:
-            response["result"] = result or {}
+            # Explicitly check for None: falsy values like [], 0, False are valid results
+            response["result"] = result if result is not None else {}
 
         return json.dumps(response)
 

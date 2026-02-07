@@ -8,6 +8,7 @@ Handles:
 - Permission error detection
 """
 
+import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 
@@ -69,6 +70,11 @@ class PhotosService:
             PhotosPermissionError: If Full Disk Access not granted
             PhotosServiceError: If database access fails
         """
+        # Offload blocking DB iteration to thread pool to avoid blocking the event loop
+        return await asyncio.to_thread(self._list_albums_sync)
+    
+    def _list_albums_sync(self) -> List[Dict[str, Any]]:
+        """Synchronous implementation of list_albums (runs in thread pool)."""
         try:
             if not self.db:
                 raise PhotosServiceError("Database not initialized")
@@ -111,6 +117,11 @@ class PhotosService:
         Raises:
             PhotosServiceError: If album not found or access fails
         """
+        # Offload blocking DB iteration to thread pool to avoid blocking the event loop
+        return await asyncio.to_thread(self._get_photos_sync, album_id, limit, offset)
+    
+    def _get_photos_sync(self, album_id: str, limit: int, offset: int) -> Dict[str, Any]:
+        """Synchronous implementation of get_photos (runs in thread pool)."""
         try:
             if not self.db:
                 raise PhotosServiceError("Database not initialized")
@@ -173,6 +184,11 @@ class PhotosService:
             PhotosServiceError: If export fails
             PhotosPermissionError: If Full Disk Access not granted
         """
+        # Offload blocking export to thread pool to avoid blocking the event loop
+        return await asyncio.to_thread(self._export_photo_sync, photo_id, export_path)
+    
+    def _export_photo_sync(self, photo_id: str, export_path: str) -> Dict[str, Any]:
+        """Synchronous implementation of export_photo (runs in thread pool)."""
         try:
             if not self.db:
                 raise PhotosServiceError("Database not initialized")
@@ -186,8 +202,13 @@ class PhotosService:
             if not photo:
                 raise PhotosServiceError(f"Photo not found: {photo_id}")
 
-            # Export to path
-            photo.export(export_path)
+            # Export to path: osxphotos expects (directory, filename), not full path
+            from pathlib import Path
+            export_file = Path(export_path)
+            export_dir = str(export_file.parent)
+            export_filename = export_file.name
+            
+            photo.export(export_dir, export_filename)
 
             logger.info(f"Exported photo {photo_id} to {export_path}")
 

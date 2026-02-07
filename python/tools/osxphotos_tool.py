@@ -399,9 +399,12 @@ class OsxphotosTool:
 async def list_albums_async(
     socket_path: str = "/tmp/trae-osxphotos.sock",
 ) -> list[dict[str, Any]]:
-    """Async wrapper for list_albums."""
-    tool = OsxphotosTool(socket_path)
-    return tool.list_albums()
+    """Async wrapper for list_albums (offloads blocking socket I/O to thread pool)."""
+    def _sync() -> list[dict[str, Any]]:
+        tool = OsxphotosTool(socket_path)
+        return tool.list_albums()
+    
+    return await asyncio.to_thread(_sync)
 
 
 async def get_photos_async(
@@ -409,6 +412,9 @@ async def get_photos_async(
     limit: int = 50,
     socket_path: str = "/tmp/trae-osxphotos.sock",
 ) -> list[dict[str, Any]]:
-    """Async wrapper for get_photos."""
-    tool = OsxphotosTool(socket_path)
-    return tool.get_photos(album_id, limit)
+    """Async wrapper for get_photos (offloads blocking socket I/O to thread pool)."""
+    def _sync() -> list[dict[str, Any]]:
+        tool = OsxphotosTool(socket_path)
+        return tool.get_photos(album_id, limit)
+    
+    return await asyncio.to_thread(_sync)
