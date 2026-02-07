@@ -132,7 +132,7 @@ class OsxphotosMCPServer:
             request = json.loads(request_str)
         except json.JSONDecodeError as e:
             return self._error_response(
-                -1, -32700, "Parse error", {"details": str(e)}
+                None, -32700, "Parse error", {"details": str(e)}
             )
 
         request_id = request.get("id", -1)
