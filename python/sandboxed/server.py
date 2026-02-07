@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from jsonrpc_handler import JsonRpcHandler, JsonRpcError, JsonRpcErrorCode
+from python.sandboxed.photos_service import PhotosService, PhotosServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ class OsxphotosServer:
         self.handler = JsonRpcHandler()
         self.server = None
         self.shutdown_event = asyncio.Event()
+        self.photos_service = PhotosService()
 
         # Register methods
         self._register_methods()
@@ -43,6 +45,7 @@ class OsxphotosServer:
         self.handler.register("ping", self.handle_ping)
         self.handler.register("list_albums", self.handle_list_albums)
         self.handler.register("get_photos", self.handle_get_photos)
+        self.handler.register("export_photo", self.handle_export_photo)
 
     async def handle_ping(self) -> dict:
         """Simple ping method for health checks."""
@@ -61,6 +64,24 @@ class OsxphotosServer:
         """Get photos from album (placeholder)."""
         # TODO: Implement with osxphotos.PhotosDB
         return {"album_id": album_id, "photos": []}
+
+    async def handle_export_photo(self, photo_id: str, export_path: str) -> dict:
+        """Export a photo to disk."""
+        try:
+            result = await self.photos_service.export_photo(photo_id, export_path)
+            return {"success": True, "data": result}
+        except PhotosServiceError as e:
+            logger.error(f"Photos service error: {e}")
+            return {
+                "success": False,
+                "error": {"code": "SERVICE_ERROR", "message": str(e)},
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error exporting photo: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": {"code": "INTERNAL_ERROR", "message": "Failed to export photo"},
+            }
 
     async def handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
