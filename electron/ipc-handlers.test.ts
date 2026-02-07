@@ -212,14 +212,34 @@ describe('Osxphotos Handlers', () => {
 		supervisor.socket = null;
 	});
 
-	it('LIST_ALBUMS handler validates input types', async () => {
-		const { registerOsxphotosIpcHandlers } = await import('./sidecar-ipc-handlers');
+	it('LIST_ALBUMS handler returns albums on success', async () => {
+		const { registerOsxphotosIpcHandlers, osxphotosSupervisor } = await import(
+			'./sidecar-ipc-handlers'
+		);
 		handlers.clear();
 		registerOsxphotosIpcHandlers();
 
+		const supervisor = osxphotosSupervisor as unknown as {
+			ensureRunning: () => Promise<void>;
+			sendJsonRpc: <T>(method: string, params?: unknown) => Promise<T>;
+		};
+		const ensureRunningSpy = vi.spyOn(supervisor, 'ensureRunning').mockResolvedValue();
+		const albumsPayload = {
+			albums: [{ id: 'a1', name: 'Album 1', count: 5 }],
+		};
+		const sendJsonRpcSpy = vi
+			.spyOn(supervisor, 'sendJsonRpc')
+			.mockResolvedValue(albumsPayload as never);
+
 		const handler = getHandler(OsxphotosChannels.LIST_ALBUMS);
-		// Should not throw and should return a result
-		expect(handler).toBeDefined();
+		const result = await handler({});
+
+		expect(ensureRunningSpy).toHaveBeenCalledTimes(1);
+		expect(sendJsonRpcSpy).toHaveBeenCalledWith('list_albums');
+		expect(result).toEqual({ success: true, data: albumsPayload });
+
+		ensureRunningSpy.mockRestore();
+		sendJsonRpcSpy.mockRestore();
 	});
 
 	it('OsxphotosSupervisor does not restart on health-check failure during shutdown', async () => {
