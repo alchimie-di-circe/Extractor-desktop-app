@@ -131,11 +131,14 @@ class OsxphotosTool:
                 sock.sendall(request_length + request_bytes)
 
                 # Receive response length prefix
-                response_length_bytes = sock.recv(4)
-                if not response_length_bytes:
-                    raise OsxphotosResponseError(
-                        "Server closed connection without response"
-                    )
+                response_length_bytes = b""
+                while len(response_length_bytes) < 4:
+                    chunk = sock.recv(4 - len(response_length_bytes))
+                    if not chunk:
+                        raise OsxphotosResponseError(
+                            "Server closed connection without response"
+                        )
+                    response_length_bytes += chunk
                 response_length = int.from_bytes(response_length_bytes, byteorder="big")
 
                 # Receive full response payload

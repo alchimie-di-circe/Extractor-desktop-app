@@ -96,6 +96,8 @@ class PhotosService:
 
         except PermissionError as e:
             raise PhotosPermissionError(str(e)) from e
+        except PhotosServiceError:
+            raise
         except Exception as e:
             logger.error(f"Error listing albums: {e}", exc_info=True)
             raise PhotosServiceError(f"Failed to list albums: {e}") from e
@@ -165,6 +167,8 @@ class PhotosService:
 
         except PermissionError as e:
             raise PhotosPermissionError(str(e)) from e
+        except PhotosServiceError:
+            raise
         except Exception as e:
             logger.error(f"Error getting photos: {e}", exc_info=True)
             raise PhotosServiceError(f"Failed to get photos: {e}") from e
@@ -233,6 +237,8 @@ class PhotosService:
 
         except PermissionError as e:
             raise PhotosPermissionError(str(e)) from e
+        except PhotosServiceError:
+            raise
         except Exception as e:
             logger.error(f"Error exporting photo: {e}", exc_info=True)
             raise PhotosServiceError(f"Failed to export photo: {e}") from e

@@ -67,67 +67,24 @@ class OsxphotosServer:
 
     async def handle_list_albums(self) -> dict:
         """List available albums."""
-        try:
-            albums = await self.photos_service.list_albums()
-            return {"albums": albums}
-        except PhotosServiceError as e:
-            logger.error(f"Photos service error: {e}")
-            return {
-                "success": False,
-                "error": {"code": "SERVICE_ERROR", "message": str(e)},
-            }
-        except Exception as e:
-            logger.error(f"Unexpected error listing albums: {e}", exc_info=True)
-            return {
-                "success": False,
-                "error": {"code": "INTERNAL_ERROR", "message": "Failed to list albums"},
-            }
+        albums = await self.photos_service.list_albums()
+        return {"albums": albums}
 
     async def handle_get_photos(self, album_id: str, limit: int = 100, offset: int = 0) -> dict:
         """Get photos from album."""
-        try:
-            result = await self.photos_service.get_photos(album_id, limit=limit, offset=offset)
-            return result
-        except PhotosServiceError as e:
-            logger.error(f"Photos service error: {e}")
-            return {
-                "success": False,
-                "error": {"code": "SERVICE_ERROR", "message": str(e)},
-            }
-        except Exception as e:
-            logger.error(f"Unexpected error getting photos: {e}", exc_info=True)
-            return {
-                "success": False,
-                "error": {"code": "INTERNAL_ERROR", "message": "Failed to get photos"},
-            }
+        return await self.photos_service.get_photos(album_id, limit=limit, offset=offset)
 
     async def handle_export_photo(self, photo_id: str, export_path: str) -> dict:
         """Export a photo to disk."""
+        # Validate export path against whitelist (defense-in-depth)
         try:
-            # Validate export path against whitelist (defense-in-depth)
-            try:
-                validated_path = validate_export_path(export_path)
-            except SecurityError as e:
-                logger.warning(f"Export path validation failed: {e}")
-                return {
-                    "success": False,
-                    "error": {"code": "SECURITY_ERROR", "message": str(e)},
-                }
+            validated_path = validate_export_path(export_path)
+        except SecurityError as e:
+            logger.warning(f"Export path validation failed: {e}")
+            raise JsonRpcError(JsonRpcErrorCode.INVALID_PARAMS, str(e)) from e
 
-            result = await self.photos_service.export_photo(photo_id, validated_path)
-            return {"success": True, "data": result}
-        except PhotosServiceError as e:
-            logger.error(f"Photos service error: {e}")
-            return {
-                "success": False,
-                "error": {"code": "SERVICE_ERROR", "message": str(e)},
-            }
-        except Exception as e:
-            logger.error(f"Unexpected error exporting photo: {e}", exc_info=True)
-            return {
-                "success": False,
-                "error": {"code": "INTERNAL_ERROR", "message": "Failed to export photo"},
-            }
+        result = await self.photos_service.export_photo(photo_id, validated_path)
+        return {"success": True, "data": result}
 
     async def handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
