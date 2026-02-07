@@ -22,6 +22,9 @@ vi.mock('electron', () => ({
 		on: vi.fn(),
 		getPath: vi.fn(() => '/tmp'),
 	},
+	BrowserWindow: {
+		getAllWindows: vi.fn(() => []),
+	},
 }));
 
 vi.mock('./keychain', () => ({
