@@ -814,10 +814,11 @@ export function registerOsxphotosIpcHandlers(): void {
 					path.join(homeDir, 'Exports'),
 					path.join(homeDir, 'Documents', 'TraeExports'),
 				];
-
-				const normalizedPath = path.resolve(exportPath);
-				const isAllowed = allowedDirs.some(
-					(dir) => normalizedPath.startsWith(dir + path.sep) || normalizedPath === dir,
+const normalizedPath = path.resolve(exportPath);
+const isAllowed = allowedDirs.some((dir) => {
+	const rel = path.relative(dir, normalizedPath);
+	return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel));
+});
 				);
 
 				if (!isAllowed) {
