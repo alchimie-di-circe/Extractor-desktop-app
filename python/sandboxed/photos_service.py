@@ -223,7 +223,7 @@ class PhotosService:
             if not exported_paths:
                 raise PhotosServiceError(
                     f"Export returned no files for photo {photo_id} "
-                    f"(dir={export_dir}, filename={export_filename}, target={export_file})"
+                    f"(dir={export_dir}, filename={export_filename}, target={str(export_target)})"
                 )
 
             logger.info(f"Exported photo {photo_id} to {export_path}")
