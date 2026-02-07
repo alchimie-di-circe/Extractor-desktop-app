@@ -366,10 +366,14 @@ export class OsxphotosSupervisor extends EventEmitter {
 	private async handleHealthCheckFailure(): Promise<void> {
 		this.failureCount = 0;
 
+		// Record this failure and prune stale timestamps
+		this.crashTimestamps.push(Date.now());
 		const now = Date.now();
-		const recentCrashes = this.crashTimestamps.filter(
+		this.crashTimestamps = this.crashTimestamps.filter(
 			(ts) => now - ts < this.config.crashWindowMs,
-		).length;
+		);
+
+		const recentCrashes = this.crashTimestamps.length;
 
 		if (recentCrashes >= this.config.maxCrashes) {
 			console.error('[Osxphotos] Circuit breaker open - max crashes in window exceeded');
@@ -764,7 +768,8 @@ export function registerOsxphotosIpcHandlers(): void {
 				}
 
 				// Check for directory traversal using segment-based check (not substring)
-				const segments = exportPath.split(path.sep);
+				const normalized = path.normalize(exportPath);
+				const segments = normalized.split(/[/\\]+/);
 				if (segments.some((s) => s === '..')) {
 					return {
 						success: false,
