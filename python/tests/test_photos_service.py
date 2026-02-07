@@ -143,7 +143,7 @@ async def test_export_photo_success(mock_osxphotos):
     assert result["success"] is True
     assert result["photo_id"] == "photo-0"
     assert result["export_path"] == "/Users/test/Exports/photo.jpg"
-    mock_photo.export.assert_called_once_with("/Users/test/Exports/photo.jpg")
+    mock_photo.export.assert_called_once_with("/Users/test/Exports", "photo.jpg")
 
 
 @pytest.mark.asyncio
