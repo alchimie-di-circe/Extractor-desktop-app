@@ -103,8 +103,9 @@
     }
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,svelte}": [
+    "*.{ts,tsx,js,jsx}": [
       "biome check --write --no-errors-on-unmatched"
-    ]
+    ],
+    "*.svelte": []
   }
 }

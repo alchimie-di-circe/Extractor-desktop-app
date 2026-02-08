@@ -1,8 +1,8 @@
-# Task ID: 20
+# Task ID: 19
 
-**Title:** Integrazione Runtime Cagent in Sidecar Python
+**Title:** CAGENT RUNTIME in SIDECAR PYTHON
 
-**Status:** pending
+**Status:** done
 
 **Dependencies:** 4 ✓, 5 ✓
 

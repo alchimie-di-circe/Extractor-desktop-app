@@ -115,6 +115,50 @@ interface ElectronAPI {
 			}) => void,
 		) => () => void;
 	};
+	osxphotos: {
+		/**
+		 * List all albums from Photos library
+		 *
+		 * @returns Promise with array of albums {id, name, count}
+		 */
+		listAlbums: () => Promise<
+			IpcResult<{ albums: Array<{ id: string; name: string; count: number }> }>
+		>;
+
+		/**
+		 * Get photos from specified album
+		 *
+		 * @param albumId Album ID from listAlbums()
+		 * @param limit Optional limit on number of photos to return
+		 * @returns Promise with album_id and array of photos
+		 */
+		getPhotos: (
+			albumId: string,
+			limit?: number,
+		) => Promise<
+			IpcResult<{
+				album_id: string;
+				photos: Array<{ id: string; filename: string; width: number; height: number }>;
+			}>
+		>;
+
+		/**
+		 * Export photo to specified path
+		 *
+		 * @param photoId Photo ID from getPhotos()
+		 * @param exportPath Destination path (validated against whitelist)
+		 * @returns Promise with success status and exported path
+		 */
+		exportPhoto: (
+			photoId: string,
+			exportPath: string,
+		) => Promise<
+			IpcResult<{
+				success: boolean;
+				path: string;
+			}>
+		>;
+	};
 	/**
 	 * Get the current platform (async via IPC for sandbox compatibility)
 	 */

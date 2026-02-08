@@ -59,3 +59,12 @@ export const SidecarReloadChannels = {
 	FORCE_RELOAD: 'sidecar:force-reload',
 	RELOAD_EVENT: 'sidecar:reload-event', // Renderer listening for this
 } as const;
+
+/**
+ * IPC Channel names for osxphotos supervisor operations
+ */
+export const OsxphotosChannels = {
+	LIST_ALBUMS: 'osxphotos:list-albums',
+	GET_PHOTOS: 'osxphotos:get-photos',
+	EXPORT_PHOTO: 'osxphotos:export-photo',
+} as const;
